@@ -1,1 +1,5 @@
 /.idea
+
+*.vpp.bak*
+
+.DS_Store
