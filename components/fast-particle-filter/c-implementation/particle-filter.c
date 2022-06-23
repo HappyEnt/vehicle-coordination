@@ -56,7 +56,7 @@ uint32_t distance2(struct particle p1, struct particle p2);
  */
 struct normal_distribution *generate_normal_distribution(
                                   size_t buckets, uint32_t mean,
-                                  double std_dev) {
+                                  uint32_t std_dev) { // the standard deviation has also to be a integer
   uint32_t bucket_size = (3 * std_dev) / buckets;
   struct normal_distribution *result_distribution =
     malloc(sizeof(struct normal_distribution));
