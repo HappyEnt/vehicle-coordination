@@ -37,7 +37,7 @@ ffibuilder.set_source("_pf_cffi",
                       include_dirs=['./'],
                       library_dirs=['./build'],                      
                       libraries=['ParticleFilter'],
-                      extra_link_args=['-Wl,-rpath,/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/c-implementation/build']
+                      extra_link_args=['-Wl,-rpath,/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation/build']
                       )   # library name, for the linker
 
 if __name__ == "__main__":

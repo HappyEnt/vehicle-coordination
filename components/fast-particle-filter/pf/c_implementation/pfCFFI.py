@@ -2,7 +2,7 @@ import sys, os
 from _pf_cffi import ffi, lib
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from pf.abstractPF import AbstractParticleFilter
+from abstractPF import AbstractParticleFilter
 
 class CParticleFilter(AbstractParticleFilter):
     def value_from_normal_distribution(self, mean, std_dev, x):
