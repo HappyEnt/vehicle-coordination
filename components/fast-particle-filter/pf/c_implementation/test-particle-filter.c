@@ -1,4 +1,4 @@
-#include "particle-filter.h"
+#include "floating-point-particle-filter.h"
 
 int main(int argc, char *argv[]) {
   struct particle node_1_particles[PARTICLES];

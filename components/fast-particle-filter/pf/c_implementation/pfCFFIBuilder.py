@@ -5,25 +5,27 @@ ffibuilder = FFI()
 # globals needed to use the shared object. It must be in valid C syntax.
 ffibuilder.cdef("""
 struct particle {
-  uint32_t x_pos;
-  uint32_t y_pos;
+  double x_pos;
+  double y_pos;
 };
 
 struct normal_distribution {
-  uint32_t mean;
-  uint32_t std_dev;
+  double mean;
+  double std_dev;
 
   size_t buckets;
-  uint32_t bucket_size;
+  double bucket_size;
 
   double *cached_distribution;
 };
 
-double value_from_normal_distribution(struct normal_distribution *distribution,
-                                      uint32_t x);
 struct normal_distribution *generate_normal_distribution(
-                                  size_t buckets, uint32_t mean,
-                                  double std_dev);
+                                  double mean,
+                                  double std_dev,
+                                  bool cache_histogram);
+
+double value_from_normal_distribution(struct normal_distribution *distribution,
+                                      double x);
 """)
 
 # set_source() gives the name of the python extension module to
@@ -32,7 +34,7 @@ struct normal_distribution *generate_normal_distribution(
 # so it is often just the "#include".
 ffibuilder.set_source("_pf_cffi",
                       """
-     #include "particle-filter.h"   // the C header of the library
+     #include "floating-point-particle-filter.h"   // the C header of the library
 """,
                       include_dirs=['./'],
                       library_dirs=['./build'],                      

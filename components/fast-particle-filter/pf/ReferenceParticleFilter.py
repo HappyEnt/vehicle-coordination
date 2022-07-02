@@ -1,19 +1,27 @@
+from AbstractParticleFilter import AbstractParticleFilter
+
 from abc import ABC, abstractmethod
 
 # Actually an abstract class since python has no interfaces
-
 class AbstractParticleFilter(ABC):
+    
+    # Returns the current internal state (i.e., particles) of particle filter
+    @abstractmethod
+    def get_current_state():
+        raise NotImplementedError
 
+    # These should only be used for verfication of the implementation and should usually not be called by a module using the Particle Filter.
     @abstractmethod
     def resample(self, particles):
         raise NotImplementedError
 
     @abstractmethod
-    def predict(self, particles, action):
+    def predict(self, action):
         raise NotImplementedError
-    
+
+    # Measurement could be either self measurement z_self or measurement between two nodes z_ij
     @abstractmethod
-    def correct(self, particles, measurement):
+    def correct(self, measurement):
         raise NotImplementedError
     
     @abstractmethod

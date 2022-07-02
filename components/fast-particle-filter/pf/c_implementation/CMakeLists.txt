@@ -21,12 +21,12 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost COMPONENTS system REQUIRED)
 
 
-add_library(ParticleFilter SHARED particle-filter.h particle-filter.c)
+add_library(ParticleFilter SHARED floating-point-particle-filter.h floating-point-particle-filter.c)
 target_link_libraries(ParticleFilter m)
 
 # add the executable
-add_executable(test_particle_filter test-particle-filter.c)
-target_link_libraries(test_particle_filter ParticleFilter)
+add_executable(test-particle-filter test-particle-filter.c)
+target_link_libraries(test-particle-filter ParticleFilter)
 
 # add the executable
 add_executable(particle-filter-consumer ParticleFilterConsumer.hpp ParticleFilterConsumer.cpp)

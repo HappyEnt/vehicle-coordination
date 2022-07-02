@@ -182,6 +182,12 @@ class ParticleNode(Node):
         self._resample_particles(weights)
 
 
+def add_noise(d):
+    return # we add gaussian noise to each measurement
+
+
+
+
 anchors = [
     AnchorNode((0.0, 0.0)),
     AnchorNode((0.0, SIDE_LENGTH)),
