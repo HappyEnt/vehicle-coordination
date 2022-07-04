@@ -22,12 +22,12 @@ class CParticleFilter(AbstractParticleFilter):
 
     def get_particles(self):
         particles = ffi.new("struct particle*")
-        particles_ptr = ffi.new("struct particle**", particles)        
+        particles_ptr = ffi.new("struct particle**", particles)
         length = lib.get_particle_array(self.pf_inst, particles_ptr)
         
         particles_list = ffi.unpack(particles, length)
         
-        return particles_list
+        return [(p.x_pos, p.y_pos) for p in particles_list]
         
     def set_particles(self, particles):
         particle_array = ffi.new("struct particle[]", len(particles))

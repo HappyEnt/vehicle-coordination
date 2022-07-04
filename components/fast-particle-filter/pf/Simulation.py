@@ -123,13 +123,14 @@ class ParticleNode(Node):
 
 class Simulation():
     nodes = []
+    events = []
     
     def __init__(self):
         "docstring"
         self.events = []
 
     def add_nodes(self, nodes):
-        self.nodes = nodes
+        self.nodes.extend(nodes)
 
     def add_events(self, events):
         self.events.extend(events)
