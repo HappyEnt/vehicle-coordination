@@ -213,30 +213,6 @@ messages = [
 nodes = anchors + tags
 
 
-def illustrate_nodes_and_particles():
-    plt.clf()
-    fig, ax = plt.subplots()
-
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-
-    for (i, node) in enumerate(nodes):
-        # we draw the position
-        pos = node.get_pos()
-        plt.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[i])
-
-        # we then scatter its particles
-        particles = node.get_particles()
-        plt.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[i], alpha=0.05, edgecolor='none')
-
-        est_pos = node.get_estimated_pos()
-        if est_pos:
-            plt.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[i])
-            print("Estimation error node {} of {}".format(i, round(distance.euclidean(pos, est_pos), 2)))
-
-
-    plt.show()
-
-illustrate_nodes_and_particles()
 
 
 while True:

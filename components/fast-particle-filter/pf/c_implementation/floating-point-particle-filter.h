@@ -64,7 +64,7 @@ struct measurement {
   size_t foreign_particles_length;
 };
 
-// Public Interface
+// _____Public Interface_____
 
 // Use create and destroy to create instance, do not free memory yourself.
 void create_particle_filter_instance(struct particle_filter_instance **pf_inst);
@@ -75,10 +75,10 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 
 // TODO find out what kind of actions will exist 
 void predict(struct particle_filter_instance *pf_inst, int action);
-void correct(struct particle_filter_instance *pf_inst, struct measurement m);
+void correct(struct particle_filter_instance *pf_inst, struct measurement *m);
 
 
-// Test Interface
+// _____Test Interface_____
 struct normal_distribution *generate_normal_distribution(
                                   double mean,
                                   double std_dev,

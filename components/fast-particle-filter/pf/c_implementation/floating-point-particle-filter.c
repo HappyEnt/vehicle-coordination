@@ -150,8 +150,8 @@ void create_particle_filter_instance(struct particle_filter_instance **pf_inst) 
 }
 
 void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst) {
-  if(pf_inst->local_particles != NULL)
-    free(pf_inst->local_particles);
+  /* if(pf_inst->local_particles != NULL) */
+  /*   free(pf_inst->local_particles); */
 
   free(pf_inst);
 }
@@ -177,12 +177,16 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
   return pf_inst->local_particles_length;
 }
 
-void correct(struct particle_filter_instance *pf_inst, struct measurement m) {
+void correct(struct particle_filter_instance *pf_inst, struct measurement *m) {
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * pf_inst->local_particles_length);
 
-  calculate_likelihood(m.measured_distance, pf_inst->local_particles, m.foreign_particles, pf_inst->local_particles_length, m.foreign_particles_length, wp);
+  calculate_likelihood(m->measured_distance, pf_inst->local_particles, m->foreign_particles, pf_inst->local_particles_length, m->foreign_particles_length, wp);
 
   resample(wp, pf_inst->local_particles, pf_inst->local_particles_length);
 
   free(wp);
+}
+
+void predict(struct particle_filter_instance *pf_inst, int action) {
+  // TODO implement me
 }

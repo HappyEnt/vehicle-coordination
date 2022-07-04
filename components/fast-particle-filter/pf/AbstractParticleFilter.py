@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 # particle filter.
 class AbstractParticleFilter(ABC):
     @abstractmethod
-    def get_particles(self, particles):
+    def get_particles(self):
         raise NotImplementedError
 
     # Usually only called initially to generate a uniform prior distribution showing that are
@@ -27,7 +27,7 @@ class AbstractParticleFilter(ABC):
     def correct(self, measurement):
         raise NotImplementedError
 
-    # Exposed just for automatic testing of the implementation
+    # Exposed just for automatic testing of the implementation, not part of the public interface
     @abstractmethod
     def resample(self, particles):
         raise NotImplementedError
