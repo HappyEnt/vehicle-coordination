@@ -29,7 +29,7 @@ class AbstractParticleFilter(ABC):
 
     # Exposed just for automatic testing of the implementation, not part of the public interface
     @abstractmethod
-    def resample(self, particles):
+    def resample(self, weighted_particles):
         raise NotImplementedError
     
     @abstractmethod

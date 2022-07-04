@@ -1,6 +1,7 @@
 from Measurements import TWR_Measurement
 from abc import ABC, abstractmethod
 from c_implementation.ParticleFilter import CParticleFilter
+from ReferenceParticleFilter import ReferenceParticleFilter
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
 
@@ -16,10 +17,10 @@ def generate_uniform_distribution(side_length, num_particles):
 
 # we should only be needed to pass the side_length, maybe add some abstraction for a space. num_particles could be taken
 # from simulation parameters, i.e., method should be part of Simulation
-def node_set_uniform_prior(node, side_length, num_particles):
+def particle_node_set_uniform_prior(node, side_length, num_particles):
     node.set_particles(generate_uniform_distribution(side_length, num_particles))
 
-def node_set_dirac_delta_dist(node):
+def particle_node_set_dirac_delta_dist(node):
     node.set_particles([node.get_pos()])
 
 
@@ -61,7 +62,7 @@ class TDOA(Measurement):
         raise NotImplementedError
 
 class TWR(Measurement):
-    MEASUREMENT_STD = 0.1
+    MEASUREMENT_STD = 0.1 # Parameter of the simulation
     
     def __init__(self, sender, recipient):
         self.sender = sender
@@ -78,14 +79,9 @@ class Node:
     def __init__(self, pos):
         self.pos = pos
 
-    def get_particles(self):
-        return []
-
     def get_pos(self):
         return self.pos
-    
-    def get_estimated_pos(self):
-        return self.pos                
+
     
 # A node backed by some particle filter implementation
 # i.e., pass measurements and events to the particle filter and retrieve
@@ -134,58 +130,73 @@ class Simulation():
 
     def add_events(self, events):
         self.events.extend(events)
+        # TODO for now hack it like that, this should be replaced ASAP
+        self.fig, self.ax = plt.subplots(figsize=(1, len(events)))
 
     def illustrate(self):
-        plt.clf()
-        fig, ax = plt.subplots()
-
-        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-
-        for (i, node) in enumerate(self.nodes):
-            # we draw the position
-            pos = node.get_pos()
-            plt.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[i])
-
-            # we then scatter its particles
-            particles = node.get_particles()
-            plt.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[i], alpha=0.05, edgecolor='none')
-
-            est_pos = node.get_estimated_pos()
-            if est_pos:
-                plt.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[i])
-                print("Estimation error node {} of {}".format(i, round(distance.euclidean(pos, est_pos), 2)))
-
         plt.show()
 
     # def step(self):
     #     pass
 
     def execute_all_events(self):
-        for event in self.events:
+        for i,event in enumerate(self.events):
             event.get_recipient().handle_event(event)
+            
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            
+            self.fig.add_subplot(1, len(events), i+1)
+            for (j, node) in enumerate(self.nodes):
 
-SIDE_LENGTH = 10.0
-NUM_PARTICLES = 500
+                
+                pos = node.get_pos()
+                plt.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[j])
 
+                particles = node.get_particles()
+                plt.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.05, edgecolor='none')
+
+                est_pos = node.get_estimated_pos()
+                plt.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
+                print("Estimation error node {} of {}".format(j, round(distance.euclidean(pos, est_pos), 2)))
+            
+
+ANCHOR_SPACING = 10.0
+SIM_SPACE_LENGTH = 20.0
+
+NUM_PARTICLES = 10000
+
+
+
+# TODO The right abstraction still has to be found. We should design general enough abstraction
+# so the prior/posterior distributions can be described by a variety of distributions
+# For example it should also be able to have nodes that represent their belief through
+# parametric distributions like a gaussian. 
 anchors = [
-    Node((0.0, 0.0)),
-    Node((0.0, SIDE_LENGTH)),
-    Node((SIDE_LENGTH, SIDE_LENGTH))
+    ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
+    ParticleNode((0.0, ANCHOR_SPACING), ReferenceParticleFilter()),
+    ParticleNode((ANCHOR_SPACING, ANCHOR_SPACING), ReferenceParticleFilter())
 ]
 
 cache_distribution = True
+# tags = [
+#     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+#     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+#     ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+#     ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+# ]
+
 tags = [
-    ParticleNode((SIDE_LENGTH*0.25, SIDE_LENGTH*0.25), CParticleFilter(cache_distribution)),
-    ParticleNode((SIDE_LENGTH*0.25, SIDE_LENGTH*0.75), CParticleFilter(cache_distribution)),
-    ParticleNode((SIDE_LENGTH*0.75, SIDE_LENGTH*0.75), CParticleFilter(cache_distribution)),
-    ParticleNode((SIDE_LENGTH*0.75, SIDE_LENGTH*0.25), CParticleFilter(cache_distribution)),
+    ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
+    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),
+    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),
+    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
 ]
 
 for tag in tags:
-    node_set_uniform_prior(tag, SIDE_LENGTH, NUM_PARTICLES)
+    particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, NUM_PARTICLES)
 
-for tag in tags:
-    tag.set_particles(generate_uniform_distribution(SIDE_LENGTH, NUM_PARTICLES))
+for anchor in anchors:
+    particle_node_set_dirac_delta_dist(anchor)
             
 events = [
     # TDOA(anchors[0], anchors[1], tags[0]),
@@ -193,10 +204,6 @@ events = [
     # TDOA(anchors[1], anchors[2], tags[0]),
     # TDOA(anchors[1], anchors[2], tags[1]),
     # TDOA(anchors[1], anchors[2], tags[1]),
-    # TDOA(anchors[1], anchors[2], tags[2])
-    # (tags[1], tags[2], tags[0]),
-    # (tags[0], tags[2], tags[1]),
-    # (tags[0], tags[1], tags[2]),
 
     TWR(sender = anchors[0], recipient = tags[0]),
     TWR(sender = anchors[1], recipient = tags[0]),
@@ -210,6 +217,8 @@ sim.add_nodes(anchors)
 
 sim.add_events(events)
 
-sim.illustrate()
+# sim.illustrate()
 
 sim.execute_all_events()
+
+sim.illustrate()

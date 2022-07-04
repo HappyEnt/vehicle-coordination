@@ -6,7 +6,9 @@ from ._pf_cffi import ffi, lib
 from AbstractParticleFilter import AbstractParticleFilter
 
 class CParticleFilter(AbstractParticleFilter):
+    
     cache_normal_distribution = False
+    
     def __init__(self, cache_distribution):
         "create and initialize c implementation particle filter instance"
         
@@ -50,7 +52,7 @@ class CParticleFilter(AbstractParticleFilter):
         else:
             raise NotImplementedError
 
-    def resample(self, particles):
+    def resample(self, weighted_particles):
         raise NotImplementedError
     
     def calculate_likelihood(self, measurement, particles):
