@@ -89,7 +89,8 @@ void destroy_normal_distribution(struct normal_distribution *distribution);
 double value_from_normal_distribution(struct normal_distribution *distribution,
                                       double x);
 
-void calculate_likelihood(double measurement, struct particle *particles,
+void calculate_likelihood(struct particle_filter_instance *pf,
+                          double measurement, struct particle *particles,
                           struct particle *particles_other, size_t amount,
                           size_t amount_other,
                           struct weighted_particle *weighted_particles);

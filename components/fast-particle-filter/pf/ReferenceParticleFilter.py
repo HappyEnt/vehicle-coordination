@@ -31,17 +31,18 @@ class ReferenceParticleFilter(AbstractParticleFilter):
                 
                 norm_val = (measurement.get_measured_distance()-expected_d) / self.MEASUREMENT_STD
                 prob = norm.pdf(norm_val) / self.MEASUREMENT_STD # use correct way to calculate prob in order to aid comparison between implementations
+
                 return prob            
 
             for (i, p) in enumerate(self.particles):
                 weight_factor = 0.0
-                for (k, rp) in enumerate(measurement.get_measurement_particles()):
+                for (k, rp) in enumerate(measurement.get_sender_particles()):
                     weight_factor += estimate_prob(p, rp)
                     weights[i] *= weight_factor
 
-            self.__resample(weights)
+            self.resample(weights)
 
-    def __resample(self, weights):
+    def resample(self, weights):
         sum_weights = sum(weights)
         normalized_weights = [x/sum_weights for x in weights]
 
@@ -51,12 +52,7 @@ class ReferenceParticleFilter(AbstractParticleFilter):
             weights=normalized_weights,
             k=len(self.particles)
         )
-        
-    # Exposed mostly for automatic testing of the implementation, not part of the public interface
-    # TODO Most likely can be removed again.
-    def resample(self, weighted_particles):
-        raise NotImplementedError
-    
+            
     def calculate_likelihood(self, measurement, particles):
         raise NotImplementedError
     

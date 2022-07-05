@@ -26,16 +26,3 @@ class AbstractParticleFilter(ABC):
     @abstractmethod
     def correct(self, measurement):
         raise NotImplementedError
-
-    # Exposed just for automatic testing of the implementation, not part of the public interface
-    @abstractmethod
-    def resample(self, weighted_particles):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def calculate_likelihood(self, measurement, particles):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def value_from_normal_distribution(self, mean, std_dev, x):
-        raise NotImplementedError

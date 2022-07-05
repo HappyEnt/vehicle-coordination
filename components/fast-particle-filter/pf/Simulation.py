@@ -114,6 +114,8 @@ class ParticleNode(Node):
     def handle_event(self, event):
         if isinstance(event, Measurement):
             self.particle_filter_instance.correct(event.get_measurement())
+            print(self.particle_filter_instance.get_particles()[0:10])            
+            
         elif isinstance(event, Action):
             self.particle_filter_instance.correct(event.get_measurement())
 
@@ -177,20 +179,22 @@ anchors = [
     ParticleNode((ANCHOR_SPACING, ANCHOR_SPACING), ReferenceParticleFilter())
 ]
 
-cache_distribution = True
-# tags = [
-#     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-#     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
-#     ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
-#     ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-# ]
+cache_distribution = False
 
 tags = [
-    ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
+    ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),    
+    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+]
+
+# tags = [
+    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
     # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),
     # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),
     # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
-]
+# ]
 
 for tag in tags:
     particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, NUM_PARTICLES)

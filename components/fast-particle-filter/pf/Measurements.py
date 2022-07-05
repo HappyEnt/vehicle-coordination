@@ -9,7 +9,7 @@ class TWR_Measurement(AbstractMeasurement):
         
     # Returns the (possibly reduced) set of particles representing the distribution of the
     # random variable describing posterior of the Node we performed the TWR measurement with
-    def get_measurement_particles(self):
+    def get_sender_particles(self):
         return self.particles
 
     def get_measured_distance(self):

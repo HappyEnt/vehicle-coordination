@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
 #include <memory.h>
@@ -93,18 +94,20 @@ double distance2(struct particle p1, struct particle p2) {
 void low_variance_resampling(struct weighted_particle *weighted_particles, struct particle* resampled_particles, size_t length) {
   double U, r, c;
   size_t i;
-  
-  r = rand() * 1.0/length;
+
+  r = (((double) rand())/(RAND_MAX)) * (1.0/length);
   U = 0;
   c = weighted_particles[0].weight;
-    i = 0;
+  printf("%f\n", r);
+
+  i = 0;
   for (size_t m = 0; m < length; ++m) {
-    U = r + (double) (m - 1)/length;
+    U = r + ((double) m)/length;
     while (U > c) {
       i++;
-      c = c + weighted_particles[i].weight;
+      c += weighted_particles[i].weight;
     }
-    
+
     resampled_particles[m] = weighted_particles[i].particle;
   }
 }
@@ -113,27 +116,39 @@ void resample(struct weighted_particle *weighted_particles, struct particle *res
   low_variance_resampling(weighted_particles, resampled_particles, length);
 }
 
-void calculate_likelihood(double measurement, struct particle *particles,
+void calculate_likelihood(struct particle_filter_instance *pf,
+                          double measurement, struct particle *particles,
                           struct particle *particles_other, size_t amount,
                           size_t amount_other,
                           struct weighted_particle *weighted_particles) {
-
-  struct normal_distribution *norm;
-  norm = generate_normal_distribution(0, 1000, false);
-
+  double total_weight = 0.0;
+  
   for (size_t i = 0; i < amount; ++i) {
     weighted_particles[i].particle = particles[i];
+    weighted_particles[i].weight = 1.0/amount;    
+    double weight_factor = 0.0;
+
     for (size_t j = 0; j < amount_other; ++j) {
       double likelihood = value_from_normal_distribution(
-                                                         norm,
+                                                         pf->uwb_error_likelihood,
                                                          distance1(
                                                                    measurement,
                                                                    distance2(
                                                                              particles[i],
-                                                                             particles[j]))); // if more precision is needed raise type to
+                                                                             particles_other[j])));
       // uint64_t and use precision prefactor
-      weighted_particles[i].weight += likelihood;
+      weight_factor += likelihood;
+      weighted_particles[i].weight *= weight_factor;
     }
+
+    total_weight += weighted_particles[i].weight;
+  }
+
+  printf("total_weight: %f\n", total_weight);
+
+  //  normalize
+  for (size_t i = 0; i < amount; ++i) {
+    weighted_particles[i].weight /= total_weight;
   }
 }
 
@@ -144,7 +159,9 @@ void create_particle_filter_instance(struct particle_filter_instance **pf_inst) 
   struct particle_filter_instance *ret_inst = malloc(sizeof(struct particle_filter_instance));
 
   ret_inst->local_particles = NULL;
-  ret_inst->uwb_error_likelihood = generate_normal_distribution(0, 0.1, 1);
+  ret_inst->uwb_error_likelihood = generate_normal_distribution(0, 0.1, 0);
+
+  srand(time(0));
 
   *pf_inst = ret_inst;
 }
@@ -159,8 +176,8 @@ void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst) 
 void set_particle_array(struct particle_filter_instance *pf_inst, struct particle *particles, size_t length) {
   struct particle *pt_cpy = malloc(sizeof(struct particle) * length);
 
-  memcpy(pt_cpy, particles, length);
-  
+  memcpy(pt_cpy, particles, sizeof(struct particle) * length);
+
   pf_inst->local_particles = pt_cpy;
   pf_inst->local_particles_length = length;
 }
@@ -172,6 +189,7 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
     return -1;
   }
 
+
   *particles = pf_inst->local_particles;
   
   return pf_inst->local_particles_length;
@@ -180,7 +198,7 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 void correct(struct particle_filter_instance *pf_inst, struct measurement *m) {
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * pf_inst->local_particles_length);
 
-  calculate_likelihood(m->measured_distance, pf_inst->local_particles, m->foreign_particles, pf_inst->local_particles_length, m->foreign_particles_length, wp);
+  calculate_likelihood(pf_inst, m->measured_distance, pf_inst->local_particles, m->foreign_particles, pf_inst->local_particles_length, m->foreign_particles_length, wp);
 
   resample(wp, pf_inst->local_particles, pf_inst->local_particles_length);
 

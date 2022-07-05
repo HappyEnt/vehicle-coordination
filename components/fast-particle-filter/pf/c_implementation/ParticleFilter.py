@@ -23,32 +23,37 @@ class CParticleFilter(AbstractParticleFilter):
         lib.destroy_particle_filter_instance(self.pf_inst)
 
     def get_particles(self):
-        particles = ffi.new("struct particle*")
-        particles_ptr = ffi.new("struct particle**", particles)
+        particles_ptr = ffi.new("struct particle**")
         length = lib.get_particle_array(self.pf_inst, particles_ptr)
         
-        particles_list = ffi.unpack(particles, length)
-        
+        particles_list = ffi.unpack(particles_ptr[0], length)
+
         return [(p.x_pos, p.y_pos) for p in particles_list]
         
     def set_particles(self, particles):
-        particle_array = ffi.new("struct particle[]", len(particles))
+        particle_arr = ffi.new("struct particle[]", len(particles))
         for i in range(len(particles)):
-            particle_array[i] = ffi.new("struct particle*", particles[i])[0]
-        lib.set_particle_array(self.pf_inst, particle_array, len(particles))
+            particle_arr[i] = ffi.new("struct particle*", particles[i])[0]
+        lib.set_particle_array(self.pf_inst, particle_arr, len(particles))
 
     def predict(self, action):
         raise NotImplementedError
 
     def correct(self, measurement):
         if measurement.get_type() == "TWR":
-            fp = ffi.new("struct particle*", measurement.get_measurement_particles())
+            self.foreign_particle_list = measurement.get_sender_particles()
+            self.foreign_particle_arr = ffi.new("struct particle[]", len(self.foreign_particle_list))
+            for i in range(len(self.foreign_particle_list)):
+                self.foreign_particle_arr[i] = ffi.new("struct particle*", self.foreign_particle_list[i])[0]
             
-            m = ffi.new("struct measurement*")
-            m.measured_distance = measurement.get_measured_distance()
-            m.foreign_particles = fp
-            m.foreign_particles_length = len(measurement.get_measurement_particles())
-            lib.correct(self.pf_inst, m)
+            self.m = ffi.new("struct measurement*")
+            self.m.measured_distance = measurement.get_measured_distance()
+            self.m.foreign_particles = self.foreign_particle_arr
+            self.m.foreign_particles_length = len(self.foreign_particle_arr)
+            
+            # TODO because we have ownership of the data we create through ffi we need to store all data created in the object
+            # otherwise the data is freed
+            lib.correct(self.pf_inst, self.m)
         else:
             raise NotImplementedError
 
