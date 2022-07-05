@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
 #include <memory.h>
@@ -98,7 +97,6 @@ void low_variance_resampling(struct weighted_particle *weighted_particles, struc
   r = (((double) rand())/(RAND_MAX)) * (1.0/length);
   U = 0;
   c = weighted_particles[0].weight;
-  printf("%f\n", r);
 
   i = 0;
   for (size_t m = 0; m < length; ++m) {
@@ -144,7 +142,6 @@ void calculate_likelihood(struct particle_filter_instance *pf,
     total_weight += weighted_particles[i].weight;
   }
 
-  printf("total_weight: %f\n", total_weight);
 
   //  normalize
   for (size_t i = 0; i < amount; ++i) {
@@ -159,7 +156,7 @@ void create_particle_filter_instance(struct particle_filter_instance **pf_inst) 
   struct particle_filter_instance *ret_inst = malloc(sizeof(struct particle_filter_instance));
 
   ret_inst->local_particles = NULL;
-  ret_inst->uwb_error_likelihood = generate_normal_distribution(0, 0.1, 0);
+  ret_inst->uwb_error_likelihood = generate_normal_distribution(0, 0.1, 1);
 
   srand(time(0));
 

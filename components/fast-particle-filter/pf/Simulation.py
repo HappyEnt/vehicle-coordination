@@ -114,7 +114,6 @@ class ParticleNode(Node):
     def handle_event(self, event):
         if isinstance(event, Measurement):
             self.particle_filter_instance.correct(event.get_measurement())
-            print(self.particle_filter_instance.get_particles()[0:10])            
             
         elif isinstance(event, Action):
             self.particle_filter_instance.correct(event.get_measurement())
