@@ -2,10 +2,13 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
 #include <memory.h>
+
+#include <omp.h>
 
 #define SIGN(x) ((x > 0) - (x < 0))
 
@@ -119,12 +122,14 @@ void calculate_likelihood(struct particle_filter_instance *pf,
                           struct particle *particles_other, size_t amount,
                           size_t amount_other,
                           struct weighted_particle *weighted_particles) {
-  double total_weight = 0.0;
-  
+  double total_weight = 0.0; // implicitly shared by being definde outside the following parallel block
+#pragma omp parallel for
+{
   for (size_t i = 0; i < amount; ++i) {
     weighted_particles[i].particle = particles[i];
     weighted_particles[i].weight = 1.0/amount;    
     double weight_factor = 0.0;
+
 
     for (size_t j = 0; j < amount_other; ++j) {
       double likelihood = value_from_normal_distribution(
@@ -141,6 +146,7 @@ void calculate_likelihood(struct particle_filter_instance *pf,
 
     total_weight += weighted_particles[i].weight;
   }
+}
 
 
   //  normalize
