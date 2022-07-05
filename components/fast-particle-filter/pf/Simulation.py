@@ -165,8 +165,7 @@ class Simulation():
 ANCHOR_SPACING = 10.0
 SIM_SPACE_LENGTH = 20.0
 
-NUM_PARTICLES = 10000
-
+NUM_PARTICLES = 5000
 
 
 # TODO The right abstraction still has to be found. We should design general enough abstraction
@@ -184,7 +183,7 @@ cache_distribution = False
 tags = [
     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
     # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),    
-    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+    ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
     # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
     # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
 ]
@@ -211,7 +210,12 @@ events = [
 
     TWR(sender = anchors[0], recipient = tags[0]),
     TWR(sender = anchors[1], recipient = tags[0]),
-    TWR(sender = anchors[2], recipient = tags[0]),
+    # TWR(sender = anchors[2], recipient = tags[0]),
+
+    TWR(sender = anchors[1], recipient = tags[1]),
+    TWR(sender = anchors[2], recipient = tags[1]),
+
+    TWR(sender = tags[0], recipient = tags[1]),
 ]
 
 sim = Simulation()
