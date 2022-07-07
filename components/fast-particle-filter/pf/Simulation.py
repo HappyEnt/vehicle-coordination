@@ -164,7 +164,7 @@ class Simulation():
 ANCHOR_SPACING = 10.0
 SIM_SPACE_LENGTH = 20.0
 
-NUM_PARTICLES = 20000
+NUM_PARTICLES = 50000
 
 
 # TODO The right abstraction still has to be found. We should design general enough abstraction
