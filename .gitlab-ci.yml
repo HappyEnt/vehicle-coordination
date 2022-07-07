@@ -1,15 +1,3 @@
-image: alpine
-
-stages:
-  - hello
-  - second
-
-main:
-  stage: hello
-  script:
-    - echo "Hello, world!"
-
-second_job:
-  stage: second
-  script:
-    - echo "This is the second job"
+picar_wheels:
+  trigger:
+    include: components/picar-wheels/.gitlab-ci.yml
