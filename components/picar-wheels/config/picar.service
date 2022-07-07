@@ -1,0 +1,15 @@
+[Unit]
+Description=Picar Wheel Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=pi
+Group=dialout
+ExecStart=/home/pi/bin/picar-daemon
+
+[Install]
+WantedBy=default.target

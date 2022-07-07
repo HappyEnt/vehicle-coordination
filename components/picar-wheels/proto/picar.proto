@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package picar;
+
+service Picar {
+    rpc SetSpeed (SetSpeedRequest) returns (SetSpeedResponse);
+}
+
+message SetSpeedRequest {
+    double left = 1;
+    double right = 2;
+}
+
+message SetSpeedResponse {
+    bool success = 1;
+    string message = 2;
+}
