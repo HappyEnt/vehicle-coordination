@@ -30,8 +30,6 @@ build_picar_wheels:
       - ./components/picar-wheels/target/armv7-unknown-linux-gnueabihf/release/picar-daemon
 
 release_picar_wheels:
-  only:
-    - main
   rules:
     - if: $CI_COMMIT_TAG =~ /^(\d+\.)(\d+\.)(\*|\d+)$/
   stage: release
