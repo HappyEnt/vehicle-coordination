@@ -18,6 +18,7 @@ rppal = "0.13.1"
 tonic = "0.7"
 prost = "0.10"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"]}
+async-channel = "1.6.1"
 
 [build-dependencies]
 tonic-build = "0.7"
