@@ -1,4 +1,7 @@
 argparse
+matplotlib
+numpy
 pyserial
 requests
+types-requests
 scipy

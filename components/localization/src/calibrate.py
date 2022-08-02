@@ -1,5 +1,6 @@
 from copy import deepcopy
 import json
+from logging import warning
 import math
 from typing import Dict, List, Optional, Tuple
 
@@ -24,6 +25,7 @@ MIN_CALIBRATION_DIST = 0.2
 
 
 def get_real_positions():
+    return {"0": [0,0], "64": [100,0]}
     return {"1725": [0, 0], "64071": [223, 0], "50438": [0, 177]}
     return {"59582": [0, 0], "50438": [0, 150]}  # "dump_file_150.txt"
     # r_cars = get("http://192.168.87.78:8081/positions")
@@ -119,8 +121,6 @@ def build_tof_matrix_measured(
 
 def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
     def convert_to_delays(res) -> Tuple[Dict, Dict]:
-        print(res)
-        print(type(res))
         assert len(participants) == len(res)
         tx_times = {}
         rx_times = {}
@@ -147,7 +147,7 @@ def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
     pos = get_real_positions()
     if not pos:
         # TODO: Use proper logging
-        print("WARN: could not get distance information from camera server")
+        warning("Could not get distance information from camera server")
         return None
     real_tof = build_tof_matrix(pos)
     measured_tof = build_tof_matrix_measured(messages)

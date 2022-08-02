@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from logging import info
+from time import sleep
 from typing import Callable, Dict, List, Union
 
 from serial import Serial
@@ -29,8 +31,8 @@ class RangingNode(ABC):
         self.active_measurements: List[ActiveMeasurement] = []
         self.tx_delays: Dict[int, float] = {}
         self.rx_delays: Dict[int, float] = {}
-        self.calibrated = False
-        self.calibrated_at = 0
+        self.calibrated: bool = False
+        self.calibrated_at: int = 0
 
     def handle_message(self, message: Message):
         """Process a RX or TX Message."""
@@ -41,24 +43,25 @@ class RangingNode(ABC):
             rx_delays=self.rx_delays,
             tx_delays=self.tx_delays,
         )
-        print(measurements)
 
         # self.active_measurements.append(ActiveMeasurement(message.tx.addr, rx_timing_info.addr, distance))
 
         # TODO: Make more efficient
         self.msg_storage.insert(0, message)
-        self.active_measurements.extend(list(filter(lambda x: isinstance(x,ActiveMeasurement),measurements)))
+        self.active_measurements.extend(
+            list(filter(lambda x: isinstance(x, ActiveMeasurement), measurements))
+        )
+        # info(f"Performed {len(self.active_measurements)} measurements")
         self.measurement_callback(measurements)
 
     def calibrate(self):
         if not self.calibrated:
             calibration = calibrate(self.msg_storage)
-            print(f"Calibration {calibration}")
+            info(f"Calibration {calibration}")
             if calibration:
                 self.tx_delays, self.rx_delays = calibration
                 self.calibrated = True
                 self.calibrated_at = len(self.active_measurements)
-
 
     @abstractmethod
     def send_data(self, data):
@@ -116,13 +119,11 @@ class DumpFileRangingNode(RangingNode):
 
     def run(self):
         with open(self.file_name, "r", encoding="UTF-8") as dump_file:
-            for line in dump_file.readlines():
-                # if line.startswith("/dev/tty.usbmodem0007601202451"):  # TODO: remove
+            for line in dump_file.readlines()[:600]:
                 decoded_message = parse_json_message(line)
                 if decoded_message:
                     self.handle_message(decoded_message)
-                if len(self.msg_storage) >= 100:
-                    self.calibrate()
+                    sleep(0.01)
 
     def send_data(self, data):
         print(data)
