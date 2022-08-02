@@ -27,7 +27,11 @@ bin/
 .vscode/
 
 .env*
+.venv
 
 __pycache__/
 target/
 output/
+
+
+build
