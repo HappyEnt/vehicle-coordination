@@ -73,7 +73,7 @@ class ParticleNode:
 
         dist_std = 2 * np.std(distances)
         guess_radius = dist_std + np.mean(distances)
-        return (self.id_int, [estimate_x, estimate_y], guess_radius, self.car_radius)
+        return (self.id_int, [estimate_x, estimate_y], self.car_radius, guess_radius)
 
     def get_particles(self):
         return self.particles
@@ -93,7 +93,8 @@ class ParticleNode:
         Handle incoming measurements by updating own particles.
         '''
         # save position of other node using their uuid as key
-        # self.other_nodes_pos[estimate_from_other[0]] = (estimate_from_other[1],estimate_from_other[2])
+        #                   id                         position                inaccuracy
+        self.other_nodes_pos[estimate_from_other[0]] = (estimate_from_other[1],estimate_from_other[2])
         
         for (i, p) in enumerate(self.particles):
             noisy_p = (np.random.normal(p[0], MEASUREMENT_STDEV), np.random.normal(p[1], MEASUREMENT_STDEV))
