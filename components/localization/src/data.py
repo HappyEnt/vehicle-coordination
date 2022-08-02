@@ -1,3 +1,4 @@
+from logging import error, warning
 from json import JSONDecodeError, JSONDecoder
 from typing import List, NamedTuple, Optional, Dict
 
@@ -60,8 +61,8 @@ def parse_json_message(json_str: str) -> Optional[Message]:
                 rx=list(map(parse_timing_info, json_dict["rx"])),
             )
         else:
-            # print("Decode Error")
+            warning("Decode Error")
             return None
     except (KeyError, JSONDecodeError):
-        # print("Decode Error")
+        warning("Decode Error")
         return None

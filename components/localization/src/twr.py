@@ -1,3 +1,4 @@
+from logging import debug, info, warning
 from typing import Dict, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
@@ -100,9 +101,15 @@ def perform_twr(
             # Time at B between receiving b and sending c
             d_b = c_msg.tx.ts - get_ts(c_msg.rx, b_msg.tx) + tx_delays[b_id] + rx_delays[b_id]
 
+            # TODO: Try to correct instead of filtering out
+            if r_a < 0 or r_b < 0 or d_a < 0 or d_b < 0:
+                continue
+
             tof = (r_a * r_b - d_a * d_b) / (r_a + r_b + d_a + d_b)
             distance = tof * TIME_UNIT * speed_of_light
-            print(distance)
+            if distance < 0 or distance > 1_000_000:
+                warning(f"Extremely unlikely distance of {distance}, R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}")
+            debug(f"Distance between {message.tx.addr} and {rx_timing_info.addr}: {distance}")
             measurements.append(
                 ActiveMeasurement(message.tx.addr, rx_timing_info.addr, distance)
             )
