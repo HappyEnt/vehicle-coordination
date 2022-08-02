@@ -1,0 +1,55 @@
+from components.localization.src.data import ActiveMeasurement, TimingInfo
+from components.localization.src.ranging import RangingNode
+from components.localization.src.data import Message
+
+
+MESSAGES = [
+    Message(
+        tx=TimingInfo(addr=0xBBBB, sn=2, ts=600_000),
+        rx=[TimingInfo(addr=0xAAAA, sn=2, ts=500_000)],
+    ),
+    Message(
+        tx=TimingInfo(addr=0xAAAA, sn=2, ts=400_000),
+        rx=[TimingInfo(addr=0xBBBB, sn=1, ts=300_000)],
+    ),
+    Message(
+        tx=TimingInfo(addr=0xBBBB, sn=1, ts=200_000),
+        rx=[TimingInfo(addr=0xAAAA, sn=1, ts=100_000)],
+    ),
+    Message(tx=TimingInfo(addr=0xAAAA, sn=1, ts=0), rx=[]),
+]
+
+
+class MockRangingNode(RangingNode):
+    def __init__(self, ranging_id, measurement_callback):
+        super().__init__(
+            ranging_id=ranging_id, measurement_callback=measurement_callback
+        )
+
+    def run(self):
+        pass
+
+    def send_data(self, data):
+        pass
+
+
+def test_ranging():
+    def cb(measurements):
+        print(measurements)
+        assert (
+            measurements
+            and abs([
+                m
+                for m in measurements
+                if isinstance(m, ActiveMeasurement) and m.a == 0xBBBB
+            ][0].distance - 469.175) < 1
+        )
+
+    ranging_node = MockRangingNode(0xBBBB, cb)
+    ranging_node.msg_storage = MESSAGES[1:]
+    print(ranging_node.msg_storage)
+    ranging_node.handle_message(MESSAGES[0])
+
+
+if __name__ == "__main__":
+    test_ranging()

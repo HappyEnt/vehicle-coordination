@@ -1,0 +1,13 @@
+image: python:3.9
+
+stages:
+  - Test
+
+pytest:
+  stage: Test
+  script:
+    - export PYTHONPATH="$PYTHONPATH:`pwd`:`pwd`/components/localization"
+    - cd components/localization
+    - pip3 install --upgrade pip
+    - pip3 install -r requirements.txt -r requirements-dev.txt
+    - pytest test
