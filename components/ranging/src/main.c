@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <drivers/uart.h>
 
+#define RANGING_ID 0x40
+
 LOG_MODULE_REGISTER(main);
 
 /* ieee802.15.4 device */
@@ -42,6 +44,8 @@ struct __attribute__((__packed__)) msg_ts {
 
 // TODO: Use mac?
 uint8_t *mac_addr; // 8 bytes MAC
+
+uint16_t ranging_id;
 
 // TODO: This is not standard compliant
 static uint8_t msg_header[] = {0xDE, 0xCA};
@@ -86,17 +90,19 @@ int main(void) {
     {
         (void)memset(msg_tx_buf, 0, sizeof(msg_tx_buf));
         // TODO: Add own addr!
-        msg_tx_buf[0].addr[0] = mac_addr[1]; // | mac_addr[3] | mac_addr[5] | mac_addr[7];
-        msg_tx_buf[0].addr[1] = mac_addr[0]; // | mac_addr[2] | mac_addr[4] | mac_addr[6];
+        msg_tx_buf[0].addr[0] = RANGING_ID & 0xFF; // | mac_addr[3] | mac_addr[5] | mac_addr[7];
+        msg_tx_buf[0].addr[1] = (RANGING_ID >> 8) & 0xFF; // | mac_addr[2] | mac_addr[4] | mac_addr[6];
 
         k_sem_give(&msg_tx_buf_sem);
     }
+    printk("Mac addr:");
     for (int i = 0; i < 8; i++) {
         printk("%X",mac_addr[i]);
     }
     printk("\n");
+    printk("Ranging ID: %X\n", ranging_id);
 
-    k_msleep(2000);
+    k_msleep(10000);
 
     // we disable the frame filter, otherwise the packets are not received!
     dwt_set_frame_filter(ieee802154_dev, 0, 0);

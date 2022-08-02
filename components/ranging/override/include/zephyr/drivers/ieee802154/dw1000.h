@@ -48,4 +48,6 @@ float dwt_rx_clock_ratio_offset(const struct device *dev);
 
 uint8_t *dwt_get_mac(const struct device *dev);
 
+
+
 #endif /* ZEPHYR_INCLUDE_DRIVERS_IEEE802154_DW1000_H_ */
