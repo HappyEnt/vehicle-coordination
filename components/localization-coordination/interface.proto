@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package coordination;
+
+service Coordination {
+  rpc Tick (TickRequest) returns (TickResponse);
+}
+
+message TickRequest {
+  message Vec2 {
+    double x = 1;
+    double y = 2;
+  }
+
+  message Participant {
+    int32 id = 1;
+    Vec2 position = 2;
+    double radius = 3;
+    double confidence = 4;
+  }
+
+  int32 id = 1;
+  Vec2 position = 2;
+  double confidence = 3;
+  repeated Participant others = 4;
+}
+
+message TickResponse {
+  double x = 1;
+  double y = 2;
+}
