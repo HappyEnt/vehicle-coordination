@@ -44,8 +44,6 @@ class RangingNode(ABC):
             tx_delays=self.tx_delays,
         )
 
-        # self.active_measurements.append(ActiveMeasurement(message.tx.addr, rx_timing_info.addr, distance))
-
         # TODO: Make more efficient
         self.msg_storage.insert(0, message)
         self.active_measurements.extend(
@@ -124,6 +122,8 @@ class DumpFileRangingNode(RangingNode):
                 if decoded_message:
                     self.handle_message(decoded_message)
                     sleep(0.01)
+                if len(self.active_measurements) >= 500:
+                    self.calibrate()
 
     def send_data(self, data):
         print(data)

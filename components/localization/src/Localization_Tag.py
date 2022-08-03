@@ -149,7 +149,7 @@ class ParticleNode:
             probabilities = norm.pdf(norm_vals)
             weight_factor += sum(probabilities)
             weights[i] *= weight_factor
-            info(f"Processing particle {p} new weight factor: {weight_factor}")
+            debug(f"Processing particle {p} new weight factor: {weight_factor}")
 
         sum_weights = sum(weights)
         normalized_weights = [x / sum_weights for x in weights]
@@ -211,7 +211,6 @@ class ParticleNode:
 
     def run(self):
         while True:
-            info("Ping from run in ParticleNode")
             if self.measurement_queue:
                 measurements = self.measurement_queue[:]
                 self.measurement_queue = []
