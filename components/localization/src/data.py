@@ -8,6 +8,7 @@ class ActiveMeasurement(NamedTuple):
     b: int
     """"The distance between `a` and `b` as measured by `a`"""
     distance: float
+    time: float
 
     def __eq__(self, other):
         return self.distance == other.distance
@@ -21,6 +22,7 @@ class PassiveMeasurement(NamedTuple):
     b: int
     c: int
     distance: float
+    time: float
 
     def __eq__(self, other):
         return self.distance == other.distance

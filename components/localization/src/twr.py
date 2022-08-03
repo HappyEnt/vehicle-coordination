@@ -1,4 +1,5 @@
 from logging import debug, info, warning
+from time import time
 from typing import Dict, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
@@ -111,7 +112,7 @@ def perform_twr(
                 warning(f"Extremely unlikely distance of {distance}, R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}")
             debug(f"Distance between {message.tx.addr} and {rx_timing_info.addr}: {distance}")
             measurements.append(
-                ActiveMeasurement(message.tx.addr, rx_timing_info.addr, distance)
+                ActiveMeasurement(message.tx.addr, rx_timing_info.addr, distance, time())
             )
 
     return measurements
