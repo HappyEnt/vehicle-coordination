@@ -1,7 +1,11 @@
+import json
 from logging import error, warning
 from json import JSONDecodeError, JSONDecoder
 from typing import List, NamedTuple, Optional, Dict
 
+
+RX = 1
+TX = 2
 
 class ActiveMeasurement(NamedTuple):
     a: int
@@ -45,6 +49,8 @@ class TimingInfo(NamedTuple):
 
 
 class Message(NamedTuple):
+    type: int
+    clock_offset_ratio: Optional[float]
     tx: TimingInfo
     rx: List[TimingInfo]
 
@@ -58,7 +64,12 @@ def parse_json_message(json_str: str) -> Optional[Message]:
     try:
         json_dict = JSONDecoder().decode(json_str)
         if json_dict:
+            clock_offset_ratio = None
+            if "clock_ratio_offset" in json_dict:
+                clock_offset_ratio=float(json_dict["clock_ratio_offset"])
             return Message(
+                type=RX if json_dict["type"] == "rx" else TX,
+                clock_offset_ratio=clock_offset_ratio,
                 tx=parse_timing_info(json_dict["tx"]),
                 rx=list(map(parse_timing_info, json_dict["rx"])),
             )
