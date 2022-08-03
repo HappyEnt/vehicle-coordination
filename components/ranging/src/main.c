@@ -147,7 +147,7 @@ static void net_pkt_hexdump(struct net_pkt *pkt, const char *str)
 static int format_msg_ts_to_json(char *buf, size_t buf_len, struct msg_ts *msg_ts) {
     uint16_t addr = sys_get_le16(&msg_ts->addr[0]);
     uint64_t ts = ((uint64_t)sys_get_le32(&msg_ts->ts[1]) << 8) | msg_ts->ts[0];
-    return snprintf(buf, buf_len, "{\"addr\": \"0x%04X\", \"sn\": %d, \"ts\": %llu}", addr, msg_ts->sn, ts);
+    return snprintf(buf, buf_len, "{\"addr\":\"0x%04X\",\"sn\":%d,\"ts\":%llu}", addr, msg_ts->sn, ts);
 }
 
 static void output_msg_to_uart(char* type, struct msg_ts msg_ts_arr[], size_t num_ts, float *clock_ratio_offset) {
@@ -157,14 +157,14 @@ static void output_msg_to_uart(char* type, struct msg_ts msg_ts_arr[], size_t nu
     }
 
     // write open parentheses
-    uart_out("{ \"type\": \"");
+    uart_out("{\"type\":\"");
     uart_out(type);
-    uart_out("\", ");
+    uart_out("\",");
 
     char buf[256];
 
     if (clock_ratio_offset != NULL) {
-        snprintf(buf, sizeof(buf), "\"clock_ratio_offset\": %f, ", *clock_ratio_offset);
+        snprintf(buf, sizeof(buf), "\"clock_ratio_offset\":%f,", *clock_ratio_offset);
         uart_out(buf);
     }
 
@@ -181,14 +181,14 @@ static void output_msg_to_uart(char* type, struct msg_ts msg_ts_arr[], size_t nu
     }
 
     uart_out(buf);
-    uart_out(", \"rx\": [");
+    uart_out(",\"rx\":[");
 
     // write message content
     for(int i = 1; i < num_ts; i++) {
         // add separators in between
         if (i > 1)
         {
-            uart_out(", ");
+            uart_out(",");
         }
 
         // write ts content
