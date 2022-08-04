@@ -5,8 +5,8 @@
 
 struct particle {
 public:
-  uint32_t x_pos;
-  uint32_t y_pos;
+  double x_pos;
+  double y_pos;
 };
 
 

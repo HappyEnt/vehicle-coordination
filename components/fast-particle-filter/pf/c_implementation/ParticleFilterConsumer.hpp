@@ -3,11 +3,11 @@
 #include <memory>
 #include <sstream>
 
-struct particle {
-public:
-  uint32_t x_pos;
-  uint32_t y_pos;
-};
+// struct particle {
+// public:
+//   uint32_t x_pos;
+//   uint32_t y_pos;
+// };
 
 class ParticleFilterConsumer
 {
@@ -17,4 +17,6 @@ public:
   int startConsumerLoop();
   ParticleFilterConsumer();
   virtual ~ParticleFilterConsumer();
+
+  struct particle_filter_instance *pf_inst;
 };

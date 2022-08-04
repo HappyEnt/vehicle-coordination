@@ -8,10 +8,6 @@
 #include <time.h>
 #include <stdbool.h>
 
-#define PARTICLES 100
-#define MEASUREMENT_STDEV 0.1
-
-
 struct particle {
   double x_pos; // [x_pos] = m
   double y_pos; // [y_pos] = m
