@@ -8,24 +8,25 @@ service Coordination {
 
 message TickRequest {
   message Vec2 {
-    double x = 1;
-    double y = 2;
+    float x = 1;
+    float y = 2;
   }
 
   message Participant {
     int32 id = 1;
     Vec2 position = 2;
-    double radius = 3;
-    double confidence = 4;
+    float radius = 3;
+    float confidence = 4;
   }
 
   int32 id = 1;
   Vec2 position = 2;
-  double confidence = 3;
-  repeated Participant others = 4;
+  float radius = 3;
+  float confidence = 4;
+  repeated Participant others = 5;
 }
 
 message TickResponse {
-  double x = 1;
-  double y = 2;
+  float x = 1;
+  float y = 2;
 }
