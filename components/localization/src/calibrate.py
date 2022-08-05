@@ -8,9 +8,9 @@ from requests import get
 from scipy.constants import speed_of_light
 import scipy.optimize
 
-from components.localization.src.config import TIME_UNIT
-from components.localization.src.data import ActiveMeasurement, Message
-from components.localization.src.twr import perform_twr
+from src.config import TIME_UNIT
+from src.data import ActiveMeasurement, Message
+from src.twr import perform_twr
 
 
 CAMERA_SERVER_LENGTH_UNIT = 0.01
@@ -71,7 +71,7 @@ def build_tof_matrix(positions) -> Dict[int, Dict[int, float]]:
 
 
 def build_tof_matrix_measured(
-    messages: List[Message], tx_delays={}, rx_delays={}
+    messages: List[Message], tx_delays=None, rx_delays=None
 ) -> Dict[int, Dict[int, float]]:
     measurements: List[ActiveMeasurement] = []
     messages_copy = deepcopy(messages)

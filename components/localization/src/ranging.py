@@ -5,14 +5,14 @@ from typing import Callable, Dict, List, Union
 
 from serial import Serial
 
-from components.localization.src.calibrate import calibrate
-from components.localization.src.data import (
+from src.calibrate import calibrate
+from src.data import (
     ActiveMeasurement,
     Message,
     PassiveMeasurement,
     parse_json_message,
 )
-from components.localization.src.twr import perform_twr
+from src.twr import perform_twr
 
 
 class RangingNode(ABC):

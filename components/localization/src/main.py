@@ -3,9 +3,8 @@ from logging import basicConfig, DEBUG, ERROR, INFO, WARNING
 from threading import Thread
 from time import sleep
 
-from components.localization.src.localization import LocalizationNode
-from components.localization.src.Localization_Tag import ParticleNode
-from components.localization.src.ranging import DumpFileRangingNode, SerialRangingNode
+from src.localization import ParticleNode
+from src.ranging import DumpFileRangingNode, SerialRangingNode
 
 
 def main():

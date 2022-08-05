@@ -1,11 +1,11 @@
-from logging import debug, info, warning
+from logging import debug, warning
 from time import time
 from typing import Dict, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
 
-from components.localization.src.config import TIME_UNIT
-from components.localization.src.data import (
+from src.config import TIME_UNIT
+from src.data import (
     ActiveMeasurement,
     Message,
     PassiveMeasurement,
@@ -70,9 +70,9 @@ def perform_twr(
         return None
 
     def get_ts(rx: List[TimingInfo], reference: TimingInfo) -> int:
-        for info in rx:
-            if info == reference:
-                return info.ts
+        for i in rx:
+            if i == reference:
+                return i.ts
         assert False
 
     measurements = []
