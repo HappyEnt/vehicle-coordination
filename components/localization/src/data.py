@@ -1,5 +1,4 @@
-import json
-from logging import error, warning
+from logging import warning
 from json import JSONDecodeError, JSONDecoder
 from typing import List, NamedTuple, Optional, Dict
 
