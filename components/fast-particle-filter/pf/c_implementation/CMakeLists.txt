@@ -25,10 +25,13 @@ if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
+    message("Found OpenMP")
+  endif()
 
 
-add_library(ParticleFilter SHARED floating-point-particle-filter.h floating-point-particle-filter.c)
+
+
+add_library(ParticleFilter SHARED importance-sampling-particle-filter.h importance-sampling-particle-filter.c)
 target_link_libraries(ParticleFilter m OpenMP::OpenMP_CXX)
 
 # add the executable
@@ -38,3 +41,9 @@ target_link_libraries(test-particle-filter ParticleFilter)
 # add the executable
 add_executable(particle-filter-consumer ParticleFilterConsumer.hpp ParticleFilterConsumer.cpp)
 target_link_libraries(particle-filter-consumer ParticleFilter Boost::boost)
+
+
+if(UNIX AND NOT APPLE)
+  target_link_libraries(particle-filter-consumer rt pthread)
+  target_link_libraries(ParticleFilter rt pthread)  
+endif()  

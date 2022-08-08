@@ -4,6 +4,9 @@ from c_implementation.ParticleFilter import CParticleFilter
 from ReferenceParticleFilter import ReferenceParticleFilter
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
+
+from time import sleep
 
 import numpy as np
 
@@ -11,7 +14,7 @@ import numpy as np
 def generate_uniform_distribution(side_length, num_particles):
     particles = []
     for i in range(num_particles):
-        p = tuple(np.random.uniform(low=0.0, high=side_length, size=2))
+        p = tuple(np.random.uniform(low=-side_length, high=side_length, size=2))
         particles.append(p)
     return particles
 
@@ -41,6 +44,10 @@ class Measurement(Event):
     def get_measurement():
         raise NotImplementedError
 
+class Iterate(Event):
+    def __init__(self, recipient):
+        super().__init__(recipient)
+    
 class Action(Event):
     def __init__(self, recipient):
         super().__init__(recipient)
@@ -113,10 +120,13 @@ class ParticleNode(Node):
 
     def handle_event(self, event):
         if isinstance(event, Measurement):
-            self.particle_filter_instance.correct(event.get_measurement())
+            self.particle_filter_instance.add_message(event.get_measurement())
             
         elif isinstance(event, Action):
-            self.particle_filter_instance.correct(event.get_measurement())
+            # self.particle_filter_instance.correct(event.get_measurement())
+            raise NotImplementedError
+        elif isinstance(event, Iterate):
+            self.particle_filter_instance.correct()
 
 class Simulation():
     nodes = []
@@ -124,6 +134,17 @@ class Simulation():
     
     def __init__(self):
         "docstring"
+        self.ind = 0
+        
+        self.fig, self.ax = plt.subplots()
+        
+        plt.subplots_adjust(bottom=0.2)        
+        axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
+        bnext = Button(axnext, 'Next')
+        bnext.on_clicked(self.next)
+
+        plt.connect('button_press_event', self.next)
+        
         self.events = []
 
     def add_nodes(self, nodes):
@@ -131,40 +152,59 @@ class Simulation():
 
     def add_events(self, events):
         self.events.extend(events)
+
         # TODO for now hack it like that, this should be replaced ASAP
-        self.fig, self.ax = plt.subplots(figsize=(1, len(events)))
+        # self.fig, self.ax = plt.subplots(1, len(events))
+
+    def next(self, event):
+        self.ax.cla()
+        
+        while not isinstance(self.events[self.ind], Iterate):
+            print("execute {}", self.ind)
+            self.events[self.ind].get_recipient().handle_event(self.events[self.ind])
+            self.ind += 1
+            
+        print("execute {}", self.ind)            
+        self.events[self.ind].get_recipient().handle_event(self.events[self.ind])
+        self.draw_plot()
+
+        self.ind += 1
+        
+        if self.ind >= len(self.events):
+            self.ind = 0        
+
+        plt.draw()
 
     def illustrate(self):
-        plt.show()
+        # plt.axis([0, 10, 0, 1])
+        plt.show()        
 
-    # def step(self):
-    #     pass
+    def draw_plot(self):
+        for (j, node) in enumerate(self.nodes):                
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']        
+            pos = node.get_pos()
+            self.ax.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[j])
 
+            particles = node.get_particles()
+            self.ax.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.05, edgecolor='none')
+
+            est_pos = node.get_estimated_pos()
+            self.ax.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
+        
     def execute_all_events(self):
         for i,event in enumerate(self.events):
             event.get_recipient().handle_event(event)
             
-            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-            
-            self.fig.add_subplot(1, len(events), i+1)
-            for (j, node) in enumerate(self.nodes):
+            draw_plot(j, node)
 
-                
-                pos = node.get_pos()
-                plt.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[j])
+            print("Estimation error node {} of {}".format(j, round(distance.euclidean(pos, est_pos), 2)))
 
-                particles = node.get_particles()
-                plt.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.05, edgecolor='none')
-
-                est_pos = node.get_estimated_pos()
-                plt.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
-                print("Estimation error node {} of {}".format(j, round(distance.euclidean(pos, est_pos), 2)))
             
 
 ANCHOR_SPACING = 10.0
 SIM_SPACE_LENGTH = 20.0
 
-NUM_PARTICLES = 50000
+NUM_PARTICLES = 1000
 
 
 # TODO The right abstraction still has to be found. We should design general enough abstraction
@@ -181,16 +221,10 @@ cache_distribution = False
 
 tags = [
     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),    
     ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
-    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
-    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
 ]
 
 # tags = [
-    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
-    # ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),
-    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),
     # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
 # ]
 
@@ -209,12 +243,21 @@ events = [
 
     TWR(sender = anchors[0], recipient = tags[0]),
     TWR(sender = anchors[1], recipient = tags[0]),
-    # TWR(sender = anchors[2], recipient = tags[0]),
+    Iterate(recipient = tags[0]),    
 
     TWR(sender = anchors[1], recipient = tags[1]),
     TWR(sender = anchors[2], recipient = tags[1]),
+    Iterate(recipient = tags[1]),
 
     TWR(sender = tags[0], recipient = tags[1]),
+    TWR(sender = tags[1], recipient = tags[0]),    
+    Iterate(recipient = tags[0]),    
+    Iterate(recipient = tags[1]),
+
+    TWR(sender = anchors[0], recipient = tags[1]),
+    TWR(sender = anchors[2], recipient = tags[0]),
+    Iterate(recipient = tags[0]),    
+    Iterate(recipient = tags[1]),    
 ]
 
 sim = Simulation()
@@ -224,8 +267,9 @@ sim.add_nodes(anchors)
 
 sim.add_events(events)
 
-# sim.illustrate()
-
-sim.execute_all_events()
-
 sim.illustrate()
+
+# sim.execute_all_events()
+
+# sim.illustrate_all()
+# sim.illustrate_last()

@@ -6,8 +6,8 @@ from ._pf_cffi import ffi, lib
 from AbstractParticleFilter import AbstractParticleFilter
 
 class CParticleFilter(AbstractParticleFilter):
-    
     cache_normal_distribution = False
+    message_list = []
     
     def __init__(self, cache_distribution):
         "create and initialize c implementation particle filter instance"
@@ -36,26 +36,33 @@ class CParticleFilter(AbstractParticleFilter):
             particle_arr[i] = ffi.new("struct particle*", particles[i])[0]
         lib.set_particle_array(self.pf_inst, particle_arr, len(particles))
 
+
+    def add_message(self, message):
+        if message.get_type() == "TWR":
+            foreign_particle_list = message.get_sender_particles()
+            foreign_particle_arr = ffi.new("struct particle[]", len(foreign_particle_list))
+            for i in range(len(foreign_particle_list)):
+                foreign_particle_arr[i] = ffi.new("struct particle*", foreign_particle_list[i])[0]
+                
+            m = ffi.new("struct message*")
+            m.measured_distance = message.get_measured_distance()
+            m.particles = foreign_particle_arr
+            m.particles_length = len(foreign_particle_arr)
+
+            lib.add_message(self.pf_inst, m[0])
+
+            # we have ownership, prevent memory from being freed by storing in instance variable
+            self.message_list.append((m, foreign_particle_arr))
+        else:
+            raise NotImplementedError
+        
     def predict(self, action):
         raise NotImplementedError
 
-    def correct(self, measurement):
-        if measurement.get_type() == "TWR":
-            self.foreign_particle_list = measurement.get_sender_particles()
-            self.foreign_particle_arr = ffi.new("struct particle[]", len(self.foreign_particle_list))
-            for i in range(len(self.foreign_particle_list)):
-                self.foreign_particle_arr[i] = ffi.new("struct particle*", self.foreign_particle_list[i])[0]
-            
-            self.m = ffi.new("struct measurement*")
-            self.m.measured_distance = measurement.get_measured_distance()
-            self.m.foreign_particles = self.foreign_particle_arr
-            self.m.foreign_particles_length = len(self.foreign_particle_arr)
-            
-            # TODO because we have ownership of the data we create through ffi we need to store all data created in the object
-            # otherwise the data is freed
-            lib.correct(self.pf_inst, self.m)
-        else:
-            raise NotImplementedError
+    def correct(self):
+            lib.correct(self.pf_inst)
+            self.message_list.clear()
+
 
     def resample(self, weighted_particles):
         raise NotImplementedError

@@ -1,4 +1,4 @@
-#include "floating-point-particle-filter.h"
+#include "importance-sampling-particle-filter.h"
 
 int main(int argc, char *argv[]) {
   // TODO implement with new API

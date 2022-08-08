@@ -26,3 +26,7 @@ target_link_libraries(BenchmarkUtils Boost::boost)
 add_executable(mock-data-generator main.cpp)
 target_link_libraries(mock-data-generator BenchmarkUtils)
 # target_include_directories(mock-data-generator SYSTEM PUBLIC Boost::headers)
+
+if(UNIX AND NOT APPLE)
+  target_link_libraries(BenchmarkUtils rt pthread)
+endif()  

@@ -35,11 +35,12 @@ struct normal_distribution {
   double *cached_distribution;
 };
 
-struct measurement {
+struct message {
   double measured_distance;
-  struct particle *foreign_particles;
-  size_t foreign_particles_length;
+  struct particle *particles;
+  size_t particles_length;
 };
+
 
 void create_particle_filter_instance(struct particle_filter_instance **pf_inst);
 void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst);
@@ -49,8 +50,9 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 
 // TODO find out what kind of actions will exist 
 void predict(struct particle_filter_instance *pf_inst, int action);
-void correct(struct particle_filter_instance *pf_inst, struct measurement *m);
+void correct(struct particle_filter_instance *pf_inst);
 
+void add_message(struct particle_filter_instance *pf_inst, struct message m);
 
 // Test Interface
 struct normal_distribution *generate_normal_distribution(
@@ -63,11 +65,8 @@ void destroy_normal_distribution(struct normal_distribution *distribution);
 double value_from_normal_distribution(struct normal_distribution *distribution,
                                       double x);
 
-void calculate_likelihood(struct particle_filter_instance *pf_inst,
-                          double measurement, struct particle *particles,
-                          struct particle *particles_other, size_t amount,
-                          size_t amount_other,
-                          struct weighted_particle *weighted_particles);
+
+void calculate_belief(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles);
 
 void resample(struct weighted_particle *weighted_particles, struct particle* resampled_particles, size_t length);
 """)
@@ -78,7 +77,7 @@ void resample(struct weighted_particle *weighted_particles, struct particle* res
 # so it is often just the "#include".
 ffibuilder.set_source("_pf_cffi",
                       """
-     #include "floating-point-particle-filter.h"   // the C header of the library
+     #include "importance-sampling-particle-filter.h"   // the C header of the library
 """,
                       include_dirs=['./'],
                       library_dirs=['./build'],                      

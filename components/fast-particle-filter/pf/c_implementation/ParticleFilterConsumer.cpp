@@ -1,11 +1,8 @@
 #include "ParticleFilterConsumer.hpp"
 #include <iostream>
 
-// extern "C" void correct(struct particle_filter_instance *pf_inst, struct measurement *m);
-// extern "C" void create_particle_filter_instance(struct particle_filter_instance **pf_inst);
-
 extern "C" {
-  #include "floating-point-particle-filter.h"
+  #include "importance-sampling-particle-filter.h"
 }
 
 ParticleFilterConsumer::ParticleFilterConsumer() {
@@ -39,14 +36,16 @@ int ParticleFilterConsumer::startConsumerLoop() {
       return -1; // TODO proper error handling
     }
 
-    struct measurement m;
+    struct message m;
     m.measured_distance = 2;
-    m.foreign_particles = particles;
-    m.foreign_particles_length = 1000;
+    m.particles = particles;
+    m.particles_length = 1000;
     
     
     // free(calculate_likelihood(1000, particles, particles, 1000, 1000));
-    correct(this->pf_inst, &m);
+
+    add_message(this->pf_inst, m);
+    correct(this->pf_inst);
 
     // std::cout << "consumed new particle cloud" << std::endl;
   } while(true);
