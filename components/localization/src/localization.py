@@ -19,20 +19,16 @@ from src.data import ActiveMeasurement
 config = configparser.ConfigParser()
 config.read("components/localization/src/config.ini")
 
-SIDE_LENGTH_X = float(config["DEFAULT"]["testing_area_length"])  # 10x10 m^2
-SIDE_LENGTH_Y = float(config["DEFAULT"]["testing_area_width"])  # 10x10 m^2
+SIDE_LENGTH_X = float(config["DEFAULT"]["testing_area_length"])  # size of area in m
+SIDE_LENGTH_Y = float(config["DEFAULT"]["testing_area_width"])  # size of area in m
 
 NUM_PARTICLES = 1_000  # number of particles
 NUM_PART_EXCHANGE = (
     500  # The amount of particles that actually gets transmitted to the other nodes
 )
 
-PERCENTAGE_FOR_GUESS = (
-    0.95  # amount of particles in %, which are included in the estimation radius
-)
-
 # error in distance measurements in m
-MEASUREMENT_STDEV = 2
+MEASUREMENT_STDEV = 0.02
 
 SERVER = "http://192.168.87.78:8081"
 
@@ -201,8 +197,8 @@ class ParticleNode:
             25,
             alpha=0.05,
         )
-        plt.xlim([-200, 200])
-        plt.ylim([-200, 200])
+        plt.xlim([0, 2])
+        plt.ylim([0, 2])
         plt.gca().invert_yaxis()
         # plt.pause(0.5)
         plt.show()
