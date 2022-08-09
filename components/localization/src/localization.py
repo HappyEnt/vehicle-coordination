@@ -67,8 +67,8 @@ class ParticleNode(LocalizationNode):
             "components/localization/src/car_config.ini"
         )  # config for the car (holds id and size of car)
         self.int_id = INT_ID
-        self.car_size_width = int(car_config["CAR"]["width"])
-        self.car_size_length = int(car_config["CAR"]["length"])
+        self.car_size_width = float(car_config["CAR"]["width"])
+        self.car_size_length = float(car_config["CAR"]["length"])
         self.car_radius = (
             math.sqrt(self.car_size_width**2 + self.car_size_length**2)
         ) / 2  # convert a rectangle-shaped car into a single radius
