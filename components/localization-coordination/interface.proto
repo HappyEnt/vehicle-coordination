@@ -6,11 +6,12 @@ service Coordination {
   rpc Tick (TickRequest) returns (TickResponse);
 }
 
+message Vec2 {
+  float x = 1;
+  float y = 2;
+}
+
 message TickRequest {
-  message Vec2 {
-    float x = 1;
-    float y = 2;
-  }
 
   message Participant {
     int32 id = 1;
@@ -27,6 +28,5 @@ message TickRequest {
 }
 
 message TickResponse {
-  float x = 1;
-  float y = 2;
+  optional Vec2 new_velocity = 1;
 }
