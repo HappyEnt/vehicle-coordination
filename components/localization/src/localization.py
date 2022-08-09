@@ -86,7 +86,7 @@ class ParticleNode:
 
         dist_std = 2 * np.std(distances)
         guess_radius = dist_std + np.mean(distances)
-        return (self.int_id, [estimate_x, estimate_y], guess_radius, self.car_radius)
+        return (self.int_id, [estimate_x, estimate_y], self.car_radius, guess_radius)
 
     def get_particles(self):
         return self.particles
@@ -240,7 +240,7 @@ class ParticleNode:
                     # _, _, _, particles = self.get_measurements_from_server(other_id)
                     particles = [(0, 0)]
                     self.handle_measurement(
-                        sum(distances) / len(distances) * 100, particles, None
+                        sum(distances) / len(distances), particles, None
                     )
                     self.send_estimate_to_server()
                     # self.illustrate_nodes_and_particles((100,0))
