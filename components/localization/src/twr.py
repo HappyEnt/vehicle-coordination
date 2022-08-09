@@ -1,4 +1,4 @@
-from logging import debug, warning
+from logging import debug, info, warning
 from time import time
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -44,7 +44,7 @@ def perform_twr(
                     continue
             elif b_sn and msg.tx.addr == active_addr and msg.tx.sn == b_sn:
                 try:
-                    ts = max([ts for ts in msg.rx if ts.addr == endpoint.addr])
+                    ts = max(ts for ts in msg.rx if ts.addr == endpoint.addr)
                     b_msg = Message(
                         type=msg.type,
                         clock_offset_ratio=msg.clock_offset_ratio,
@@ -56,7 +56,7 @@ def perform_twr(
                     continue
             elif msg.tx.addr == endpoint.addr and msg.tx.sn == endpoint.sn:
                 try:
-                    ts = max([ts for ts in msg.rx if ts.addr == active_addr])
+                    ts = max(ts for ts in msg.rx if ts.addr == active_addr)
                     c_msg = Message(
                         type=msg.type,
                         clock_offset_ratio=msg.clock_offset_ratio,
@@ -75,7 +75,7 @@ def perform_twr(
                 return i.ts
         assert False
 
-    measurements = []
+    measurements: List[Union[ActiveMeasurement,PassiveMeasurement]] = []
 
     if not tx_delays:
         tx_delays = {}
@@ -135,13 +135,15 @@ def perform_twr(
 
             # TODO: Try to correct instead of filtering out
             if r_a < 0 or r_b < 0 or d_a < 0 or d_b < 0:
+                info("Discarding measurement")
                 continue
 
             tof = (r_a * r_b - d_a * d_b) / (r_a + r_b + d_a + d_b)
             distance = tof * TIME_UNIT * speed_of_light
             if distance < 0 or distance > 1_000_000:
                 warning(
-                    f"Extremely unlikely distance of {distance}, R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
+                    f"Extremely unlikely distance of {distance}, \
+                        R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
                 )
             debug(
                 f"Distance between {message.tx.addr} and {rx_timing_info.addr}: {distance}"

@@ -3,6 +3,8 @@ from logging import basicConfig, DEBUG, ERROR, INFO, WARNING
 from threading import Thread
 from time import sleep
 
+from serial import Serial
+
 from src.localization import ParticleNode
 from src.ranging import DumpFileRangingNode, SerialRangingNode
 
@@ -49,7 +51,7 @@ def main():
     ranging_nodes = []
     if args.port:
         ranging_nodes.append(
-            SerialRangingNode(0, localization_node.receive_measurements, args.port)
+            SerialRangingNode(0, localization_node.receive_measurements, Serial(args.port, baudrate=115200))
         )
     if args.file:
         ranging_nodes.append(
@@ -65,8 +67,14 @@ def main():
     for thread in ranging_threads:
         thread.start()
 
-    sleep(10)
-    localization_node.illustrate_nodes_and_particles((100,0))
+    # while localization_node.tick():
+    #     sleep(0.1)
+    #         # localization_node.illustrate_nodes_and_particles(real_pos=(111.5,88.5))
+
+
+    sleep(20)
+    localization_node.illustrate_nodes_and_particles(real_pos=(111.5,88.5))
+    # localization_node.illustrate_nodes_and_particles((100,0))
 
 
 if __name__ == "__main__":

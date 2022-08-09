@@ -1,10 +1,12 @@
+from base64 import encode
 from logging import warning
-from json import JSONDecodeError, JSONDecoder
+from json import JSONDecodeError, JSONDecoder, JSONEncoder
 from typing import List, NamedTuple, Optional, Dict
 
 
 RX = 1
 TX = 2
+
 
 class ActiveMeasurement(NamedTuple):
     a: int
@@ -65,7 +67,7 @@ def parse_json_message(json_str: str) -> Optional[Message]:
         if json_dict:
             clock_offset_ratio = None
             if "clock_ratio_offset" in json_dict:
-                clock_offset_ratio=float(json_dict["clock_ratio_offset"])
+                clock_offset_ratio = float(json_dict["clock_ratio_offset"])
             return Message(
                 type=RX if json_dict["type"] == "rx" else TX,
                 clock_offset_ratio=clock_offset_ratio,
@@ -78,3 +80,17 @@ def parse_json_message(json_str: str) -> Optional[Message]:
     except (KeyError, JSONDecodeError):
         warning("Decode Error")
         return None
+
+
+def jsonify_message(message: Message) -> str:
+    def jsonify_timing_info(t):
+        return {"addr": hex(t.addr), "sn": t.sn, "ts": t.ts}
+
+    message_dict = {
+        "type": "rx" if message.type == RX else "tx",
+        "tx": jsonify_timing_info(message.tx),
+        "rx": list(map(jsonify_timing_info, message.rx)),
+    }
+    if message.clock_offset_ratio:
+        message_dict["clock_offset_ratio"] = message.clock_offset_ratio
+    return JSONEncoder().encode(message_dict)

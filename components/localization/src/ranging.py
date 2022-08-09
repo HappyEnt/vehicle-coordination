@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from logging import info
+from logging import debug, info
 from time import sleep
-from typing import Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
 
 from serial import Serial
 
@@ -21,12 +21,14 @@ class RangingNode(ABC):
     def __init__(
         self,
         ranging_id,
-        measurement_callback: Callable[
-            [List[Union[ActiveMeasurement, PassiveMeasurement]]], None
+        measurement_cb: Callable[
+            [List[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ],
     ):
-        self.addr = ranging_id
-        self.measurement_callback = measurement_callback
+        self.addr: int = ranging_id
+        self.measurement_cb: Callable[
+            [List[Union[ActiveMeasurement, PassiveMeasurement]]], Any
+        ] = measurement_cb
         self.msg_storage: List[Message] = []
         self.active_measurements: List[ActiveMeasurement] = []
         self.tx_delays: Dict[int, float] = {}
@@ -46,11 +48,12 @@ class RangingNode(ABC):
 
         # TODO: Make more efficient
         self.msg_storage.insert(0, message)
+        debug(f"Measurement by {self.addr}: {measurements}")
         self.active_measurements.extend(
-            list(filter(lambda x: isinstance(x, ActiveMeasurement), measurements))
+            list(filter(lambda x: isinstance(x, ActiveMeasurement), measurements))  # type: ignore
         )
         # info(f"Performed {len(self.active_measurements)} measurements")
-        self.measurement_callback(measurements)
+        self.measurement_cb(measurements)
 
     def calibrate(self):
         if not self.calibrated:
@@ -97,8 +100,8 @@ class SerialRangingNode(RangingNode):
                 if message:
                     self.handle_message(message)
 
-            if len(self.active_measurements) >= 500:
-                self.calibrate()
+            # if len(self.active_measurements) >= 500:
+            #     self.calibrate()
 
 
 class DumpFileRangingNode(RangingNode):
@@ -117,13 +120,13 @@ class DumpFileRangingNode(RangingNode):
 
     def run(self):
         with open(self.file_name, "r", encoding="UTF-8") as dump_file:
-            for line in dump_file.readlines()[:600]:
+            for line in dump_file.readlines():
                 decoded_message = parse_json_message(line)
                 if decoded_message:
                     self.handle_message(decoded_message)
-                    sleep(0.01)
-                if len(self.active_measurements) >= 500:
-                    self.calibrate()
+                    sleep(0.001)
+                # if len(self.active_measurements) >= 500:
+                #     self.calibrate()
 
     def send_data(self, data):
         print(data)
