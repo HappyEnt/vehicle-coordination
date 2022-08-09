@@ -223,9 +223,9 @@ class ParticleNode(LocalizationNode):
         plt.scatter([pos[0]], [pos[1]], 100, marker="x", color="g")
         # plt.scatter([estimate_x], [estimate_y], 100, marker="x", color="b")
         plt.scatter(0, 0, 100, marker="x", color="r")
-        plt.scatter(223, 0, 100, marker="x", color="r")
-        plt.scatter(0, 177, 100, marker="x", color="r")
-        plt.scatter(223, 177, 100, marker="x", color="r")
+        plt.scatter(SIDE_LENGTH_X, 0, 100, marker="x", color="r")
+        plt.scatter(SIDE_LENGTH_X, SIDE_LENGTH_Y, 100, marker="x", color="r")
+        plt.scatter(0, SIDE_LENGTH_Y, 100, marker="x", color="r")
         # we then scatter its particles
         particles = self.get_particles()
         plt.scatter(
@@ -234,8 +234,8 @@ class ParticleNode(LocalizationNode):
             25,
             alpha=0.05,
         )
-        plt.xlim([-20, SIDE_LENGTH_X + 20])
-        plt.ylim([-20, SIDE_LENGTH_Y + 20])
+        plt.xlim([-0.2, SIDE_LENGTH_X + 0.2])
+        plt.ylim([-0.2, SIDE_LENGTH_Y + 0.2])
         plt.gca().invert_yaxis()
         # plt.pause(0.5)
         plt.show()
@@ -273,7 +273,7 @@ class ParticleNode(LocalizationNode):
                     warning(f"Unkown id: {other_id}")
                     assert False
                 self.handle_measurement(
-                    sum(distances) / len(distances) * 100, particles, None
+                    sum(distances) / len(distances), particles, None
                 )
             return True
         else:
