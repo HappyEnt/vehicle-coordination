@@ -108,7 +108,7 @@ class ParticleNode:
         Handle incoming measurements by updating own particles.
         """
         # save position of other node using their uuid as key
-        # self.other_nodes_pos[estimate_from_other[0]] = (estimate_from_other[1],estimate_from_other[2])
+        self.other_nodes_pos[estimate_from_other[0]] = estimate_from_other
 
         info("Handling measurement")
 
@@ -177,12 +177,27 @@ class ParticleNode:
         return other_marker_id, float(dista), ast.literal_eval(other_pos), particles
 
     def send_particles_to_server(self):
+        """
+        Send particles to the webserver.
+        """
         dict1 = {}
         dict1["marker_id"] = self.int_id
         particles = self.get_particles_for_exchange()
         dict1["particles"] = list(particles)
         json1 = json.dumps(dict1)
         postr = requests.post(SERVER + "/setparticles", json=json1).text
+
+    def send_estimate_to_server(self, estimate=None):
+        """
+        Send estimate to the webserver.
+        """
+        dict1 = {}
+        if not estimate:
+            estimate = self.get_estimate()
+        dict1["marker_id"] = self.int_id
+        dict1["estimate"] = estimate
+        json1 = json.dumps(dict1)
+        postr = requests.post(SERVER + "/setestimate", json=json1).text
 
     def illustrate_nodes_and_particles(self, real_pos, estimate=(-100, -100)):
         plt.clf()
@@ -227,5 +242,6 @@ class ParticleNode:
                     self.handle_measurement(
                         sum(distances) / len(distances) * 100, particles, None
                     )
+                    self.send_estimate_to_server()
                     # self.illustrate_nodes_and_particles((100,0))
             time.sleep(0.1)
