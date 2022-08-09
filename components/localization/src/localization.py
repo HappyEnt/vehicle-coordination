@@ -51,7 +51,8 @@ class LocalizationNode(ABC):
     def run(self):
         pass
 
-    def send_locations_to_coordination(self, locations: Dict[int, Tuple[float,float]]):
+    def send_locations_to_coordination(self, locations: Dict[int, Tuple[int, List[float, float], float, float]]):
+        
         pass
 
 # Particle nodes try to estimate their position using particles
