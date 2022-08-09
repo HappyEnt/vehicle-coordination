@@ -1,11 +1,12 @@
+from abc import ABC, abstractmethod
 import ast
 import configparser
 import json
-from logging import debug, info
+from logging import debug, info, warning
 import math
 import random
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, NoReturn, Tuple, Union
 import uuid
 
 import numpy as np
@@ -14,7 +15,7 @@ from scipy.stats import norm
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
 
-from src.data import ActiveMeasurement
+from src.data import ActiveMeasurement, PassiveMeasurement
 
 config = configparser.ConfigParser()
 config.read("components/localization/src/config.ini")
@@ -37,8 +38,24 @@ VISUALISATION = False
 
 INT_ID = 4
 
+class LocalizationNode(ABC):
+    """
+    Base class for localization.
+    """
+
+    @abstractmethod
+    def receive_measurements(self, ds: List[Union[ActiveMeasurement,PassiveMeasurement]]):
+        pass
+
+    @abstractmethod
+    def run(self):
+        pass
+
+    def send_locations_to_coordination(self, locations: Dict[int, Tuple[float,float]]):
+        pass
+
 # Particle nodes try to estimate their position using particles
-class ParticleNode:
+class ParticleNode(LocalizationNode):
     """
     Class for dynamic nodes.
     """
@@ -98,9 +115,9 @@ class ParticleNode:
         # return random particles from particle list for exchange
         return random.choices(population=self.particles, k=NUM_PART_EXCHANGE)
 
-    def receive_measurements(self, d):
+    def receive_measurements(self, ds):
         self.measurement_queue.extend(
-            list(filter(lambda x: isinstance(x, ActiveMeasurement), d))
+            list(filter(lambda x: isinstance(x, ActiveMeasurement), ds))  # type: ignore
         )
 
     def handle_measurement(self, d, recv_particles, estimate_from_other) -> None:
@@ -122,7 +139,7 @@ class ParticleNode:
         # we update our particles and resample them directly
         # first initialize the weights -> we assume an equal weight for each particle
         # this means also that if particles had a bigger weight, they are just multiple times in the particles list
-        start = time.time()
+        # start = time.time()
         weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
         for (i, p) in enumerate(self.particles):
             weight_factor = 0.0
@@ -152,8 +169,8 @@ class ParticleNode:
         self.particles = random.choices(
             population=self.particles, weights=normalized_weights, k=len(self.particles)
         )
-        end = time.time() - start
-        info("Time elapsed: " + str(end))
+        # end = time.time() - start
+        # info("Time elapsed: " + str(end))
 
     def get_measurements_from_server(self, other_marker_id):
         positions = ast.literal_eval(requests.get(SERVER + "/positions").text)
@@ -202,8 +219,13 @@ class ParticleNode:
     def illustrate_nodes_and_particles(self, real_pos, estimate=(-100, -100)):
         plt.clf()
         pos = real_pos
+        # _, estimate_x, estimate_y, _, _ = self.get_estimate()
         plt.scatter([pos[0]], [pos[1]], 100, marker="x", color="g")
-        plt.scatter([estimate[0]], [estimate[1]], 100, marker="x", color="r")
+        # plt.scatter([estimate_x], [estimate_y], 100, marker="x", color="b")
+        plt.scatter(0, 0, 100, marker="x", color="r")
+        plt.scatter(223, 0, 100, marker="x", color="r")
+        plt.scatter(0, 177, 100, marker="x", color="r")
+        plt.scatter(223, 177, 100, marker="x", color="r")
         # we then scatter its particles
         particles = self.get_particles()
         plt.scatter(
@@ -212,36 +234,53 @@ class ParticleNode:
             25,
             alpha=0.05,
         )
-        plt.xlim([0, 2])
-        plt.ylim([0, 2])
+        plt.xlim([-20, SIDE_LENGTH_X + 20])
+        plt.ylim([-20, SIDE_LENGTH_Y + 20])
         plt.gca().invert_yaxis()
         # plt.pause(0.5)
         plt.show()
 
-    def run(self):
-        while True:
-            if self.measurement_queue:
-                measurements = self.measurement_queue[:]
-                self.measurement_queue = []
-                measurement_dict = {}
-                for m in measurements:
-                    # TODO: Think about ID structure
-                    if m.a >> 4 == self.int_id:
-                        if m.b in measurement_dict:
-                            measurement_dict[m.b].append(m.distance)
-                        else:
-                            measurement_dict[m.b] = [m.distance]
-                    if m.b >> 4 == self.int_id:
-                        if m.a in measurement_dict:
-                            measurement_dict[m.a].append(m.distance)
-                        else:
-                            measurement_dict[m.a] = [m.distance]
-                for (other_id, distances) in measurement_dict.items():
-                    # _, _, _, particles = self.get_measurements_from_server(other_id)
+    def tick(self) -> bool:
+        if self.measurement_queue:
+            measurements = self.measurement_queue[:]
+            self.measurement_queue = []
+            measurement_dict: Dict[int, List[float]] = {}
+            for m in measurements:
+                # TODO: Think about ID structure
+                if m.a >> 8 == self.int_id:
+                    if m.b in measurement_dict:
+                        measurement_dict[m.b].append(m.distance)
+                    else:
+                        measurement_dict[m.b] = [m.distance]
+                if m.b >> 8 == self.int_id:
+                    if m.a in measurement_dict:
+                        measurement_dict[m.a].append(m.distance)
+                    else:
+                        measurement_dict[m.a] = [m.distance]
+            for (other_id, distances) in measurement_dict.items():
+                # _, _, _, particles = self.get_measurements_from_server(other_id)
+
+                # TODO: Remove hardcode
+                if other_id == 0x000:
                     particles = [(0, 0)]
-                    self.handle_measurement(
-                        sum(distances) / len(distances), particles, None
-                    )
-                    self.send_estimate_to_server()
-                    # self.illustrate_nodes_and_particles((100,0))
+                elif other_id == 0x100:
+                    particles = [(223, 0)]
+                elif other_id == 0x200:
+                    particles = [(0, 177)]
+                elif other_id == 0x300:
+                    particles = [(233, 177)]
+                else:
+                    warning(f"Unkown id: {other_id}")
+                    assert False
+                self.handle_measurement(
+                    sum(distances) / len(distances) * 100, particles, None
+                )
+            return True
+        else:
+            return False
+
+    def run(self) -> NoReturn:
+        while True:
+            self.tick()
+            # self.illustrate_nodes_and_particles((100,0))
             time.sleep(0.1)
