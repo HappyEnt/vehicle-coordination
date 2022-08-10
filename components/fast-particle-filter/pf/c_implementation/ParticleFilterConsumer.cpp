@@ -1,8 +1,9 @@
 #include "ParticleFilterConsumer.hpp"
+#include "util.h"
 #include <iostream>
 
 extern "C" {
-  #include "importance-sampling-particle-filter.h"
+  #include "particle-belief-propagation.h"
 }
 
 ParticleFilterConsumer::ParticleFilterConsumer() {
@@ -45,7 +46,7 @@ int ParticleFilterConsumer::startConsumerLoop() {
     // free(calculate_likelihood(1000, particles, particles, 1000, 1000));
 
     add_message(this->pf_inst, m);
-    correct(this->pf_inst);
+    iterate(this->pf_inst);
 
     // std::cout << "consumed new particle cloud" << std::endl;
   } while(true);

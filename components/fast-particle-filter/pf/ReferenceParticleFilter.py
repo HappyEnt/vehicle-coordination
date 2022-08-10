@@ -7,6 +7,7 @@ from scipy.spatial import distance
 class ReferenceParticleFilter(AbstractParticleFilter):
     particles = []
     MEASUREMENT_STD = 0.1  # Parameter of the model
+    messages = []
 
     def get_particles(self):
         return self.particles
@@ -17,30 +18,30 @@ class ReferenceParticleFilter(AbstractParticleFilter):
     def predict(self, action):
         raise NotImplementedError
 
+    def add_message(self, message):
+        self.messages.append(message)
 
-    def correct(self, measurement):
-        if measurement.get_type() == "TWR":
-            # self._add_particle_noise()
-
-            num_particles = len(self.particles)
-
-            weights = [1.0 / num_particles] * num_particles
+    def iterate(self):
+        num_particles = len(self.particles)        
+        weights = [1.0 / num_particles] * num_particles        
+        for m in self.messages:
 
             def estimate_prob(p1, p2):
                 expected_d = distance.euclidean(p1, p2)
                 
-                norm_val = (measurement.get_measured_distance()-expected_d) / self.MEASUREMENT_STD
+                norm_val = (m.get_measured_distance()-expected_d) / self.MEASUREMENT_STD
                 prob = norm.pdf(norm_val) / self.MEASUREMENT_STD # use correct way to calculate prob in order to aid comparison between implementations
 
                 return prob            
 
             for (i, p) in enumerate(self.particles):
                 weight_factor = 0.0
-                for (k, rp) in enumerate(measurement.get_sender_particles()):
+                for (k, rp) in enumerate(m.get_sender_particles()):
                     weight_factor += estimate_prob(p, rp)
-                    weights[i] *= weight_factor
+                weights[i] *= weight_factor / len(m.get_sender_particles())
 
-            self.resample(weights)
+        self.resample(weights)
+        self.messages.clear()
 
     def resample(self, weights):
         sum_weights = sum(weights)

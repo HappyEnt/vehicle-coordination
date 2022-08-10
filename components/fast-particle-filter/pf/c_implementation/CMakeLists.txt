@@ -31,19 +31,19 @@ if (OPENMP_FOUND)
 
 
 
-add_library(ParticleFilter SHARED importance-sampling-particle-filter.h importance-sampling-particle-filter.c)
-target_link_libraries(ParticleFilter m OpenMP::OpenMP_CXX)
+add_library(BeliefPropagation SHARED particle-belief-propagation.h particle-belief-propagation.c util.h util.c)
+target_link_libraries(BeliefPropagation m OpenMP::OpenMP_CXX)
 
 # add the executable
 add_executable(test-particle-filter test-particle-filter.c)
-target_link_libraries(test-particle-filter ParticleFilter)
+target_link_libraries(test-particle-filter BeliefPropagation)
 
 # add the executable
 add_executable(particle-filter-consumer ParticleFilterConsumer.hpp ParticleFilterConsumer.cpp)
-target_link_libraries(particle-filter-consumer ParticleFilter Boost::boost)
+target_link_libraries(particle-filter-consumer BeliefPropagation Boost::boost)
 
 
 if(UNIX AND NOT APPLE)
   target_link_libraries(particle-filter-consumer rt pthread)
-  target_link_libraries(ParticleFilter rt pthread)  
+  target_link_libraries(BeliefPropagation rt pthread)  
 endif()  

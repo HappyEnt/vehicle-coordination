@@ -126,16 +126,16 @@ class ParticleNode(Node):
             # self.particle_filter_instance.correct(event.get_measurement())
             raise NotImplementedError
         elif isinstance(event, Iterate):
-            self.particle_filter_instance.correct()
+            self.particle_filter_instance.iterate()
 
 class Simulation():
     nodes = []
     events = []
     
-    def __init__(self):
+    def __init__(self, dimensions):
         "docstring"
         self.ind = 0
-        
+        self.dimensions = dimensions
         self.fig, self.ax = plt.subplots()
         
         plt.subplots_adjust(bottom=0.2)        
@@ -158,13 +158,17 @@ class Simulation():
 
     def next(self, event):
         self.ax.cla()
+
+        self.ax.set_xlim([-self.dimensions, self.dimensions])
+        self.ax.set_ylim([-self.dimensions, self.dimensions])
+        
         
         while not isinstance(self.events[self.ind], Iterate):
-            print("execute {}", self.ind)
+            print("execute event {}", self.ind)
             self.events[self.ind].get_recipient().handle_event(self.events[self.ind])
             self.ind += 1
             
-        print("execute {}", self.ind)            
+        print("execute event {}", self.ind)            
         self.events[self.ind].get_recipient().handle_event(self.events[self.ind])
         self.draw_plot()
 
@@ -177,6 +181,10 @@ class Simulation():
 
     def illustrate(self):
         # plt.axis([0, 10, 0, 1])
+
+        self.draw_plot()
+        plt.draw()
+        
         plt.show()        
 
     def draw_plot(self):
@@ -186,7 +194,7 @@ class Simulation():
             self.ax.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[j])
 
             particles = node.get_particles()
-            self.ax.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.05, edgecolor='none')
+            self.ax.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.25, edgecolor='none')
 
             est_pos = node.get_estimated_pos()
             self.ax.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
@@ -200,11 +208,11 @@ class Simulation():
             print("Estimation error node {} of {}".format(j, round(distance.euclidean(pos, est_pos), 2)))
 
             
+ANCHOR_SPACING = 20.0
+SIM_SPACE_LENGTH = 40.0
 
-ANCHOR_SPACING = 10.0
-SIM_SPACE_LENGTH = 20.0
+NUM_PARTICLES = 250
 
-NUM_PARTICLES = 1000
 
 
 # TODO The right abstraction still has to be found. We should design general enough abstraction
@@ -213,15 +221,17 @@ NUM_PARTICLES = 1000
 # parametric distributions like a gaussian. 
 anchors = [
     ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
-    ParticleNode((0.0, ANCHOR_SPACING), ReferenceParticleFilter()),
-    ParticleNode((ANCHOR_SPACING, ANCHOR_SPACING), ReferenceParticleFilter())
+    ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
+    ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
 ]
 
 cache_distribution = False
 
 tags = [
-    ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-    ParticleNode((ANCHOR_SPACING*0.25, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+    ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+    # ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+    # ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
+    # ParticleNode((0, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),    
 ]
 
 # tags = [
@@ -234,38 +244,60 @@ for tag in tags:
 for anchor in anchors:
     particle_node_set_dirac_delta_dist(anchor)
             
-events = [
-    # TDOA(anchors[0], anchors[1], tags[0]),
-    # TDOA(anchors[0], anchors[2], tags[0]),
-    # TDOA(anchors[1], anchors[2], tags[0]),
-    # TDOA(anchors[1], anchors[2], tags[1]),
-    # TDOA(anchors[1], anchors[2], tags[1]),
+# events = [
+#     TWR(sender = anchors[0], recipient = tags[0]),    
+#     # TWR(sender = anchors[1], recipient = tags[0]),
+#     TWR(sender = anchors[2], recipient = tags[0]),    
+
+
+#     TWR(sender = anchors[0], recipient = tags[1]),
+#     TWR(sender = anchors[1], recipient = tags[1]),    
+#     # TWR(sender = anchors[2], recipient = tags[1]),
+
+#     TWR(sender = tags[0], recipient = tags[1]),
+#     TWR(sender = tags[1], recipient = tags[0]),
+#     Iterate(recipient = tags[1]),
+#     Iterate(recipient = tags[0]),
+    
+#     # Iterate(recipient = tags[1]),
+#     # Iterate(recipient = tags[0]),
+# ]
+
+all_anchors_events = [
+    TWR(sender = anchors[0], recipient = tags[0]),
+    Iterate(recipient = tags[0]),
+    
+    TWR(sender = anchors[0], recipient = tags[0]),
+    TWR(sender = anchors[1], recipient = tags[0]),
+    Iterate(recipient = tags[0]),
 
     TWR(sender = anchors[0], recipient = tags[0]),
     TWR(sender = anchors[1], recipient = tags[0]),
-    Iterate(recipient = tags[0]),    
-
-    TWR(sender = anchors[1], recipient = tags[1]),
-    TWR(sender = anchors[2], recipient = tags[1]),
-    Iterate(recipient = tags[1]),
-
-    TWR(sender = tags[0], recipient = tags[1]),
-    TWR(sender = tags[1], recipient = tags[0]),    
-    Iterate(recipient = tags[0]),    
-    Iterate(recipient = tags[1]),
-
-    TWR(sender = anchors[0], recipient = tags[1]),
     TWR(sender = anchors[2], recipient = tags[0]),
     Iterate(recipient = tags[0]),    
-    Iterate(recipient = tags[1]),    
 ]
 
-sim = Simulation()
+hack_events = [
+    TWR(sender = anchors[0], recipient = tags[0]),
+    Iterate(recipient = tags[0]),
+
+    TWR(sender = anchors[0], recipient = tags[0]),
+    TWR(sender = anchors[1], recipient = tags[0]),
+    Iterate(recipient = tags[0]),
+    
+    TWR(sender = anchors[0], recipient = tags[0]),
+    TWR(sender = anchors[1], recipient = tags[0]),
+    TWR(sender = anchors[2], recipient = tags[0]),    
+    Iterate(recipient = tags[0]),        
+]
+
+sim = Simulation(SIM_SPACE_LENGTH)
 
 sim.add_nodes(tags)
 sim.add_nodes(anchors)
 
-sim.add_events(events)
+sim.add_events(all_anchors_events)
+# sim.add_events(all_anchors_events)
 
 sim.illustrate()
 

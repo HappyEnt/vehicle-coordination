@@ -24,5 +24,5 @@ class AbstractParticleFilter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def correct(self):
+    def iterate(self):
         raise NotImplementedError
