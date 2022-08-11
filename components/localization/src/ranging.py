@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from logging import debug, info
+from logging import debug, info, warning
 from time import sleep
 from typing import Any, Callable, Dict, List, Union
 
@@ -35,15 +35,24 @@ class RangingNode(ABC):
         self.rx_delays: Dict[int, float] = {}
         self.calibrated: bool = False
         self.calibrated_at: int = 0
+        self.real_positions = None
+
+    def set_calibration_ground_truth(self, positions):
+        self.real_positions = positions
 
     def handle_message(self, message: Message):
         """Process a RX or TX Message."""
 
-        measurements = perform_twr(
-            message,
-            self.msg_storage,
-            rx_delays=self.rx_delays,
-            tx_delays=self.tx_delays,
+        measurements = list(
+            filter(
+                lambda m: m.distance >= 0 and m.distance < 1_000_000,
+                perform_twr(
+                    message,
+                    self.msg_storage,
+                    rx_delays=self.rx_delays,
+                    tx_delays=self.tx_delays,
+                ),
+            )
         )
 
         # TODO: Make more efficient
@@ -56,9 +65,9 @@ class RangingNode(ABC):
         self.measurement_cb(measurements)
 
     def calibrate(self):
-        if not self.calibrated:
-            calibration = calibrate(self.msg_storage)
-            info(f"Calibration {calibration}")
+        if not self.calibrated and self.real_positions:
+            calibration = calibrate(self.msg_storage, self.real_positions)
+            warning(f"Calibration {calibration}")
             if calibration:
                 self.tx_delays, self.rx_delays = calibration
                 self.calibrated = True
@@ -125,8 +134,8 @@ class DumpFileRangingNode(RangingNode):
                 if decoded_message:
                     self.handle_message(decoded_message)
                     sleep(0.001)
-                # if len(self.active_measurements) >= 500:
-                #     self.calibrate()
+                if len(self.msg_storage) >= 100:
+                    self.calibrate()
 
     def send_data(self, data):
         print(data)

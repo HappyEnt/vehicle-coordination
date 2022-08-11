@@ -51,7 +51,7 @@ def main():
     elif args.log == "DEBUG":
         basicConfig(level=DEBUG)
 
-    localization_node = GridParticleNode()
+    localization_node = ClassicParticleNode()
     ranging_nodes = []
     if args.port:
         ranging_nodes.append(

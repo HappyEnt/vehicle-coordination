@@ -136,14 +136,13 @@ def perform_twr(
             # TODO: Try to correct instead of filtering out
             if r_a < 0 or r_b < 0 or d_a < 0 or d_b < 0:
                 info("Discarding measurement")
-                continue
+                # continue
 
             tof = (r_a * r_b - d_a * d_b) / (r_a + r_b + d_a + d_b)
             distance = tof * TIME_UNIT * speed_of_light
             if distance < 0 or distance > 1_000_000:
                 warning(
-                    f"Extremely unlikely distance of {distance}, \
-                        R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
+                    f"Extremely unlikely distance of {distance}, R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
                 )
             debug(
                 f"Distance between {message.tx.addr} and {rx_timing_info.addr}: {distance}"
