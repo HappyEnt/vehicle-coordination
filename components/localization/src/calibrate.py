@@ -18,31 +18,31 @@ CAMERA_SERVER_LENGTH_UNIT = 0.01
 # AVG_DELAY = 16450
 # DELAY_SPAN = 10.0 * 1e-9 * TIME_UNIT
 # TODO: find optimal range
-AVG_DELAY = 1e-9 * TIME_UNIT  # 1 ns
-DELAY_SPAN = AVG_DELAY
+AVG_DELAY = 0 # 1e-9 * TIME_UNIT  # 1 ns
+DELAY_SPAN = 1e-8 / TIME_UNIT
 
 MIN_CALIBRATION_DIST = 0.2
 
 
-def get_real_positions():
-    return {"0": [0,0], "64": [100,0]}
-    return {"1725": [0, 0], "64071": [223, 0], "50438": [0, 177]}
-    return {"59582": [0, 0], "50438": [0, 150]}  # "dump_file_150.txt"
-    # r_cars = get("http://192.168.87.78:8081/positions")
-    # r_anchors = get("http://192.168.87.78:8081/anchors")
-    # if r_cars.status_code == 200 and r_anchors.status_code == 200:
-    # car_positions_raw = r_cars.content.decode("utf-8")
-    # anchor_positions_raw = r_anchors.content.decode("utf-8")
-    car_positions_raw = (
-        '{"6": [9.77394644, 90.9556397775], "4": [203.034752275, 9.541160232500001]}'
-    )
-    anchor_positions_raw = (
-        '{"0": [0, 0], "1": [215.0, 0], "2": [215.0, 165.5], "3": [0, 165.5]}'
-    )
-    # return ({'6': [9.77394644, 90.9556397775], '4': [203.034752275, 9.541160232500001]}, {'0': [0, 0], '1': [215.0, 0], '2': [215.0, 165.5], '3': [0, 165.5]})
-    cars_json = json.JSONDecoder().decode(car_positions_raw)
-    anchors_json = json.JSONDecoder().decode(anchor_positions_raw)
-    return {**cars_json, **anchors_json}
+# def get_real_positions():
+#     return {"0": [0,0], "64": [100,0]}
+#     return {"1725": [0, 0], "64071": [223, 0], "50438": [0, 177]}
+#     return {"59582": [0, 0], "50438": [0, 150]}  # "dump_file_150.txt"
+#     # r_cars = get("http://192.168.87.78:8081/positions")
+#     # r_anchors = get("http://192.168.87.78:8081/anchors")
+#     # if r_cars.status_code == 200 and r_anchors.status_code == 200:
+#     # car_positions_raw = r_cars.content.decode("utf-8")
+#     # anchor_positions_raw = r_anchors.content.decode("utf-8")
+#     car_positions_raw = (
+#         '{"6": [9.77394644, 90.9556397775], "4": [203.034752275, 9.541160232500001]}'
+#     )
+#     anchor_positions_raw = (
+#         '{"0": [0, 0], "1": [215.0, 0], "2": [215.0, 165.5], "3": [0, 165.5]}'
+#     )
+#     # return ({'6': [9.77394644, 90.9556397775], '4': [203.034752275, 9.541160232500001]}, {'0': [0, 0], '1': [215.0, 0], '2': [215.0, 165.5], '3': [0, 165.5]})
+#     cars_json = json.JSONDecoder().decode(car_positions_raw)
+#     anchors_json = json.JSONDecoder().decode(anchor_positions_raw)
+#     return {**cars_json, **anchors_json}
 
 
 # else:
@@ -60,7 +60,6 @@ def build_tof_matrix(positions) -> Dict[int, Dict[int, float]]:
                         (positions[addr1][0] - positions[addr2][0]) ** 2
                         + (positions[addr1][1] - positions[addr2][1]) ** 2
                     )
-                    * CAMERA_SERVER_LENGTH_UNIT
                 )
                 tof = distance / speed_of_light
                 tof_dtu = tof / TIME_UNIT
@@ -119,14 +118,15 @@ def build_tof_matrix_measured(
     return matrix
 
 
-def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
+def calibrate(messages, pos) -> Optional[Tuple[Dict, Dict]]:
     def convert_to_delays(res) -> Tuple[Dict, Dict]:
-        assert len(participants) == len(res)
+        assert len(participants) * 2 == len(res)
         tx_times = {}
         rx_times = {}
         for i in range(len(participants)):
-            tx_times[participants[i]] = res[i] * 1.12
-            rx_times[participants[i]] = res[i] * 0.88
+            tx_times[participants[i]] = res[i]
+        for i in range(len(participants)):
+            rx_times[participants[i]] = res[i+len(participants)]
         return tx_times, rx_times
 
     def accuracy(res):
@@ -144,7 +144,7 @@ def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
 
     participants: List[int] = []
     # Build EDMs for the real (measured by the camera system) and measured (by UWB ranging) distances
-    pos = get_real_positions()
+    # pos = get_real_positions()
     if not pos:
         # TODO: Use proper logging
         warning("Could not get distance information from camera server")
@@ -161,12 +161,13 @@ def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
     # Find the optimal delays that minize the difference between the real and measured positions
     res = scipy.optimize.minimize(
         accuracy,
-        [AVG_DELAY] * len(participants),
-        bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * len(participants),
+        [AVG_DELAY] * (len(participants) * 2),
+        bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * (len(participants) * 2),
         method="Powell",
+        # options= {
+        #     "ftol" : 0.000000000001 / TIME_UNIT,
+        #     "xtol" : 0.000000000001 / TIME_UNIT
+
+        # }
     )
     return convert_to_delays(res.x)
-
-
-if __name__ == "__main__":
-    print(build_tof_matrix(get_real_positions()))
