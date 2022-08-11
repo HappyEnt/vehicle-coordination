@@ -5,9 +5,13 @@ from time import sleep
 
 from serial import Serial
 
-from src.localization import GridParticleNode
-from src.ranging import DumpFileRangingNode, SerialRangingNode
+from localization import GridParticleNode
+from ranging import DumpFileRangingNode, SerialRangingNode
 
+import sys
+import os
+dirname = os.path.dirname(__file__)
+sys.path.insert(0, dirname + "../src/")
 
 def main():
     parser = ArgumentParser()
