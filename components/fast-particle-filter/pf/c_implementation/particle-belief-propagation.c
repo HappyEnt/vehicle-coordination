@@ -86,12 +86,12 @@ void low_variance_resampling(struct weighted_particle *weighted_particles, struc
 
 
 double message_prob(struct particle_filter_instance *pf, struct particle sample, struct message m) {
-  double weight_factor = 0.0;        
-  
+  double weight_factor = 0.0;
+
   size_t samples_other = m.particles_length;
   double measurement = m.measured_distance;
   struct particle *particles_other = m.particles;
-  
+
   for (size_t j = 0; j < samples_other; ++j) {        
     double likelihood = value_from_normal_distribution(
                                                        pf->uwb_error_likelihood,
@@ -107,18 +107,20 @@ double message_prob(struct particle_filter_instance *pf, struct particle sample,
     assert(likelihood == likelihood);
 
     weight_factor += likelihood;
-  }
 
-  return weight_factor / samples_other;
+    //add each threads partial sum to the total sum
+  }
+  return weight_factor / m.particles_length;      
 }
 
 double message_stack_prob(struct particle_filter_instance *pf, struct particle sample) {
   struct message_stack *current_message = pf->mstack;
   double weight_product = 1.0;
-  
+
+ 
   while(current_message != NULL) {
     weight_product *= message_prob(pf, sample, current_message->item);
-
+    
     current_message = current_message->next;
   }
 
@@ -162,7 +164,7 @@ void correct(struct particle_filter_instance *pf, struct weighted_particle *weig
   }
 }
 
-double calculate_max_empirical_variance(struct particle *particles, size_t components) {
+double max_empirical_variance(struct particle *particles, size_t components) {
   // todo has to be calculated from message
   double variance_x = 0, variance_y = 0;
   struct particle mean;
@@ -191,7 +193,31 @@ double calculate_max_empirical_variance(struct particle *particles, size_t compo
   return variance;
 }
 
-double calculate_opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
+double max_empirical_weighted_variance(struct weighted_particle *particles, size_t components) {
+  // todo has to be calculated from message
+  double variance_x = 0, variance_y = 0;
+  struct particle mean;
+
+  mean.x_pos = 0;
+  mean.y_pos = 0;  
+  
+  for(size_t i = 0; i < components; i++) {
+    mean.x_pos += particles[i].weight * particles[i].particle.x_pos;
+    mean.y_pos += particles[i].weight * particles[i].particle.y_pos;    
+  }
+
+  for(size_t i = 0; i < components; i++) {
+    variance_x += particles[i].weight * (particles[i].particle.x_pos - mean.x_pos)*(particles[i].particle.x_pos - mean.x_pos);
+    variance_y += particles[i].weight * (particles[i].particle.y_pos - mean.y_pos)*(particles[i].particle.y_pos - mean.y_pos);    
+  }
+
+  double variance = variance_x > variance_y ? variance_x : variance_y;
+
+  return variance;
+}
+
+
+double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
   return pow(components, - 1.0 / (dimensions + 4)) * pow((4.0/(dimensions + 2)), 1.0 / (dimensions + 4)) * 0.5;
 }
 
@@ -205,25 +231,30 @@ void regularized_reject_correct(struct particle_filter_instance *pf) {
   double supremum = value_from_normal_distribution(pf->uwb_error_likelihood, 0) * message_stack_len(pf->mstack);
   log_info("supremum %f", supremum);
 
-  double variance = calculate_max_empirical_variance(old_particles, components);
-  double h_opt = calculate_opt_unit_gaussian_bandwidth(components, DIM);
+  double variance = max_empirical_variance(old_particles, components);
+  double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
+#pragma omp parallel shared(new_particles)
+  {
+#pragma omp for
+    {
+      for(size_t c = 0; c < components; c++) {
+        while(true) {
+          size_t I = (((double) rand())/(RAND_MAX)) * (components);
+          double U = (((double) rand())/(RAND_MAX));
+          struct particle sample;
+          sample_particles_from_unit_gaussian(&sample, 1);
+      
+          struct particle next_sample;
+          next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
+          next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
 
-  for(size_t c = 0; c < components; c++) {
-    while(true) {
-      size_t I = (((double) rand())/(RAND_MAX)) * (components);
-      double U = (((double) rand())/(RAND_MAX));
-      struct particle sample;
-      sample_particles_from_unit_gaussian(&sample, 1);
+          double accept = message_stack_prob(pf, next_sample);
 
-      struct particle next_sample;
-      next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
-      next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
-
-      double accept = message_stack_prob(pf, next_sample);
-
-      if(accept > U * supremum) {
-        new_particles[c] = next_sample;
-        break;
+          if(accept > U * supremum) {
+            new_particles[c] = next_sample;
+            break;
+          }
+        }
       }
     }
   }
@@ -252,7 +283,7 @@ void sample_from_multinomial_direct(struct weighted_particle *wp, size_t *sample
     double alpha = (double) rand()/(RAND_MAX);
     size_t index = 0;
 
-    for (double agg = -alpha; agg < 0; agg += wp[index].weight) {
+    for (double agg = -alpha; agg < 0 && index < repetetions; agg += wp[index].weight) {
       index++;
     }
 
@@ -268,10 +299,11 @@ void resample_kde(struct particle_filter_instance *pf, struct weighted_particle 
   struct particle *new_particles = malloc(target_samples * sizeof(struct particle));
   
   // todo has to be calculated from message
-  double variance = calculate_max_empirical_variance(old_particles, components);
+  double variance = max_empirical_variance(old_particles, components);
+  /* double variance = max_empirical_weighted_variance(wp, components);   */
 
   // chapter 12 douce et al. optimal bandwidth assuming unit gaussian distribution of underlying distribution
-  double h_opt = calculate_opt_unit_gaussian_bandwidth(components, DIM);
+  double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
 
   log_info("h_opt %f", h_opt);
 
@@ -401,7 +433,11 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
 
   // than perform resampling through density estimation
   resample_kde(pf_inst, wp, M);
-  
+
+  correct(pf_inst, wp);  
+
+  resample_kde(pf_inst, wp, M);
+    
   clear_message_stack(&pf_inst->mstack);
 }
 

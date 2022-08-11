@@ -394,7 +394,7 @@ def benchmark_particles_statistics(iterations, particles):
     ax1.boxplot(runtimes)
     plt.show()
 
-# benchmark_particles_statistics(50, 150)
+# benchmark_particles_statistics(10, 100)
         
 # benchmark_particles()
 

@@ -1,4 +1,4 @@
-#include "importance-sampling-particle-filter.h"
+#include "particle-belief-propagation.h"
 
 int main(int argc, char *argv[]) {
   // TODO implement with new API
