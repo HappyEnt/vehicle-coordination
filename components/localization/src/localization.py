@@ -33,7 +33,7 @@ NUM_PART_EXCHANGE = (
 GRID_SIZE = 100
 
 # error in distance measurements in m
-MEASUREMENT_STDEV = 2
+MEASUREMENT_STDEV = 0.02
 
 SERVER = "http://192.168.87.78:8081"
 
@@ -237,7 +237,7 @@ class ClassicParticleNode(BaseParticleNode):
         Handle incoming measurements by updating own particles.
         """
         # save position of other node using their uuid as key
-        self.other_nodes_pos[estimate_from_other[0]] = estimate_from_other
+        # self.other_nodes_pos[estimate_from_other[0]] = estimate_from_other
 
         info("Handling measurement")
 
