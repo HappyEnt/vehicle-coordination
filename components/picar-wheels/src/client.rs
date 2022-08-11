@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     left = left.clamp(-1.0, 1.0);
     right = right.clamp(-1.0, 1.0);
 
-    let mut client = PicarClient::connect("http://[::1]:50051").await?;
+    let mut client = PicarClient::connect("http://0.0.0.0:50051").await?;
 
     let request = tonic::Request::new(SetSpeedRequest { left, right });
 
