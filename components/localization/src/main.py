@@ -5,7 +5,7 @@ from time import sleep
 
 from serial import Serial
 
-from localization import GridParticleNode
+from localization import GridParticleNode, ClassicParticleNode
 from ranging import DumpFileRangingNode, SerialRangingNode
 
 import sys
