@@ -6,7 +6,7 @@ from scipy.spatial import distance
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-from time import sleep
+from time import sleep, time
 
 import numpy as np
 
@@ -136,15 +136,6 @@ class Simulation():
         "docstring"
         self.ind = 0
         self.dimensions = dimensions
-        self.fig, self.ax = plt.subplots()
-        
-        plt.subplots_adjust(bottom=0.2)        
-        axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
-        bnext = Button(axnext, 'Next')
-        bnext.on_clicked(self.next)
-
-        plt.connect('button_press_event', self.next)
-        
         self.events = []
 
     def add_nodes(self, nodes):
@@ -180,7 +171,14 @@ class Simulation():
         plt.draw()
 
     def illustrate(self):
-        # plt.axis([0, 10, 0, 1])
+        self.fig, self.ax = plt.subplots()
+        
+        plt.subplots_adjust(bottom=0.2)        
+        axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
+        bnext = Button(axnext, 'Next')
+        bnext.on_clicked(self.next)
+
+        plt.connect('button_press_event', self.next)
 
         self.draw_plot()
         plt.draw()
@@ -198,7 +196,16 @@ class Simulation():
 
             est_pos = node.get_estimated_pos()
             self.ax.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
+
+    def execute_all_events_capture_time(self):
+        start_time = time()
+        for i,event in enumerate(self.events):
+            event.get_recipient().handle_event(event)
+
+        end_time = time()
+        return end_time - start_time
         
+            
     def execute_all_events(self):
         for i,event in enumerate(self.events):
             event.get_recipient().handle_event(event)
@@ -207,101 +214,188 @@ class Simulation():
 
             print("Estimation error node {} of {}".format(j, round(distance.euclidean(pos, est_pos), 2)))
 
-            
-ANCHOR_SPACING = 20.0
-SIM_SPACE_LENGTH = 40.0
-
-NUM_PARTICLES = 250
-
-
-
-# TODO The right abstraction still has to be found. We should design general enough abstraction
-# so the prior/posterior distributions can be described by a variety of distributions
-# For example it should also be able to have nodes that represent their belief through
-# parametric distributions like a gaussian. 
-anchors = [
-    ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
-    ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
-    ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
-]
-
+# Example simulation            
 cache_distribution = False
+def start_interactive_sim(particles = 50):
+    
+    ANCHOR_SPACING = 20.0
+    SIM_SPACE_LENGTH = 40.0
 
-tags = [
-    ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-    # ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
-    # ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
-    # ParticleNode((0, ANCHOR_SPACING*0.75), ReferenceParticleFilter()),    
-]
+    anchors = [
+        ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
+        ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
+        ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
+    ]
 
-# tags = [
-    # ParticleNode((ANCHOR_SPACING*0.75, ANCHOR_SPACING*0.25), ReferenceParticleFilter()),
-# ]
+    tags = [
+        ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+        ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+    ]
 
-for tag in tags:
-    particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, NUM_PARTICLES)
+    events = [
+        TWR(sender = anchors[0], recipient = tags[0]),
+        Iterate(recipient = tags[0]),
+    
+        TWR(sender = anchors[0], recipient = tags[0]),
+        TWR(sender = anchors[1], recipient = tags[0]),
+        Iterate(recipient = tags[0]),
 
-for anchor in anchors:
-    particle_node_set_dirac_delta_dist(anchor)
+        TWR(sender = anchors[0], recipient = tags[1]),
+        Iterate(recipient = tags[1]),
+        
+        TWR(sender = anchors[0], recipient = tags[1]),
+        TWR(sender = anchors[2], recipient = tags[1]),
+        Iterate(recipient = tags[1]),
+
+        TWR(sender = anchors[0], recipient = tags[1]),
+        TWR(sender = anchors[1], recipient = tags[1]),
+        TWR(sender = tags[1], recipient = tags[0]),        
+        Iterate(recipient = tags[0]),
+
+        TWR(sender = anchors[0], recipient = tags[1]),
+        TWR(sender = anchors[2], recipient = tags[1]),
+        TWR(sender = tags[0], recipient = tags[1]),    
+        Iterate(recipient = tags[1]),        
+    ]
+
+    
+    for tag in tags:
+        particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
+
+    for anchor in anchors:
+        particle_node_set_dirac_delta_dist(anchor)
+    
+    sim = Simulation(SIM_SPACE_LENGTH)
+    sim.add_nodes(tags)
+    sim.add_nodes(anchors)
+    sim.add_events(events)
+    
+    sim.illustrate()
+
+def benchmark_particles():
+    runtimes = []
+    ANCHOR_SPACING = 20.0
+    SIM_SPACE_LENGTH = 40.0
+    
+    for particles in range(1000, 3000, 250):
+        anchors = [
+            ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
+            ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
+            ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
+        ]
+
+        tags = [
+            ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+            ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+        ]
+
+        events = [
+            TWR(sender = anchors[0], recipient = tags[0]),
+            Iterate(recipient = tags[0]),
             
-# events = [
-#     TWR(sender = anchors[0], recipient = tags[0]),    
-#     # TWR(sender = anchors[1], recipient = tags[0]),
-#     TWR(sender = anchors[2], recipient = tags[0]),    
+            TWR(sender = anchors[0], recipient = tags[0]),
+            TWR(sender = anchors[1], recipient = tags[0]),
+            Iterate(recipient = tags[0]),
 
+            TWR(sender = anchors[0], recipient = tags[1]),
+            Iterate(recipient = tags[1]),
+            
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[2], recipient = tags[1]),
+            Iterate(recipient = tags[1]),
 
-#     TWR(sender = anchors[0], recipient = tags[1]),
-#     TWR(sender = anchors[1], recipient = tags[1]),    
-#     # TWR(sender = anchors[2], recipient = tags[1]),
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[1], recipient = tags[1]),
+            TWR(sender = tags[1], recipient = tags[0]),        
+            Iterate(recipient = tags[0]),
 
-#     TWR(sender = tags[0], recipient = tags[1]),
-#     TWR(sender = tags[1], recipient = tags[0]),
-#     Iterate(recipient = tags[1]),
-#     Iterate(recipient = tags[0]),
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[2], recipient = tags[1]),
+            TWR(sender = tags[0], recipient = tags[1]),    
+            Iterate(recipient = tags[1]),        
+        ]
     
-#     # Iterate(recipient = tags[1]),
-#     # Iterate(recipient = tags[0]),
-# ]
 
-all_anchors_events = [
-    TWR(sender = anchors[0], recipient = tags[0]),
-    Iterate(recipient = tags[0]),
+        for tag in tags:
+            particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
+
+        for anchor in anchors:
+            particle_node_set_dirac_delta_dist(anchor)
+        
+        sim = Simulation(SIM_SPACE_LENGTH)
+        sim.add_nodes(tags)
+        sim.add_nodes(anchors)
+        sim.add_events(events)
+
+        runtimes.append(sim.execute_all_events_capture_time())
+
+    print(runtimes)
+
+def benchmark_particles_statistics(iterations, particles):
+    runtimes = []
+    ANCHOR_SPACING = 20.0
+    SIM_SPACE_LENGTH = 40.0
     
-    TWR(sender = anchors[0], recipient = tags[0]),
-    TWR(sender = anchors[1], recipient = tags[0]),
-    Iterate(recipient = tags[0]),
+    for _ in range(0, iterations):
+        anchors = [
+            ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
+            ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
+            ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
+        ]
 
-    TWR(sender = anchors[0], recipient = tags[0]),
-    TWR(sender = anchors[1], recipient = tags[0]),
-    TWR(sender = anchors[2], recipient = tags[0]),
-    Iterate(recipient = tags[0]),    
-]
+        tags = [
+            ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
+            ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+        ]
 
-hack_events = [
-    TWR(sender = anchors[0], recipient = tags[0]),
-    Iterate(recipient = tags[0]),
+        events = [
+            TWR(sender = anchors[0], recipient = tags[0]),
+            Iterate(recipient = tags[0]),
+            
+            TWR(sender = anchors[0], recipient = tags[0]),
+            TWR(sender = anchors[1], recipient = tags[0]),
+            Iterate(recipient = tags[0]),
 
-    TWR(sender = anchors[0], recipient = tags[0]),
-    TWR(sender = anchors[1], recipient = tags[0]),
-    Iterate(recipient = tags[0]),
+            TWR(sender = anchors[0], recipient = tags[1]),
+            Iterate(recipient = tags[1]),
+            
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[2], recipient = tags[1]),
+            Iterate(recipient = tags[1]),
+
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[1], recipient = tags[1]),
+            TWR(sender = tags[1], recipient = tags[0]),        
+            Iterate(recipient = tags[0]),
+
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[2], recipient = tags[1]),
+            TWR(sender = tags[0], recipient = tags[1]),    
+            Iterate(recipient = tags[1]),        
+        ]
     
-    TWR(sender = anchors[0], recipient = tags[0]),
-    TWR(sender = anchors[1], recipient = tags[0]),
-    TWR(sender = anchors[2], recipient = tags[0]),    
-    Iterate(recipient = tags[0]),        
-]
 
-sim = Simulation(SIM_SPACE_LENGTH)
+        for tag in tags:
+            particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
 
-sim.add_nodes(tags)
-sim.add_nodes(anchors)
+        for anchor in anchors:
+            particle_node_set_dirac_delta_dist(anchor)
+        
+        sim = Simulation(SIM_SPACE_LENGTH)
+        sim.add_nodes(tags)
+        sim.add_nodes(anchors)
+        sim.add_events(events)
 
-sim.add_events(all_anchors_events)
-# sim.add_events(all_anchors_events)
+        runtimes.append(sim.execute_all_events_capture_time())
 
-sim.illustrate()
+    print(runtimes)
+    fig1, ax1 = plt.subplots()
+    ax1.set_title('Basic Plot')
+    ax1.boxplot(runtimes)
+    plt.show()
 
-# sim.execute_all_events()
+# benchmark_particles_statistics(50, 150)
+        
+# benchmark_particles()
 
-# sim.illustrate_all()
-# sim.illustrate_last()
+start_interactive_sim(100)
