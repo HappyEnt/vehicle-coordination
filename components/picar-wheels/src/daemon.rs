@@ -13,10 +13,18 @@ pub mod picar {
 }
 
 const HERTZ: f64 = 50.0;
+const FULL_DUTY_LENGTH: f64 = 1000.0 / HERTZ;
+const MIN_DUTY_RATIO: f64 = 1.0 / FULL_DUTY_LENGTH;
+const MAX_DUTY_RATIO: f64 = 2.0 / FULL_DUTY_LENGTH;
 
 #[derive(Debug)]
 pub struct PicarService {
     channel: Sender<(f64, f64)>,
+}
+
+fn calc_duty_ratio(val: f64) -> f64 {
+    // quick maffs
+    MIN_DUTY_RATIO + (MAX_DUTY_RATIO - MIN_DUTY_RATIO) * (0.5 * (val + 1.0))
 }
 
 #[tonic::async_trait]
@@ -38,17 +46,17 @@ impl Picar for PicarService {
             }));
         }
 
-        // quick maffs
-        let full_duty_length = 1000.0 / HERTZ;
-        let min_duty_ratio = 1.0 / full_duty_length;
-        let max_duty_ratio = 2.0 / full_duty_length;
+        let duty_ratio_l = calc_duty_ratio(left);
+        let duty_ratio_r = calc_duty_ratio(right);
 
-        let duty_ratio_l =
-            min_duty_ratio + (max_duty_ratio - min_duty_ratio) * (0.5 * (left + 1.0));
-        let duty_ratio_r =
-            min_duty_ratio + (max_duty_ratio - min_duty_ratio) * (0.5 * (right + 1.0));
-
-        if let Err(_) = self.channel.send((duty_ratio_l, duty_ratio_r)).await {
+        // TODO: Sleep for a certain amount of time
+        // ? This has to be send via the request.
+        if self
+            .channel
+            .send((duty_ratio_l, duty_ratio_r))
+            .await
+            .is_err()
+        {
             eprintln!("Could not set PWM duty cycle");
             Err(Status::internal("Could not set PWM duty cycle"))
         } else {
@@ -105,7 +113,7 @@ impl PicarService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
+    let addr = "0.0.0.0:50051".parse()?;
 
     let (sender, receiver) = async_channel::unbounded::<(f64, f64)>();
 
