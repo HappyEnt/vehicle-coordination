@@ -8,6 +8,7 @@ import random
 import time
 from typing import Dict, List, NoReturn, Tuple, Union
 import uuid
+import os
 
 import numpy as np
 import requests
@@ -15,10 +16,12 @@ from scipy.stats import norm
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
 
-from src.data import ActiveMeasurement, PassiveMeasurement
+from data import ActiveMeasurement, PassiveMeasurement
+
+dirname = os.path.dirname(__file__)
 
 config = configparser.ConfigParser()
-config.read("components/localization/src/config.ini")
+config.read(dirname + "/config.ini")
 
 SIDE_LENGTH_X = float(config["DEFAULT"]["testing_area_length"])  # size of area in m
 SIDE_LENGTH_Y = float(config["DEFAULT"]["testing_area_width"])  # size of area in m
@@ -64,7 +67,7 @@ class BaseParticleNode(LocalizationNode):
         self.uuid = uuid.uuid4()  # give this node a uuid
         car_config = configparser.ConfigParser()
         car_config.read(
-            "components/localization/src/car_config.ini"
+            dirname + "/car_config.ini"
         )  # config for the car (holds id and size of car)
         self.int_id = INT_ID
         self.car_size_width = float(car_config["CAR"]["width"])

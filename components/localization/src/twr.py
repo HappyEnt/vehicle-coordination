@@ -4,8 +4,8 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
 
-from src.config import TIME_UNIT
-from src.data import (
+from config import TIME_UNIT
+from data import (
     ActiveMeasurement,
     Message,
     PassiveMeasurement,

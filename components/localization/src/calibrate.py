@@ -8,9 +8,9 @@ from requests import get
 from scipy.constants import speed_of_light
 import scipy.optimize
 
-from src.config import TIME_UNIT
-from src.data import ActiveMeasurement, Message
-from src.twr import perform_twr
+from config import TIME_UNIT
+from data import ActiveMeasurement, Message
+from twr import perform_twr
 
 
 CAMERA_SERVER_LENGTH_UNIT = 0.01
