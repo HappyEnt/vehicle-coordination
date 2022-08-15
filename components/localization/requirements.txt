@@ -5,3 +5,4 @@ pyserial
 requests
 types-requests
 scipy
+grpcio
