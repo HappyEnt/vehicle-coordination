@@ -18,6 +18,11 @@ import matplotlib.pyplot as plt
 
 from data import ActiveMeasurement, PassiveMeasurement
 
+# GRPC imports (for communication with coordination)
+import grpc
+import interface_pb2
+import interface_pb2_grpc
+
 dirname = os.path.dirname(__file__)
 
 config = configparser.ConfigParser()
@@ -36,6 +41,8 @@ GRID_SIZE = 100
 MEASUREMENT_STDEV = 0.02
 
 SERVER = "http://192.168.87.78:8081"
+
+GRPC_CHANNEL = "localhost:50052"
 
 VISUALISATION = False
 
@@ -58,9 +65,6 @@ class LocalizationNode(ABC):
     def run(self):
         pass
 
-    def send_locations_to_coordination(self, locations: Dict[int, Tuple[int, List[float], float, float]]):
-        pass
-
 
 class BaseParticleNode(LocalizationNode):
     def __init__(self):
@@ -79,6 +83,10 @@ class BaseParticleNode(LocalizationNode):
             Union[Tuple[float, float], List[float]]
         ] = []  # we assume that the weights are equal for all particles
         self.last_movement_update = time.time()
+        self.velocity = [
+            0.0,
+            0.0,
+        ]  # velocity of this vehicle, gotten from the coordination
         self.other_nodes_pos: Dict[
             str, Tuple[float, float, float]
         ] = {}  # positions of other nodes, key is the uuid of the other nodes
@@ -166,6 +174,31 @@ class BaseParticleNode(LocalizationNode):
     @abstractmethod
     def illustrate_nodes_and_particles(self, real_pos, estimate=(-100, -100)):
         pass
+
+    def send_locations_to_coordination(self):
+        """
+        Send information to a coordination module.
+        The information includes the own position, the own size (radius of vehicle),
+        the own inaccuracy in the position estimation (as a radius) and the position and size of the other vehicles.
+        """
+        with grpc.insecure_channel("localhost:50052") as channel:
+            stub = interface_pb2_grpc.CoordinationStub(channel)
+            estimate = self.get_estimate()
+            others_list = []
+            for key, val in self.other_nodes_pos:
+                other = interface_pb2.TickRequest.Participant(id=int(key),position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),radius=val[2],confidence=val[3])
+                others_list.append(other)
+            response = stub.Tick(
+                interface_pb2.TickRequest(
+                    id=self.int_id,
+                    position=interface_pb2.Vec2(x=estimate[1][0], y=estimate[1][1]),
+                    radius=self.car_radius,
+                    confidence=estimate[2],
+                    others=others_list,
+                )
+            )
+            self.last_movement_update = time.time()
+            self.velocity = [response.new_velocity.x, response.new_velocity.y]
 
     def tick(self) -> bool:
         if self.measurement_queue:
@@ -325,7 +358,7 @@ class GridParticleNode(BaseParticleNode):
                 )
                 self.particles.append(p)
         self.measurement_queue: List[ActiveMeasurement] = []
-        self.weights = [1.0/(GRID_SIZE**2)] * GRID_SIZE**2
+        self.weights = [1.0 / (GRID_SIZE**2)] * GRID_SIZE**2
 
     def handle_measurement(self, d, recv_particles, estimate_from_other) -> None:
         """
@@ -399,7 +432,7 @@ class GridParticleNode(BaseParticleNode):
             np.array([p[0] for p in particles]),
             np.array([p[1] for p in particles]),
             5,
-            alpha=np.array(self.weights)/max_weight,
+            alpha=np.array(self.weights) / max_weight,
         )
         plt.xlim([-0.2, SIDE_LENGTH_X + 0.2])
         plt.ylim([-0.2, SIDE_LENGTH_Y + 0.2])
