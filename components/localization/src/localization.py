@@ -7,7 +7,6 @@ import math
 import random
 import time
 from typing import Dict, List, NoReturn, Tuple, Union
-import uuid
 import os
 
 import numpy as np
@@ -68,7 +67,6 @@ class LocalizationNode(ABC):
 
 class BaseParticleNode(LocalizationNode):
     def __init__(self):
-        self.uuid = uuid.uuid4()  # give this node a uuid
         car_config = configparser.ConfigParser()
         car_config.read(
             dirname + "/car_config.ini"
@@ -89,12 +87,12 @@ class BaseParticleNode(LocalizationNode):
         ]  # velocity of this vehicle, gotten from the coordination
         self.other_nodes_pos: Dict[
             str, Tuple[float, float, float]
-        ] = {}  # positions of other nodes, key is the uuid of the other nodes
+        ] = {}  # positions of other nodes, key is the id of the other nodes
         self.measurement_queue: List[ActiveMeasurement] = []
 
     def get_estimate(self):
         """
-        Returns the current estimated position of this node. This includes its uuid, a point and a radius.
+        Returns the current estimated position of this node. This includes its id, a point and a radius.
         """
         estimate_x = np.mean([p[0] for p in self.particles])
         estimate_y = np.mean([p[1] for p in self.particles])
@@ -181,7 +179,7 @@ class BaseParticleNode(LocalizationNode):
         The information includes the own position, the own size (radius of vehicle),
         the own inaccuracy in the position estimation (as a radius) and the position and size of the other vehicles.
         """
-        with grpc.insecure_channel("localhost:50052") as channel:
+        with grpc.insecure_channel(GRPC_CHANNEL) as channel:
             stub = interface_pb2_grpc.CoordinationStub(channel)
             estimate = self.get_estimate()
             others_list = []
@@ -268,7 +266,7 @@ class ClassicParticleNode(BaseParticleNode):
         """
         Handle incoming measurements by updating own particles.
         """
-        # save position of other node using their uuid as key
+        # save position of other node using their id as key
         # self.other_nodes_pos[estimate_from_other[0]] = estimate_from_other
 
         info("Handling measurement")
@@ -364,7 +362,7 @@ class GridParticleNode(BaseParticleNode):
         """
         Handle incoming measurements by updating own particles.
         """
-        # save position of other node using their uuid as key
+        # save position of other node using their id as key
         # self.other_nodes_pos[estimate_from_other[0]] = estimate_from_other
 
         info("Handling measurement")
