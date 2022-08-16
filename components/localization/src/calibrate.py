@@ -137,7 +137,7 @@ def calibrate(messages, pos) -> Optional[Tuple[Dict, Dict]]:
     res = scipy.optimize.minimize(
         accuracy,
         [AVG_DELAY] * (len(participants) * 2),
-        bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * (len(participants) * 2),
+        # bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * (len(participants) * 2),
         method="Powell",
         # options= {
         #     "ftol" : 0.000000000001 / TIME_UNIT,
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     with open("screenlog.0", "r", encoding="UTF-8") as file:
         msg_list = list(
             filter(lambda x: x is not None, map(parse_json_message, file.readlines()))
-        )[:400]
+        )[:200]
         msg_list.reverse()
         
         calibration_result = calibrate(msg_list, real_positions)
