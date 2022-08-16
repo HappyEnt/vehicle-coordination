@@ -331,6 +331,7 @@ class ClassicParticleNode(BaseParticleNode):
             population=self.particles, weights=normalized_weights, k=len(self.particles)
         )
         self.send_estimate_to_server()
+        self.send_particles_to_server()
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
