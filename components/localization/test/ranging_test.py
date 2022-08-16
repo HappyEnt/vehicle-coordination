@@ -1,7 +1,7 @@
 from components.localization.src.data import RX, TX
-from src.data import ActiveMeasurement, TimingInfo
-from src.ranging import RangingNode
-from src.data import Message
+from data import ActiveMeasurement, TimingInfo
+from ranging import RangingNode
+from data import Message
 
 
 MESSAGES = [
@@ -35,7 +35,7 @@ MESSAGES = [
 class MockRangingNode(RangingNode):
     def __init__(self, ranging_id, measurement_callback):
         super().__init__(
-            ranging_id=ranging_id, measurement_callback=measurement_callback
+            ranging_id=ranging_id, measurement_cb=measurement_callback
         )
 
     def run(self):
