@@ -137,6 +137,15 @@ class BaseParticleNode(LocalizationNode):
         )
         return other_marker_id, float(dista), ast.literal_eval(other_pos), particles
 
+    def get_estimate_from_server(self, other_id):
+        '''
+        Get the estimate from a node from the server.
+        '''
+        other_estimate = json.loads(
+            requests.get(SERVER + "/getestimate/" + str(other_id)).text
+        )
+        return other_estimate
+
     def send_particles_to_server(self):
         """
         Send particles to the webserver.
@@ -184,7 +193,12 @@ class BaseParticleNode(LocalizationNode):
             estimate = self.get_estimate()
             others_list = []
             for key, val in self.other_nodes_pos:
-                other = interface_pb2.TickRequest.Participant(id=int(key),position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),radius=val[2],confidence=val[3])
+                other = interface_pb2.TickRequest.Participant(
+                    id=int(key),
+                    position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),
+                    radius=val[2],
+                    confidence=val[3],
+                )
                 others_list.append(other)
             response = stub.Tick(
                 interface_pb2.TickRequest(
@@ -219,13 +233,18 @@ class BaseParticleNode(LocalizationNode):
                 # _, _, _, particles = self.get_measurements_from_server(other_id)
 
                 # TODO: Remove hardcode
+                other_id_dec = 0
                 if other_id == 0x000:
                     particles = [(0, 0)]
+                    other_id_dec = 0
                 elif other_id == 0x100:
                     particles = [(SIDE_LENGTH_X, 0)]
+                    other_id_dec = 1
                 elif other_id == 0x200:
                     particles = [(0, SIDE_LENGTH_Y)]
+                    other_id_dec = 2
                 elif other_id == 0x300:
+                    other_id_dec = 3
                     particles = [(SIDE_LENGTH_X, SIDE_LENGTH_Y)]
                 else:
                     warning(f"Unkown id: {other_id}")
