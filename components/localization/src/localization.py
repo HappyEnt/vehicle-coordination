@@ -222,11 +222,11 @@ class BaseParticleNode(LocalizationNode):
                 if other_id == 0x000:
                     particles = [(0, 0)]
                 elif other_id == 0x100:
-                    particles = [(2.23, 0)]
+                    particles = [(SIDE_LENGTH_X, 0)]
                 elif other_id == 0x200:
-                    particles = [(0, 1.77)]
+                    particles = [(0, SIDE_LENGTH_Y)]
                 elif other_id == 0x300:
-                    particles = [(2.33, 1.77)]
+                    particles = [(SIDE_LENGTH_X, SIDE_LENGTH_Y)]
                 else:
                     warning(f"Unkown id: {other_id}")
                     assert False
@@ -311,6 +311,7 @@ class ClassicParticleNode(BaseParticleNode):
         self.particles = random.choices(
             population=self.particles, weights=normalized_weights, k=len(self.particles)
         )
+        self.send_estimate_to_server()
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
