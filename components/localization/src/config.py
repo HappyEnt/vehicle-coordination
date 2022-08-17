@@ -1,3 +1,5 @@
+"""This module provides some constants and default values."""
+
 TIME_UNIT = 15.65 / 1_000_000_000_000
 
 RX_DELAYS = {

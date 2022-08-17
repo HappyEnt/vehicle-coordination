@@ -26,7 +26,17 @@ DELAY_SPAN = 1e-7 / TIME_UNIT
 MIN_CALIBRATION_DIST = 0.2
 
 
-def build_tof_matrix(positions) -> Dict[int, Dict[int, float]]:
+def build_tof_matrix(
+    positions: Dict[int, Tuple[float, float]]
+) -> Dict[int, Dict[int, float]]:
+    """Build a Euclidian Distance Matrix (EDM) containing the ToFs for all nodes in ``positions``.
+
+    Args:
+        Positions: A dictionary containing the ranging ids as keys and their positions as values.
+
+    Returns:
+        A matrix containing the real ToFs between all nodes in ``positions``.
+    """
     matrix: Dict[int, Dict[int, float]] = {}
     for addr1 in positions.keys():
         matrix[int(addr1)] = {}
@@ -45,8 +55,20 @@ def build_tof_matrix(positions) -> Dict[int, Dict[int, float]]:
 
 
 def build_tof_matrix_measured(
-    messages: List[Message], tx_delays=None, rx_delays=None
+    messages: List[Message],
+    rx_delays: Optional[Dict[int, float]] = None,
+    tx_delays: Optional[Dict[int, float]] = None,
 ) -> Dict[int, Dict[int, float]]:
+    """Build a Matrix of measured ToFs according to exchanged messages.
+
+    Args:
+        messages: The messages exchanged by the UWB boards.
+        rx_delays: The reception delays to be incorporated in the matrix calculation.
+        tx_delays: The transmission delays to be incorporated in the matrix calculation.
+
+    Returns:
+        A matrix of measured ToFs adjusted with the ``rx_delays`` and ``tx_delays``.
+    """
     measurements: List[ActiveMeasurement] = []
     messages_copy = deepcopy(messages)
     while messages_copy:
@@ -61,13 +83,6 @@ def build_tof_matrix_measured(
                 )
             )  # type: ignore
         )
-
-    # measurements.sort()
-    # measurements = measurements[
-    #     int(0.05 * len(measurements)) : int(
-    #         len(measurements) - 0.05 * len(measurements)
-    #     )
-    # ]
 
     temp_matrix: Dict[int, Dict[int, Tuple[List[float], int]]] = {}
     for measurement in measurements:
@@ -93,7 +108,17 @@ def build_tof_matrix_measured(
     return matrix
 
 
-def calibrate(messages, pos) -> Optional[Tuple[Dict, Dict]]:
+def calibrate(messages: List[Message], pos) -> Optional[Tuple[Dict, Dict]]:
+    """Find an optimal calibration for the UWB boards.
+
+    Args:
+        messages: A list of ranging messages.
+        pos: A dictionary containing the ranging ids as keys and their positions as values.
+
+    Returns:
+        Optimal RX and TX delays or None.
+    """
+
     def convert_to_delays(res) -> Tuple[Dict, Dict]:
         assert len(participants) * 2 == len(res)
         tx_times = {}
@@ -121,7 +146,6 @@ def calibrate(messages, pos) -> Optional[Tuple[Dict, Dict]]:
     # Build EDMs for the real (measured by the camera system) and measured (by UWB ranging) distances
     # pos = get_real_positions()
     if not pos:
-        # TODO: Use proper logging
         warning("Could not get distance information from camera server")
         return None
     real_tof = build_tof_matrix(pos)
@@ -149,13 +173,18 @@ def calibrate(messages, pos) -> Optional[Tuple[Dict, Dict]]:
 
 if __name__ == "__main__":
     basicConfig(level=ERROR)
-    real_positions = {0x0000: [0, 0], 0x0100: [2.15, 0], 0x0200: [2.15, 1.655], 0x0300: [0, 1.655]}
+    real_positions = {
+        0x0000: [0, 0],
+        0x0100: [2.15, 0],
+        0x0200: [2.15, 1.655],
+        0x0300: [0, 1.655],
+    }
     with open("screenlog.0", "r", encoding="UTF-8") as file:
         msg_list = list(
             filter(lambda x: x is not None, map(parse_json_message, file.readlines()))
         )[:200]
         msg_list.reverse()
-        
+
         calibration_result = calibrate(msg_list, real_positions)
         if calibration_result:
             tx_times, rx_times = calibration_result
