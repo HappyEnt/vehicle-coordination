@@ -27,7 +27,7 @@ def particle_node_set_dirac_delta_dist(node):
     node.set_particles([node.get_pos()])
 
 
-    
+
 class Event(ABC):
     @abstractmethod
     def __init__(self, recipient):
@@ -39,7 +39,7 @@ class Event(ABC):
 class Measurement(Event):
     def __init__(self, recipient):
         super().__init__(recipient)
-    
+
     @abstractmethod
     def get_measurement():
         raise NotImplementedError
@@ -47,14 +47,31 @@ class Measurement(Event):
 class Iterate(Event):
     def __init__(self, recipient):
         super().__init__(recipient)
-    
+
 class Action(Event):
     def __init__(self, recipient):
         super().__init__(recipient)
-        
+
     @abstractmethod
     def get_action(self):
-        raise NotImplementedError    
+        raise NotImplementedError
+
+
+class Move(Action):
+    def __init__(self, recipient, displacement: tuple[float, float]):
+        self.recipient = recipient
+        self.displacement = displacement
+
+    def get_displacement(self):
+        return self.displacement
+
+    def get_action(self):
+        # For now we only have one kind of action: Movement;
+        # Therefore we for now omit an abstraction as classes and directly pass the moved_distance to
+        # the particle filter instance
+        dx, dy = self.get_displacement()
+        distance_moved = np.sqrt(dx*dx  + dy*dy)
+        return distance_moved
 
 # TODO sender/recipient is kinda really wrong here. Choose other name later
 class TDOA(Measurement):
@@ -62,26 +79,26 @@ class TDOA(Measurement):
         self.sender_1 = sender_1
         self.sender_2 = sender_2
         self.recipient_3 = recipient
-        
-        super().__init__(recipient)        
+
+        super().__init__(recipient)
 
     def get_measurement(self):
         raise NotImplementedError
 
 class TWR(Measurement):
     MEASUREMENT_STD = 0.1 # Parameter of the simulation
-    
+
     def __init__(self, sender, recipient):
         self.sender = sender
         self.recipient = recipient
-        
+
         super().__init__(recipient)
-  
+
     def get_measurement(self):
         real_distance = distance.euclidean(self.sender.get_pos(), self.recipient.get_pos())
         error_model_distance = np.random.normal(real_distance, self.MEASUREMENT_STD)
         return TWR_Measurement(self.sender.get_particles(), error_model_distance)
-    
+
 class Node:
     def __init__(self, pos):
         self.pos = pos
@@ -89,20 +106,23 @@ class Node:
     def get_pos(self):
         return self.pos
 
-    
+    def set_pos(self, pos):
+        self.pos = pos
+
+
 # A node backed by some particle filter implementation
 # i.e., pass measurements and events to the particle filter and retrieve
 # the updated belief from the particle filter instance.
 class ParticleNode(Node):
     def __init__(self, real_pos, particle_filter_instance) -> None:
         super().__init__(real_pos)
-        
+
         self.particle_filter_instance = particle_filter_instance
 
     # We assume that the caller determines what information the ParticleNode
     def set_particles(self, particles):
         self.particle_filter_instance.set_particles(particles)
-        
+
     def get_particles(self):
         return self.particle_filter_instance.get_particles()
 
@@ -121,17 +141,20 @@ class ParticleNode(Node):
     def handle_event(self, event):
         if isinstance(event, Measurement):
             self.particle_filter_instance.add_message(event.get_measurement())
-            
         elif isinstance(event, Action):
             # self.particle_filter_instance.correct(event.get_measurement())
-            raise NotImplementedError
+            print(self.get_pos())
+            x, y = self.get_pos()
+            dx, dy = event.get_displacement()
+            self.set_pos( (x + dx, y + dy) )
+            self.particle_filter_instance.predict(event.get_action())
         elif isinstance(event, Iterate):
             self.particle_filter_instance.iterate()
 
 class Simulation():
     nodes = []
     events = []
-    
+
     def __init__(self, dimensions):
         "docstring"
         self.ind = 0
@@ -152,42 +175,48 @@ class Simulation():
 
         self.ax.set_xlim([-self.dimensions, self.dimensions])
         self.ax.set_ylim([-self.dimensions, self.dimensions])
-        
-        
+
+
         while not isinstance(self.events[self.ind], Iterate):
-            print("execute event {}", self.ind)
+            print("execute event {}".format(self.ind))
             self.events[self.ind].get_recipient().handle_event(self.events[self.ind])
             self.ind += 1
-            
-        print("execute event {}", self.ind)            
+
+        print("execute event {}".format(self.ind))
         self.events[self.ind].get_recipient().handle_event(self.events[self.ind])
         self.draw_plot()
 
         self.ind += 1
-        
+
         if self.ind >= len(self.events):
-            self.ind = 0        
+            self.ind = 0
 
         plt.draw()
 
-    def illustrate(self):
-        self.fig, self.ax = plt.subplots()
-        
-        plt.subplots_adjust(bottom=0.2)        
+    def create_buttons(self):
+        plt.subplots_adjust(bottom=0.2)
+
         axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
         bnext = Button(axnext, 'Next')
         bnext.on_clicked(self.next)
 
-        plt.connect('button_press_event', self.next)
+        axnext._button = bnext
+
+    def illustrate(self):
+        self.fig, self.ax = plt.subplots()
+
+        self.create_buttons()
+
+        # plt.connect('button_press_event', self.next)
 
         self.draw_plot()
         plt.draw()
-        
-        plt.show()        
+
+        plt.show()
 
     def draw_plot(self):
-        for (j, node) in enumerate(self.nodes):                
-            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']        
+        for (j, node) in enumerate(self.nodes):
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
             pos = node.get_pos()
             self.ax.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[j])
 
@@ -204,20 +233,20 @@ class Simulation():
 
         end_time = time()
         return end_time - start_time
-        
-            
+
+
     def execute_all_events(self):
         for i,event in enumerate(self.events):
             event.get_recipient().handle_event(event)
-            
+
             draw_plot(j, node)
 
             print("Estimation error node {} of {}".format(j, round(distance.euclidean(pos, est_pos), 2)))
 
-# Example simulation            
+# Example simulation
 cache_distribution = False
 def start_interactive_sim(particles = 50):
-    
+
     ANCHOR_SPACING = 20.0
     SIM_SPACE_LENGTH = 40.0
 
@@ -235,48 +264,81 @@ def start_interactive_sim(particles = 50):
     events = [
         TWR(sender = anchors[0], recipient = tags[0]),
         Iterate(recipient = tags[0]),
-    
+
         TWR(sender = anchors[0], recipient = tags[0]),
         TWR(sender = anchors[1], recipient = tags[0]),
         Iterate(recipient = tags[0]),
 
         TWR(sender = anchors[0], recipient = tags[1]),
         Iterate(recipient = tags[1]),
-        
+
         TWR(sender = anchors[0], recipient = tags[1]),
         TWR(sender = anchors[2], recipient = tags[1]),
         Iterate(recipient = tags[1]),
 
-        TWR(sender = anchors[0], recipient = tags[1]),
-        TWR(sender = anchors[1], recipient = tags[1]),
-        TWR(sender = tags[1], recipient = tags[0]),        
+        TWR(sender = anchors[0], recipient = tags[0]),
+        TWR(sender = anchors[1], recipient = tags[0]),
+        TWR(sender = tags[1], recipient = tags[0]),
         Iterate(recipient = tags[0]),
 
         TWR(sender = anchors[0], recipient = tags[1]),
         TWR(sender = anchors[2], recipient = tags[1]),
-        TWR(sender = tags[0], recipient = tags[1]),    
-        Iterate(recipient = tags[1]),        
+        TWR(sender = tags[0], recipient = tags[1]),
+        Iterate(recipient = tags[1]),
+
+        Move(recipient = tags[0], displacement = (-4, 0)),
+        Iterate(recipient = tags[0]),
+
+        Move(recipient = tags[1], displacement = (-4, 0)),
+        Iterate(recipient = tags[1]),
+
+        TWR(sender = tags[1], recipient = tags[0]),
+        Iterate(recipient = tags[0]),
+
+        Move(recipient = tags[0], displacement = (-4, 0)),
+        Iterate(recipient = tags[0]),
+
+        TWR(sender = tags[1], recipient = tags[0]),
+        Iterate(recipient = tags[0]),
+
+        Move(recipient = tags[0], displacement = (-4, 0)),
+        Iterate(recipient = tags[0]),
+
+        TWR(sender = tags[1], recipient = tags[0]),
+        Iterate(recipient = tags[0]),
+
+        Move(recipient = tags[0], displacement = (-4, 0)),
+        Iterate(recipient = tags[0]),
+
+        TWR(sender = tags[1], recipient = tags[0]),
+        Iterate(recipient = tags[0]),fi
+
+        Move(recipient = tags[0], displacement = (-4, 0)),
+        Iterate(recipient = tags[0]),
+
+        TWR(sender = tags[1], recipient = tags[0]),
+        Iterate(recipient = tags[0]),
     ]
 
-    
+
     for tag in tags:
         particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
 
     for anchor in anchors:
         particle_node_set_dirac_delta_dist(anchor)
-    
+
     sim = Simulation(SIM_SPACE_LENGTH)
     sim.add_nodes(tags)
     sim.add_nodes(anchors)
     sim.add_events(events)
-    
+
     sim.illustrate()
 
 def benchmark_particles():
     runtimes = []
     ANCHOR_SPACING = 20.0
     SIM_SPACE_LENGTH = 40.0
-    
+
     for particles in range(1000, 3000, 250):
         anchors = [
             ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
@@ -292,36 +354,36 @@ def benchmark_particles():
         events = [
             TWR(sender = anchors[0], recipient = tags[0]),
             Iterate(recipient = tags[0]),
-            
+
             TWR(sender = anchors[0], recipient = tags[0]),
             TWR(sender = anchors[1], recipient = tags[0]),
             Iterate(recipient = tags[0]),
 
             TWR(sender = anchors[0], recipient = tags[1]),
             Iterate(recipient = tags[1]),
-            
+
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
             Iterate(recipient = tags[1]),
 
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[1], recipient = tags[1]),
-            TWR(sender = tags[1], recipient = tags[0]),        
+            TWR(sender = tags[1], recipient = tags[0]),
             Iterate(recipient = tags[0]),
 
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
-            TWR(sender = tags[0], recipient = tags[1]),    
-            Iterate(recipient = tags[1]),        
+            TWR(sender = tags[0], recipient = tags[1]),
+            Iterate(recipient = tags[1]),
         ]
-    
+
 
         for tag in tags:
             particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
 
         for anchor in anchors:
             particle_node_set_dirac_delta_dist(anchor)
-        
+
         sim = Simulation(SIM_SPACE_LENGTH)
         sim.add_nodes(tags)
         sim.add_nodes(anchors)
@@ -331,12 +393,12 @@ def benchmark_particles():
 
     print(runtimes)
 
-def benchmark_particles_statistics(iterations, particles):
+def benchmark_particles_statistics(repetetions, particles):
     runtimes = []
     ANCHOR_SPACING = 20.0
     SIM_SPACE_LENGTH = 40.0
-    
-    for _ in range(0, iterations):
+
+    for _ in range(0, repetetions):
         anchors = [
             ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
             ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
@@ -351,36 +413,38 @@ def benchmark_particles_statistics(iterations, particles):
         events = [
             TWR(sender = anchors[0], recipient = tags[0]),
             Iterate(recipient = tags[0]),
-            
+
             TWR(sender = anchors[0], recipient = tags[0]),
             TWR(sender = anchors[1], recipient = tags[0]),
             Iterate(recipient = tags[0]),
 
             TWR(sender = anchors[0], recipient = tags[1]),
             Iterate(recipient = tags[1]),
-            
+
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
             Iterate(recipient = tags[1]),
 
-            TWR(sender = anchors[0], recipient = tags[1]),
-            TWR(sender = anchors[1], recipient = tags[1]),
-            TWR(sender = tags[1], recipient = tags[0]),        
+            TWR(sender = anchors[0], recipient = tags[0]),
+            TWR(sender = anchors[1], recipient = tags[0]),
+            TWR(sender = tags[1], recipient = tags[0]),
             Iterate(recipient = tags[0]),
 
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
-            TWR(sender = tags[0], recipient = tags[1]),    
-            Iterate(recipient = tags[1]),        
+            TWR(sender = tags[0], recipient = tags[1]),
+            Iterate(recipient = tags[1]),
+
+
         ]
-    
+
 
         for tag in tags:
             particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
 
         for anchor in anchors:
             particle_node_set_dirac_delta_dist(anchor)
-        
+
         sim = Simulation(SIM_SPACE_LENGTH)
         sim.add_nodes(tags)
         sim.add_nodes(anchors)
@@ -394,8 +458,8 @@ def benchmark_particles_statistics(iterations, particles):
     ax1.boxplot(runtimes)
     plt.show()
 
-# benchmark_particles_statistics(10, 100)
-        
+# benchmark_particles_statistics(repetetions = 200, particles = 250)
+
 # benchmark_particles()
 
-start_interactive_sim(100)
+start_interactive_sim(particles = 125)

@@ -25,8 +25,8 @@ void push_message(struct message_stack **ms, struct message m) {
 
     new_ms->item = m;
     new_ms->next = NULL;
-  
-    *ms = new_ms;    
+
+    *ms = new_ms;
   } else {
     push_message(&(*ms)->next, m);
   }
@@ -43,7 +43,7 @@ int pop_message(struct message_stack **ms, struct message *m) {
       struct message item;
 
       item = (*ms)->item;
-      
+
       free(*ms);
       *ms = NULL;
 
@@ -92,7 +92,7 @@ double message_prob(struct particle_filter_instance *pf, struct particle sample,
   double measurement = m.measured_distance;
   struct particle *particles_other = m.particles;
 
-  for (size_t j = 0; j < samples_other; ++j) {        
+  for (size_t j = 0; j < samples_other; ++j) {
     double likelihood = value_from_normal_distribution(
                                                        pf->uwb_error_likelihood,
                                                        distance1(
@@ -103,24 +103,24 @@ double message_prob(struct particle_filter_instance *pf, struct particle sample,
     if(likelihood != likelihood) {
       log_info("%f,%f,%f,%f", sample.x_pos, sample.y_pos, particles_other[j].x_pos, particles_other[j].y_pos);
     }
-    
+
     assert(likelihood == likelihood);
 
     weight_factor += likelihood;
 
     //add each threads partial sum to the total sum
   }
-  return weight_factor / m.particles_length;      
+  return weight_factor / m.particles_length;
 }
 
 double message_stack_prob(struct particle_filter_instance *pf, struct particle sample) {
   struct message_stack *current_message = pf->mstack;
   double weight_product = 1.0;
 
- 
+
   while(current_message != NULL) {
     weight_product *= message_prob(pf, sample, current_message->item);
-    
+
     current_message = current_message->next;
   }
 
@@ -144,17 +144,17 @@ void correct(struct particle_filter_instance *pf, struct weighted_particle *weig
 
   struct particle *particles = pf->local_particles;
   size_t samples = pf->local_particles_length;
-  
-  for (size_t i = 0; i < samples; ++i) {  
+
+  for (size_t i = 0; i < samples; ++i) {
     weighted_particles[i].particle = particles[i];
     weighted_particles[i].weight = 1.0/samples;
   }
-  
+
   for (size_t i = 0; i < samples; ++i) {
     weighted_particles[i].weight *= message_stack_prob(pf, weighted_particles[i].particle);
   }
 
-  for (size_t i = 0; i < samples; ++i) {  
+  for (size_t i = 0; i < samples; ++i) {
     total_weight += weighted_particles[i].weight; // last message, i.e. weight for each particle converged to final value
     /* printf("[i] = %f\n", weighted_particles[i].weight); */
   } // printf("\n");
@@ -170,11 +170,11 @@ double max_empirical_variance(struct particle *particles, size_t components) {
   struct particle mean;
 
   mean.x_pos = 0;
-  mean.y_pos = 0;  
-  
+  mean.y_pos = 0;
+
   for(size_t i = 0; i < components; i++) {
     mean.x_pos += particles[i].x_pos;
-    mean.y_pos += particles[i].y_pos;    
+    mean.y_pos += particles[i].y_pos;
   }
 
   mean.x_pos /= components;
@@ -182,7 +182,7 @@ double max_empirical_variance(struct particle *particles, size_t components) {
 
   for(size_t i = 0; i < components; i++) {
     variance_x += (particles[i].x_pos - mean.x_pos)*(particles[i].x_pos - mean.x_pos);
-    variance_y += (particles[i].y_pos - mean.y_pos)*(particles[i].y_pos - mean.y_pos);    
+    variance_y += (particles[i].y_pos - mean.y_pos)*(particles[i].y_pos - mean.y_pos);
   }
 
   variance_x /= components;
@@ -199,16 +199,16 @@ double max_empirical_weighted_variance(struct weighted_particle *particles, size
   struct particle mean;
 
   mean.x_pos = 0;
-  mean.y_pos = 0;  
-  
+  mean.y_pos = 0;
+
   for(size_t i = 0; i < components; i++) {
     mean.x_pos += particles[i].weight * particles[i].particle.x_pos;
-    mean.y_pos += particles[i].weight * particles[i].particle.y_pos;    
+    mean.y_pos += particles[i].weight * particles[i].particle.y_pos;
   }
 
   for(size_t i = 0; i < components; i++) {
     variance_x += particles[i].weight * (particles[i].particle.x_pos - mean.x_pos)*(particles[i].particle.x_pos - mean.x_pos);
-    variance_y += particles[i].weight * (particles[i].particle.y_pos - mean.y_pos)*(particles[i].particle.y_pos - mean.y_pos);    
+    variance_y += particles[i].weight * (particles[i].particle.y_pos - mean.y_pos)*(particles[i].particle.y_pos - mean.y_pos);
   }
 
   double variance = variance_x > variance_y ? variance_x : variance_y;
@@ -225,7 +225,7 @@ double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
 void regularized_reject_correct(struct particle_filter_instance *pf) {
   struct particle *old_particles = pf->local_particles;
   size_t components = pf->local_particles_length;
-  
+
   struct particle *new_particles = malloc(components * sizeof(struct particle));
 
   double supremum = value_from_normal_distribution(pf->uwb_error_likelihood, 0) * message_stack_len(pf->mstack);
@@ -243,7 +243,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf) {
           double U = (((double) rand())/(RAND_MAX));
           struct particle sample;
           sample_particles_from_unit_gaussian(&sample, 1);
-      
+
           struct particle next_sample;
           next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
           next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
@@ -262,7 +262,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf) {
   pf->local_particles = new_particles;
   pf->local_particles_length = components;
 
-  free(old_particles);  
+  free(old_particles);
 }
 // See chapter 12 douce et al.
 void progressive_weight_correction(struct particle_filter_instance *pf) {
@@ -278,7 +278,7 @@ void sample_from_multinomial_direct(struct weighted_particle *wp, size_t *sample
   for(size_t i = 0; i < components; ++i) {
     sample[i] = 0;
   }
-  
+
   for (size_t i = 0; i < repetetions; ++i) {
     double alpha = (double) rand()/(RAND_MAX);
     size_t index = 0;
@@ -294,10 +294,10 @@ void sample_from_multinomial_direct(struct weighted_particle *wp, size_t *sample
 void resample_kde(struct particle_filter_instance *pf, struct weighted_particle *wp, size_t target_samples) {
   struct particle *old_particles = pf->local_particles;
   size_t components = pf->local_particles_length;
-  
+
   // from each message draw k * M particles
   struct particle *new_particles = malloc(target_samples * sizeof(struct particle));
-  
+
   // todo has to be calculated from message
   double variance = max_empirical_variance(old_particles, components);
   /* double variance = max_empirical_weighted_variance(wp, components);   */
@@ -314,11 +314,11 @@ void resample_kde(struct particle_filter_instance *pf, struct weighted_particle 
   for(size_t c = 0; c < components; c++) {
     for (size_t s = 0; s < component_freq[c]; s++) {
       struct particle sample;
-      
+
       sample_particles_from_unit_gaussian(&sample, 1);
 
       new_particles[sample_cnt].x_pos = wp[c].particle.x_pos + sample.x_pos*h_opt*sqrt(variance);
-      new_particles[sample_cnt].y_pos = wp[c].particle.y_pos + sample.y_pos*h_opt*sqrt(variance);        
+      new_particles[sample_cnt].y_pos = wp[c].particle.y_pos + sample.y_pos*h_opt*sqrt(variance);
 
       sample_cnt++;
     }
@@ -334,7 +334,7 @@ void resample_kde(struct particle_filter_instance *pf, struct weighted_particle 
 void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size_t burn_in) {
   struct particle *old_particles = pf->local_particles;
   size_t components = pf->local_particles_length;
-  
+
   // from each message draw k * M particles
   struct particle *new_particles = malloc(samples * sizeof(struct particle));
 
@@ -342,7 +342,7 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
 
   for(size_t i = 0; i < samples + burn_in; i++) {
     struct particle next_sample;
-    
+
     sample_particles_from_gaussian(current_sample, 0.5, &next_sample, 1);
 
     double prob_cur = message_stack_prob(pf, current_sample);
@@ -359,11 +359,11 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
     }
 
     if(i >= burn_in) {
-      new_particles[i - burn_in] = current_sample;      
+      new_particles[i - burn_in] = current_sample;
     }
 
   }
-  
+
   pf->local_particles = new_particles;
   pf->local_particles_length = samples;
 
@@ -409,7 +409,7 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
   }
 
   *particles = pf_inst->local_particles;
-  
+
   return pf_inst->local_particles_length;
 }
 
@@ -425,7 +425,7 @@ void add_message(struct particle_filter_instance *pf_inst, struct message m) {
 // This is also not yet the version that autonomously finds the best message order.
 void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
-  
+
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
   // First correct
@@ -434,31 +434,38 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   // than perform resampling through density estimation
   resample_kde(pf_inst, wp, M);
 
-  correct(pf_inst, wp);  
-
-  resample_kde(pf_inst, wp, M);
-    
   clear_message_stack(&pf_inst->mstack);
 }
 
 void post_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
-  
+
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
-  // First correct
   regularized_reject_correct(pf_inst);
-  
+
   clear_message_stack(&pf_inst->mstack);
 }
 
 
 void iterate(struct particle_filter_instance *pf_inst) {
   /* pre_regularisation_bp(pf_inst); */
-
-  post_regularisation_bp(pf_inst);
+  if(!message_stack_len(pf_inst->mstack)) {
+    log_info("empty message stack. Doing nothing");
+  } else {
+    post_regularisation_bp(pf_inst);
+  }
 }
 
-void predict(struct particle_filter_instance *pf_inst, int action) {
-  // TODO implement me
+void predict(struct particle_filter_instance *pf_inst, double moved_distance) {
+  for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
+    double dir = (((double) rand())/(RAND_MAX)) * 2* M_PI;
+
+    struct particle *current_particle  = &pf_inst->local_particles[p];
+
+    // TODO add noise
+
+    current_particle->x_pos = current_particle->x_pos + moved_distance * sin(dir);
+    current_particle->y_pos = current_particle->y_pos + moved_distance * cos(dir);
+  }
 }

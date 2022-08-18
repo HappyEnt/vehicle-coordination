@@ -27,7 +27,7 @@ struct message_stack {
 };
 
 struct particle_filter_instance {
-  // the minimum we have to store is the particle set 
+  // the minimum we have to store is the particle set
   struct particle *local_particles;
   size_t local_particles_length;
   // Any other data that is usefull
@@ -49,7 +49,7 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 void add_message(struct particle_filter_instance *pf_inst, struct message m);
 
 // TODO find out what kind of actions will exist
-void predict(struct particle_filter_instance *pf_inst, int action);
+void predict(struct particle_filter_instance *pf_inst, double moved_distance);
 void iterate(struct particle_filter_instance *pf_inst);
 
 // _____Test Interface_____
