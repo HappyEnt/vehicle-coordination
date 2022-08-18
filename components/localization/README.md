@@ -20,6 +20,7 @@ python src/main.py --file <screenlog_file>
 ### Source Files Explanation
 A small explanation on what file does what.  
 Remember that our whole vehicle system generally consits of three parts: **Ranging**, **Localization** and **Coordination**.
+This folder covers the two parts **Ranging** and **Localization**.
 
 #### Ranging:
 ```twr.py``` Heart of the Ranging.  
