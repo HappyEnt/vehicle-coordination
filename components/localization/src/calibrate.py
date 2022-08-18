@@ -1,15 +1,17 @@
 from copy import deepcopy
 import json
+from logging import basicConfig, warning, ERROR
 import math
+from time import sleep
 from typing import Dict, List, Optional, Tuple
 
 from requests import get
 from scipy.constants import speed_of_light
 import scipy.optimize
 
-from components.localization.src.config import TIME_UNIT
-from components.localization.src.data import ActiveMeasurement, Message
-from components.localization.src.twr import perform_twr
+from config import TIME_UNIT
+from data import ActiveMeasurement, Message, parse_json_message
+from twr import perform_twr
 
 
 CAMERA_SERVER_LENGTH_UNIT = 0.01
@@ -17,48 +19,32 @@ CAMERA_SERVER_LENGTH_UNIT = 0.01
 # AVG_DELAY = 16450
 # DELAY_SPAN = 10.0 * 1e-9 * TIME_UNIT
 # TODO: find optimal range
-AVG_DELAY = 1e-9 * TIME_UNIT  # 1 ns
-DELAY_SPAN = AVG_DELAY
+AVG_DELAY = 0  # 1e-9 * TIME_UNIT  # 1 ns
+DELAY_SPAN = 1e-7 / TIME_UNIT
+
 
 MIN_CALIBRATION_DIST = 0.2
 
 
-def get_real_positions():
-    return {"1725": [0, 0], "64071": [223, 0], "50438": [0, 177]}
-    return {"59582": [0, 0], "50438": [0, 150]}  # "dump_file_150.txt"
-    # r_cars = get("http://192.168.87.78:8081/positions")
-    # r_anchors = get("http://192.168.87.78:8081/anchors")
-    # if r_cars.status_code == 200 and r_anchors.status_code == 200:
-    # car_positions_raw = r_cars.content.decode("utf-8")
-    # anchor_positions_raw = r_anchors.content.decode("utf-8")
-    car_positions_raw = (
-        '{"6": [9.77394644, 90.9556397775], "4": [203.034752275, 9.541160232500001]}'
-    )
-    anchor_positions_raw = (
-        '{"0": [0, 0], "1": [215.0, 0], "2": [215.0, 165.5], "3": [0, 165.5]}'
-    )
-    # return ({'6': [9.77394644, 90.9556397775], '4': [203.034752275, 9.541160232500001]}, {'0': [0, 0], '1': [215.0, 0], '2': [215.0, 165.5], '3': [0, 165.5]})
-    cars_json = json.JSONDecoder().decode(car_positions_raw)
-    anchors_json = json.JSONDecoder().decode(anchor_positions_raw)
-    return {**cars_json, **anchors_json}
+def build_tof_matrix(
+    positions: Dict[int, Tuple[float, float]]
+) -> Dict[int, Dict[int, float]]:
+    """Build a Euclidian Distance Matrix (EDM) containing the ToFs for all nodes in ``positions``.
 
+    Args:
+        positions: A dictionary containing the ranging ids as keys and their positions as values.
 
-# else:
-#     return None
-
-
-def build_tof_matrix(positions) -> Dict[int, Dict[int, float]]:
+    Returns:
+        A matrix containing the real ToFs between all nodes in ``positions``.
+    """
     matrix: Dict[int, Dict[int, float]] = {}
     for addr1 in positions.keys():
         matrix[int(addr1)] = {}
         for addr2 in positions.keys():
             if int(addr1) != int(addr2):
-                distance = (
-                    math.sqrt(
-                        (positions[addr1][0] - positions[addr2][0]) ** 2
-                        + (positions[addr1][1] - positions[addr2][1]) ** 2
-                    )
-                    * CAMERA_SERVER_LENGTH_UNIT
+                distance = math.sqrt(
+                    (positions[addr1][0] - positions[addr2][0]) ** 2
+                    + (positions[addr1][1] - positions[addr2][1]) ** 2
                 )
                 tof = distance / speed_of_light
                 tof_dtu = tof / TIME_UNIT
@@ -69,8 +55,20 @@ def build_tof_matrix(positions) -> Dict[int, Dict[int, float]]:
 
 
 def build_tof_matrix_measured(
-    messages: List[Message], tx_delays={}, rx_delays={}
+    messages: List[Message],
+    rx_delays: Optional[Dict[int, float]] = None,
+    tx_delays: Optional[Dict[int, float]] = None,
 ) -> Dict[int, Dict[int, float]]:
+    """Build a Matrix of measured ToFs according to exchanged messages.
+
+    Args:
+        messages: The messages exchanged by the UWB boards.
+        rx_delays: The reception delays to be incorporated in the matrix calculation.
+        tx_delays: The transmission delays to be incorporated in the matrix calculation.
+
+    Returns:
+        A matrix of measured ToFs adjusted with the ``rx_delays`` and ``tx_delays``.
+    """
     measurements: List[ActiveMeasurement] = []
     messages_copy = deepcopy(messages)
     while messages_copy:
@@ -85,13 +83,6 @@ def build_tof_matrix_measured(
                 )
             )  # type: ignore
         )
-
-    measurements.sort()
-    measurements = measurements[
-        int(0.05 * len(measurements)) : int(
-            len(measurements) - 0.05 * len(measurements)
-        )
-    ]
 
     temp_matrix: Dict[int, Dict[int, Tuple[List[float], int]]] = {}
     for measurement in measurements:
@@ -117,16 +108,25 @@ def build_tof_matrix_measured(
     return matrix
 
 
-def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
+def calibrate(messages: List[Message], pos) -> Optional[Tuple[Dict, Dict]]:
+    """Find an optimal calibration for the UWB boards.
+
+    Args:
+        messages: A list of ranging messages.
+        pos: A dictionary containing the ranging ids as keys and their positions as values.
+
+    Returns:
+        Optimal RX and TX delays or None.
+    """
+
     def convert_to_delays(res) -> Tuple[Dict, Dict]:
-        print(res)
-        print(type(res))
-        assert len(participants) == len(res)
+        assert len(participants) * 2 == len(res)
         tx_times = {}
         rx_times = {}
         for i in range(len(participants)):
-            tx_times[participants[i]] = res[i] * 1.12
-            rx_times[participants[i]] = res[i] * 0.88
+            tx_times[participants[i]] = res[i]
+        for i in range(len(participants)):
+            rx_times[participants[i]] = res[i + len(participants)]
         return tx_times, rx_times
 
     def accuracy(res):
@@ -144,16 +144,15 @@ def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
 
     participants: List[int] = []
     # Build EDMs for the real (measured by the camera system) and measured (by UWB ranging) distances
-    pos = get_real_positions()
+    # pos = get_real_positions()
     if not pos:
-        # TODO: Use proper logging
-        print("WARN: could not get distance information from camera server")
+        warning("Could not get distance information from camera server")
         return None
     real_tof = build_tof_matrix(pos)
     measured_tof = build_tof_matrix_measured(messages)
+
     # We need a non changing list of ids
     # make sure `real_tof`` does not contain anything not covered by `measured_tof`
-
     for i in real_tof:
         if i in measured_tof:
             participants.append(i)
@@ -161,12 +160,38 @@ def calibrate(messages) -> Optional[Tuple[Dict, Dict]]:
     # Find the optimal delays that minize the difference between the real and measured positions
     res = scipy.optimize.minimize(
         accuracy,
-        [AVG_DELAY] * len(participants),
-        bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * len(participants),
+        [AVG_DELAY] * (len(participants) * 2),
+        # bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * (len(participants) * 2),
         method="Powell",
+        # options= {
+        #     "ftol" : 0.000000000001 / TIME_UNIT,
+        #     "xtol" : 0.000000000001 / TIME_UNIT
+        # }
     )
     return convert_to_delays(res.x)
 
 
 if __name__ == "__main__":
-    print(build_tof_matrix(get_real_positions()))
+    basicConfig(level=ERROR)
+    real_positions = {
+        0x0000: [0, 0],
+        0x0100: [2.15, 0],
+        0x0200: [2.15, 1.655],
+        0x0300: [0, 1.655],
+    }
+    sreenlog_file = "screenlog.0"
+    with open(sreenlog_file, "r", encoding="UTF-8") as file:
+        msg_list: List[Message] = list(
+            filter(lambda x: x is not None, map(parse_json_message, file.readlines()))
+        )  # type: ignore
+        msg_list.reverse()
+
+        calibration_result = calibrate(msg_list, real_positions)
+
+        if calibration_result:
+            tx_times, rx_times = calibration_result
+            print("Calibration result:")
+            print(f"RX Delays : {rx_times}")
+            print(f"TX Delays : {tx_times}")
+        else:
+            print("Calibration error")

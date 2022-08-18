@@ -1,9 +1,11 @@
+from logging import debug, info, warning
+from time import time
 from typing import Dict, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
 
-from components.localization.src.config import TIME_UNIT
-from components.localization.src.data import (
+from config import TIME_UNIT
+from data import (
     ActiveMeasurement,
     Message,
     PassiveMeasurement,
@@ -14,8 +16,8 @@ from components.localization.src.data import (
 def perform_twr(
     message: Message,
     msg_storage: List[Message],
-    tx_delays: Optional[Dict[int,float]] = None,
-    rx_delays: Optional[Dict[int,float]] = None,
+    tx_delays: Optional[Dict[int, float]] = None,
+    rx_delays: Optional[Dict[int, float]] = None,
 ) -> List[Union[ActiveMeasurement, PassiveMeasurement]]:
     def find_message_sequence(
         messages: List[Message], endpoint: TimingInfo, active_addr
@@ -30,6 +32,8 @@ def perform_twr(
                 try:
                     # ts = max([ts for ts in msg.rx if ts.addr == active_addr])
                     a_msg = Message(
+                        type=msg.type,
+                        clock_offset_ratio=msg.clock_offset_ratio,
                         tx=msg.tx,
                         # rx=[ts]
                         rx=[],
@@ -40,29 +44,38 @@ def perform_twr(
                     continue
             elif b_sn and msg.tx.addr == active_addr and msg.tx.sn == b_sn:
                 try:
-                    ts = max([ts for ts in msg.rx if ts.addr == endpoint.addr])
-                    b_msg = Message(tx=msg.tx, rx=[ts])
+                    ts = max(ts for ts in msg.rx if ts.addr == endpoint.addr)
+                    b_msg = Message(
+                        type=msg.type,
+                        clock_offset_ratio=msg.clock_offset_ratio,
+                        tx=msg.tx,
+                        rx=[ts],
+                    )
                     a_sn = ts.sn
                 except ValueError:
                     continue
             elif msg.tx.addr == endpoint.addr and msg.tx.sn == endpoint.sn:
                 try:
-                    ts = max([ts for ts in msg.rx if ts.addr == active_addr])
-                    c_msg = Message(tx=msg.tx, rx=[ts])
+                    ts = max(ts for ts in msg.rx if ts.addr == active_addr)
+                    c_msg = Message(
+                        type=msg.type,
+                        clock_offset_ratio=msg.clock_offset_ratio,
+                        tx=msg.tx,
+                        rx=[ts],
+                    )
                     b_sn = ts.sn
                 except ValueError:
                     continue
 
         return None
 
-    def get_ts(
-        rx: List[TimingInfo], reference: TimingInfo
-    ) -> int:
-        for info in rx:
-            if info == reference:
-                return info.ts
+    def get_ts(rx: List[TimingInfo], reference: TimingInfo) -> int:
+        for i in rx:
+            if i == reference:
+                return i.ts
         assert False
-    measurements = []
+
+    measurements: List[Union[ActiveMeasurement,PassiveMeasurement]] = []
 
     if not tx_delays:
         tx_delays = {}
@@ -92,19 +105,52 @@ def perform_twr(
             assert a_msg.tx in b_msg.rx and b_msg.tx in c_msg.rx
 
             # Time at A between sending b and receiving c
-            r_a = get_ts(message.rx, c_msg.tx) - b_msg.tx.ts - tx_delays[a_id] - rx_delays[a_id]
+            r_a = (
+                get_ts(message.rx, c_msg.tx)
+                - b_msg.tx.ts
+                - tx_delays[a_id]
+                - rx_delays[a_id]
+            )
             # Time at B between sending a and receiving b
-            r_b = get_ts(c_msg.rx, b_msg.tx) - a_msg.tx.ts - tx_delays[b_id] - rx_delays[b_id]
+            r_b = (
+                get_ts(c_msg.rx, b_msg.tx)
+                - a_msg.tx.ts
+                - tx_delays[b_id]
+                - rx_delays[b_id]
+            )
             # Time at A between receiving a and sending b
-            d_a = b_msg.tx.ts - get_ts(b_msg.rx, a_msg.tx) + tx_delays[a_id] + rx_delays[a_id]
+            d_a = (
+                b_msg.tx.ts
+                - get_ts(b_msg.rx, a_msg.tx)
+                + tx_delays[a_id]
+                + rx_delays[a_id]
+            )
             # Time at B between receiving b and sending c
-            d_b = c_msg.tx.ts - get_ts(c_msg.rx, b_msg.tx) + tx_delays[b_id] + rx_delays[b_id]
+            d_b = (
+                c_msg.tx.ts
+                - get_ts(c_msg.rx, b_msg.tx)
+                + tx_delays[b_id]
+                + rx_delays[b_id]
+            )
+
+            # TODO: Try to correct instead of filtering out
+            if r_a < 0 or r_b < 0 or d_a < 0 or d_b < 0:
+                info("Discarding measurement")
+                # continue
 
             tof = (r_a * r_b - d_a * d_b) / (r_a + r_b + d_a + d_b)
             distance = tof * TIME_UNIT * speed_of_light
-            print(distance)
+            if distance < 0 or distance > 1_000_000:
+                warning(
+                    f"Extremely unlikely distance of {distance}, R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
+                )
+            debug(
+                f"Distance between {message.tx.addr} and {rx_timing_info.addr}: {distance}"
+            )
             measurements.append(
-                ActiveMeasurement(message.tx.addr, rx_timing_info.addr, distance)
+                ActiveMeasurement(
+                    message.tx.addr, rx_timing_info.addr, distance, time()
+                )
             )
 
     return measurements
