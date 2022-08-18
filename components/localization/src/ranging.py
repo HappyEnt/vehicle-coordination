@@ -1,3 +1,5 @@
+"""This module contains implementations for ranging modules."""
+
 from abc import ABC, abstractmethod
 from logging import debug, info, warning
 from time import sleep
@@ -6,6 +8,7 @@ from typing import Any, Callable, Dict, List, Union
 from serial import Serial
 
 from calibrate import calibrate
+from config import RX_DELAYS, TX_DELAYS
 from data import (
     ActiveMeasurement,
     Message,
@@ -16,7 +19,16 @@ from twr import perform_twr
 
 
 class RangingNode(ABC):
-    """This class represents an UWB node."""
+    """This class represents an UWB node.
+
+    Attributes:
+        addr:
+        measurement_cb:
+        msg_storage:
+        active_measurements:
+        tx_delays:
+        rx_delays:
+    """
 
     def __init__(
         self,
@@ -31,8 +43,8 @@ class RangingNode(ABC):
         ] = measurement_cb
         self.msg_storage: List[Message] = []
         self.active_measurements: List[ActiveMeasurement] = []
-        self.tx_delays: Dict[int, float] = {}
-        self.rx_delays: Dict[int, float] = {}
+        self.tx_delays: Dict[int, float] = TX_DELAYS
+        self.rx_delays: Dict[int, float] = RX_DELAYS
         self.calibrated: bool = False
         self.calibrated_at: int = 0
         self.real_positions = None
@@ -41,7 +53,11 @@ class RangingNode(ABC):
         self.real_positions = positions
 
     def handle_message(self, message: Message):
-        """Process a RX or TX Message."""
+        """Process a RX or TX Message.
+
+        Args:
+            message: The new incoming message.
+        """
 
         measurements = list(
             filter(
@@ -86,6 +102,9 @@ class SerialRangingNode(RangingNode):
     """
     Extension of the `RangingNode` to work with a UWB board connected over a serial
     connection.
+
+    Attributes:
+        serial_connection:
     """
 
     def __init__(
@@ -114,7 +133,11 @@ class SerialRangingNode(RangingNode):
 
 
 class DumpFileRangingNode(RangingNode):
-    """Extension of the `RangingNode` to work with a dump file."""
+    """Extension of the `RangingNode` to work with a dump file.
+
+    Attributes:
+        file_name:
+    """
 
     def __init__(
         self,

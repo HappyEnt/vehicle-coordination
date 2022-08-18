@@ -32,7 +32,7 @@ def build_tof_matrix(
     """Build a Euclidian Distance Matrix (EDM) containing the ToFs for all nodes in ``positions``.
 
     Args:
-        Positions: A dictionary containing the ranging ids as keys and their positions as values.
+        positions: A dictionary containing the ranging ids as keys and their positions as values.
 
     Returns:
         A matrix containing the real ToFs between all nodes in ``positions``.
@@ -179,13 +179,15 @@ if __name__ == "__main__":
         0x0200: [2.15, 1.655],
         0x0300: [0, 1.655],
     }
-    with open("screenlog.0", "r", encoding="UTF-8") as file:
-        msg_list = list(
+    sreenlog_file = "screenlog.0"
+    with open(sreenlog_file, "r", encoding="UTF-8") as file:
+        msg_list: List[Message] = list(
             filter(lambda x: x is not None, map(parse_json_message, file.readlines()))
-        )[:200]
+        )  # type: ignore
         msg_list.reverse()
 
         calibration_result = calibrate(msg_list, real_positions)
+
         if calibration_result:
             tx_times, rx_times = calibration_result
             print("Calibration result:")
