@@ -1767,9 +1767,9 @@ static inline uint8_t *get_mac(const struct device *dev)
         }
     }
 
-    UNALIGNED_PUT(mac_addr & 0xFF, ptr);
+    UNALIGNED_PUT(mac_addr & 0xFFFFFFFF, ptr);
     ptr = (uint32_t *)(dw1000->mac_addr + 4);
-    UNALIGNED_PUT((mac_addr >> 32) & 0xFF, ptr);
+    UNALIGNED_PUT((mac_addr >> 32) & 0xFFFFFFFF, ptr);
 
     dw1000->mac_addr[0] = (dw1000->mac_addr[0] & ~0x01) | 0x02;
 

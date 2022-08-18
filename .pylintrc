@@ -32,7 +32,7 @@ ignore-patterns=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-init-hook='from pylint.config import find_pylintrc; import os, sys; sys.path.append(os.path.join(os.path.dirname(find_pylintrc()),"../.."))'
+init-hook='from pylint.config import find_pylintrc; import os, sys; sys.path.append(find_pylintrc())'
 
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use.
@@ -86,7 +86,10 @@ disable=raw-checker-failed,
         useless-suppression,
         deprecated-pragma,
         use-symbolic-message-instead,
-        no-else-return
+        no-else-return,
+        missing-module-docstring,
+        missing-class-docstring,
+        missing-function-docstring
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -398,14 +401,14 @@ good-names=i,
            ts,
            a,
            b,
-           c
+           c,
 
 # Good variable names regexes, separated by a comma. If names match any regex,
 # they will always be accepted
-good-names-rgxs=
+good-names-rgxs=[a-z]
 
 # Include a hint for the correct naming format with invalid-name.
-include-naming-hint=no
+include-naming-hint=yes
 
 # Naming style matching correct inline iteration names.
 inlinevar-naming-style=any

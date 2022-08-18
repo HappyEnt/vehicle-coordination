@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <drivers/uart.h>
 
+#define RANGING_ID 0x40
+
 LOG_MODULE_REGISTER(main);
 
 /* ieee802.15.4 device */
@@ -42,6 +44,8 @@ struct __attribute__((__packed__)) msg_ts {
 
 // TODO: Use mac?
 uint8_t *mac_addr; // 8 bytes MAC
+
+uint16_t ranging_id;
 
 // TODO: This is not standard compliant
 static uint8_t msg_header[] = {0xDE, 0xCA};
@@ -86,17 +90,19 @@ int main(void) {
     {
         (void)memset(msg_tx_buf, 0, sizeof(msg_tx_buf));
         // TODO: Add own addr!
-        msg_tx_buf[0].addr[0] = mac_addr[1]; // | mac_addr[3] | mac_addr[5] | mac_addr[7];
-        msg_tx_buf[0].addr[1] = mac_addr[0]; // | mac_addr[2] | mac_addr[4] | mac_addr[6];
+        msg_tx_buf[0].addr[0] = RANGING_ID & 0xFF; // | mac_addr[3] | mac_addr[5] | mac_addr[7];
+        msg_tx_buf[0].addr[1] = (RANGING_ID >> 8) & 0xFF; // | mac_addr[2] | mac_addr[4] | mac_addr[6];
 
         k_sem_give(&msg_tx_buf_sem);
     }
+    printk("Mac addr:");
     for (int i = 0; i < 8; i++) {
         printk("%X",mac_addr[i]);
     }
     printk("\n");
+    printk("Ranging ID: %X\n", ranging_id);
 
-    k_msleep(2000);
+    k_msleep(10000);
 
     // we disable the frame filter, otherwise the packets are not received!
     dwt_set_frame_filter(ieee802154_dev, 0, 0);
@@ -141,7 +147,7 @@ static void net_pkt_hexdump(struct net_pkt *pkt, const char *str)
 static int format_msg_ts_to_json(char *buf, size_t buf_len, struct msg_ts *msg_ts) {
     uint16_t addr = sys_get_le16(&msg_ts->addr[0]);
     uint64_t ts = ((uint64_t)sys_get_le32(&msg_ts->ts[1]) << 8) | msg_ts->ts[0];
-    return snprintf(buf, buf_len, "{\"addr\": \"0x%04X\", \"sn\": %d, \"ts\": %llu}", addr, msg_ts->sn, ts);
+    return snprintf(buf, buf_len, "{\"addr\":\"0x%04X\",\"sn\":%d,\"ts\":%llu}", addr, msg_ts->sn, ts);
 }
 
 static void output_msg_to_uart(char* type, struct msg_ts msg_ts_arr[], size_t num_ts, float *clock_ratio_offset) {
@@ -151,14 +157,14 @@ static void output_msg_to_uart(char* type, struct msg_ts msg_ts_arr[], size_t nu
     }
 
     // write open parentheses
-    uart_out("{ \"type\": \"");
+    uart_out("{\"type\":\"");
     uart_out(type);
-    uart_out("\", ");
+    uart_out("\",");
 
     char buf[256];
 
     if (clock_ratio_offset != NULL) {
-        snprintf(buf, sizeof(buf), "\"clock_ratio_offset\": %f, ", *clock_ratio_offset);
+        snprintf(buf, sizeof(buf), "\"clock_ratio_offset\":%f,", *clock_ratio_offset);
         uart_out(buf);
     }
 
@@ -175,14 +181,14 @@ static void output_msg_to_uart(char* type, struct msg_ts msg_ts_arr[], size_t nu
     }
 
     uart_out(buf);
-    uart_out(", \"rx\": [");
+    uart_out(",\"rx\":[");
 
     // write message content
     for(int i = 1; i < num_ts; i++) {
         // add separators in between
         if (i > 1)
         {
-            uart_out(", ");
+            uart_out(",");
         }
 
         // write ts content
