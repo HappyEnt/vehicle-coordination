@@ -45,10 +45,6 @@ GRPC_CHANNEL = "localhost:50052"
 
 VISUALISATION = False
 
-
-INT_ID = 4
-
-
 class LocalizationNode(ABC):
     """
     Base class for localization.
@@ -71,7 +67,7 @@ class BaseParticleNode(LocalizationNode):
         car_config.read(
             dirname + "/car_config.ini"
         )  # config for the car (holds id and size of car)
-        self.int_id = INT_ID
+        self.int_id = int(car_config["CAR"]["marker_id"])
         self.car_size_width = float(car_config["CAR"]["width"])
         self.car_size_length = float(car_config["CAR"]["length"])
         self.car_radius = (
