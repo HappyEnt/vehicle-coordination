@@ -113,7 +113,7 @@ def parse_json_message(json_str: str) -> Optional[Message]:
         else:
             warning("Decode Error")
             return None
-    except (KeyError, JSONDecodeError):
+    except (KeyError, JSONDecodeError, ValueError):
         warning("Decode Error")
         return None
 
