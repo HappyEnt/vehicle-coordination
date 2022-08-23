@@ -88,6 +88,10 @@ class BaseParticleNode(LocalizationNode):
         ] = {}  # positions of other nodes, key is the id of the other nodes
         self.measurement_queue: List[ActiveMeasurement] = []
 
+    @abstractmethod
+    def reset_particles(self):
+        pass
+
     def get_estimate(self):
         """
         Returns the current estimated position of this node. This includes its id, a point and a radius.
@@ -286,6 +290,17 @@ class ClassicParticleNode(BaseParticleNode):
             )
             self.particles.append(p)
 
+    def reset_particles(self):
+        self.particles = []
+        for _ in range(NUM_PARTICLES):
+            p = np.random.uniform(
+                low=[0, 0],
+                high=[SIDE_LENGTH_X, SIDE_LENGTH_Y],
+                size=2
+                # low=[0.0, 0.0], high=[SIDE_LENGTH_X, SIDE_LENGTH_Y], size=2
+            )
+            self.particles.append(p)
+
     def handle_measurement(self, d, recv_particles, estimate_from_other) -> None:
         """
         Handle incoming measurements by updating own particles.
@@ -337,6 +352,8 @@ class ClassicParticleNode(BaseParticleNode):
         )
         self.send_estimate_to_server()
         self.send_particles_to_server()
+        self.reset_particles()
+
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
@@ -383,6 +400,17 @@ class ClassicAllAtOnce(BaseParticleNode):
             )
             self.particles.append(p)
         self.weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
+
+    def reset_particles(self):
+        self.particles = []
+        for _ in range(NUM_PARTICLES):
+            p = np.random.uniform(
+                low=[0, 0],
+                high=[SIDE_LENGTH_X, SIDE_LENGTH_Y],
+                size=2
+                # low=[0.0, 0.0], high=[SIDE_LENGTH_X, SIDE_LENGTH_Y], size=2
+            )
+            self.particles.append(p)
 
     def handle_measurement(
         self, distances, recv_particles_arr, estimate_from_other_arr
@@ -450,6 +478,7 @@ class ClassicAllAtOnce(BaseParticleNode):
         )
         self.send_estimate_to_server()
         self.send_particles_to_server()
+        self.reset_particles()
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
