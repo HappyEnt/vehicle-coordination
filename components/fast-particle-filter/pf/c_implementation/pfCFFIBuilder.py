@@ -11,7 +11,7 @@ struct particle {
 };
 
 struct weighted_particle {
-  struct particle particle; 
+  struct particle particle;
   double weight;
 };
 
@@ -34,7 +34,7 @@ struct message_stack {
 };
 
 struct particle_filter_instance {
-  // the minimum we have to store is the particle set 
+  // the minimum we have to store is the particle set
   struct particle *local_particles;
   size_t local_particles_length;
   // Any other data that is usefull
@@ -56,7 +56,7 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 void add_message(struct particle_filter_instance *pf_inst, struct message m);
 
 // TODO find out what kind of actions will exist
-void predict(struct particle_filter_instance *pf_inst, int action);
+void predict(struct particle_filter_instance *pf_inst, double moved_distance);
 void iterate(struct particle_filter_instance *pf_inst);
 
 struct normal_distribution {
@@ -80,7 +80,7 @@ struct normal_distribution *generate_normal_distribution(
                                                          bool cache_histogram);
 
 void destroy_normal_distribution(struct normal_distribution *distribution);
-  
+
 double value_from_normal_distribution(struct normal_distribution *distribution,
                                       double x);
 
@@ -97,7 +97,7 @@ ffibuilder.set_source("_pf_cffi",
                       #include "util.h"   // the C header of the library
 """,
                       include_dirs=['./'],
-                      library_dirs=['./build'],                      
+                      library_dirs=['./build'],
                       libraries=['BeliefPropagation'],
                       extra_link_args=['-Wl,-rpath,/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation/build']
                       )   # library name, for the linker

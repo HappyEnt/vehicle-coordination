@@ -28,4 +28,7 @@
 #define check_mem(A) check((A), "Out of memory.")
 
 #define check_debug(A, M, ...) if(!(A)) { debug(M, $$__VA_ARGS__); errno = 0; goto error;}
+
 #endif /* DEBUG_H */
+
+

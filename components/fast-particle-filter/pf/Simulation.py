@@ -263,61 +263,37 @@ def start_interactive_sim(particles = 50):
 
     events = [
         TWR(sender = anchors[0], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
-
-        TWR(sender = anchors[0], recipient = tags[0]),
-        TWR(sender = anchors[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
-
-        TWR(sender = anchors[0], recipient = tags[1]),
-        Iterate(recipient = tags[1]),
-
-        TWR(sender = anchors[0], recipient = tags[1]),
-        TWR(sender = anchors[2], recipient = tags[1]),
-        Iterate(recipient = tags[1]),
-
-        TWR(sender = anchors[0], recipient = tags[0]),
         TWR(sender = anchors[1], recipient = tags[0]),
         TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
-
         TWR(sender = anchors[0], recipient = tags[1]),
         TWR(sender = anchors[2], recipient = tags[1]),
         TWR(sender = tags[0], recipient = tags[1]),
+        Iterate(recipient = tags[0]),
         Iterate(recipient = tags[1]),
 
-        Move(recipient = tags[0], displacement = (-4, 0)),
+        TWR(sender = anchors[0], recipient = tags[0]),
+        TWR(sender = anchors[1], recipient = tags[0]),
+        TWR(sender = tags[1], recipient = tags[0]),
+        TWR(sender = anchors[0], recipient = tags[1]),
+        TWR(sender = anchors[2], recipient = tags[1]),
+        TWR(sender = tags[0], recipient = tags[1]),
         Iterate(recipient = tags[0]),
-
-        Move(recipient = tags[1], displacement = (-4, 0)),
         Iterate(recipient = tags[1]),
 
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
+    #     Move(recipient = tags[0], displacement = (-4, 0)),
+    #     Iterate(recipient = tags[0]),
 
-        Move(recipient = tags[0], displacement = (-4, 0)),
-        Iterate(recipient = tags[0]),
+    #     Move(recipient = tags[1], displacement = (-4, 0)),
+    #     Iterate(recipient = tags[1]),
 
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
+    #     TWR(sender = tags[1], recipient = tags[0]),
+    #     Iterate(recipient = tags[0]),
 
-        Move(recipient = tags[0], displacement = (-4, 0)),
-        Iterate(recipient = tags[0]),
+    #     Move(recipient = tags[0], displacement = (-4, 0)),
+    #     Iterate(recipient = tags[0]),
 
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
-
-        Move(recipient = tags[0], displacement = (-4, 0)),
-        Iterate(recipient = tags[0]),
-
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),fi
-
-        Move(recipient = tags[0], displacement = (-4, 0)),
-        Iterate(recipient = tags[0]),
-
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
+    #     TWR(sender = tags[1], recipient = tags[0]),
+    #     Iterate(recipient = tags[0]),
     ]
 
 
@@ -353,28 +329,37 @@ def benchmark_particles():
 
         events = [
             TWR(sender = anchors[0], recipient = tags[0]),
-            Iterate(recipient = tags[0]),
-
-            TWR(sender = anchors[0], recipient = tags[0]),
             TWR(sender = anchors[1], recipient = tags[0]),
-            Iterate(recipient = tags[0]),
-
-            TWR(sender = anchors[0], recipient = tags[1]),
-            Iterate(recipient = tags[1]),
-
-            TWR(sender = anchors[0], recipient = tags[1]),
-            TWR(sender = anchors[2], recipient = tags[1]),
-            Iterate(recipient = tags[1]),
-
-            TWR(sender = anchors[0], recipient = tags[1]),
-            TWR(sender = anchors[1], recipient = tags[1]),
             TWR(sender = tags[1], recipient = tags[0]),
-            Iterate(recipient = tags[0]),
-
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
             TWR(sender = tags[0], recipient = tags[1]),
+            Iterate(recipient = tags[0]),
             Iterate(recipient = tags[1]),
+
+            TWR(sender = anchors[0], recipient = tags[0]),
+            TWR(sender = anchors[1], recipient = tags[0]),
+            TWR(sender = tags[1], recipient = tags[0]),
+            TWR(sender = anchors[0], recipient = tags[1]),
+            TWR(sender = anchors[2], recipient = tags[1]),
+            TWR(sender = tags[0], recipient = tags[1]),
+            Iterate(recipient = tags[0]),
+            Iterate(recipient = tags[1]),
+
+            Move(recipient = tags[0], displacement = (-4, 0)),
+            Iterate(recipient = tags[0]),
+
+            Move(recipient = tags[1], displacement = (-4, 0)),
+            Iterate(recipient = tags[1]),
+
+            TWR(sender = tags[1], recipient = tags[0]),
+            Iterate(recipient = tags[0]),
+
+            Move(recipient = tags[0], displacement = (-4, 0)),
+            Iterate(recipient = tags[0]),
+
+            TWR(sender = tags[1], recipient = tags[0]),
+            Iterate(recipient = tags[0]),
         ]
 
 
@@ -412,30 +397,22 @@ def benchmark_particles_statistics(repetetions, particles):
 
         events = [
             TWR(sender = anchors[0], recipient = tags[0]),
-            Iterate(recipient = tags[0]),
-
-            TWR(sender = anchors[0], recipient = tags[0]),
             TWR(sender = anchors[1], recipient = tags[0]),
-            Iterate(recipient = tags[0]),
-
-            TWR(sender = anchors[0], recipient = tags[1]),
-            Iterate(recipient = tags[1]),
-
+            TWR(sender = tags[1], recipient = tags[0]),
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
+            TWR(sender = tags[0], recipient = tags[1]),
+            Iterate(recipient = tags[0]),
             Iterate(recipient = tags[1]),
 
             TWR(sender = anchors[0], recipient = tags[0]),
             TWR(sender = anchors[1], recipient = tags[0]),
             TWR(sender = tags[1], recipient = tags[0]),
-            Iterate(recipient = tags[0]),
-
             TWR(sender = anchors[0], recipient = tags[1]),
             TWR(sender = anchors[2], recipient = tags[1]),
             TWR(sender = tags[0], recipient = tags[1]),
+            Iterate(recipient = tags[0]),
             Iterate(recipient = tags[1]),
-
-
         ]
 
 
@@ -458,8 +435,8 @@ def benchmark_particles_statistics(repetetions, particles):
     ax1.boxplot(runtimes)
     plt.show()
 
-# benchmark_particles_statistics(repetetions = 200, particles = 250)
+# benchmark_particles_statistics(repetetions = 100, particles = 125)
 
 # benchmark_particles()
 
-start_interactive_sim(particles = 125)
+start_interactive_sim(particles = 250)

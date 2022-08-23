@@ -16,7 +16,6 @@
 #include <omp.h>
 
 #define USE_CACHE 0
-
 #define DIM 2
 
 void push_message(struct message_stack **ms, struct message m) {
@@ -101,7 +100,7 @@ double message_prob(struct particle_filter_instance *pf, struct particle sample,
                                                                            sample,
                                                                            particles_other[j])));
     if(likelihood != likelihood) {
-      log_info("%f,%f,%f,%f", sample.x_pos, sample.y_pos, particles_other[j].x_pos, particles_other[j].y_pos);
+      /* log_info("%f,%f,%f,%f", sample.x_pos, sample.y_pos, particles_other[j].x_pos, particles_other[j].y_pos); */
     }
 
     assert(likelihood == likelihood);
@@ -113,7 +112,7 @@ double message_prob(struct particle_filter_instance *pf, struct particle sample,
   return weight_factor / m.particles_length;
 }
 
-double message_stack_prob(struct particle_filter_instance *pf, struct particle sample) {
+double message_stack_prob(struct particle_filter_instance *pf, struct particle sample, double lambda) {
   struct message_stack *current_message = pf->mstack;
   double weight_product = 1.0;
 
@@ -124,7 +123,7 @@ double message_stack_prob(struct particle_filter_instance *pf, struct particle s
     current_message = current_message->next;
   }
 
-  return weight_product;
+  return pow(weight_product, 1.0/lambda);
 }
 
 void resample(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles, size_t input_length, size_t target_length) {
@@ -139,7 +138,7 @@ void resample(struct particle_filter_instance *pf, struct weighted_particle *wei
 
 
 // calculates new particle set for belief
-void correct(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles) {
+void correct(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles, double lambda) {
   double total_weight = 0.0; // implicitly shared by being definde outside the following parallel block
 
   struct particle *particles = pf->local_particles;
@@ -151,7 +150,7 @@ void correct(struct particle_filter_instance *pf, struct weighted_particle *weig
   }
 
   for (size_t i = 0; i < samples; ++i) {
-    weighted_particles[i].weight *= message_stack_prob(pf, weighted_particles[i].particle);
+    weighted_particles[i].weight *= message_stack_prob(pf, weighted_particles[i].particle, lambda);
   }
 
   for (size_t i = 0; i < samples; ++i) {
@@ -222,14 +221,13 @@ double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
 }
 
 // for now we generate exactly the same amoutn of new samples as we had in our previous belief estimate
-void regularized_reject_correct(struct particle_filter_instance *pf) {
+void regularized_reject_correct(struct particle_filter_instance *pf, double lambda) {
   struct particle *old_particles = pf->local_particles;
   size_t components = pf->local_particles_length;
 
   struct particle *new_particles = malloc(components * sizeof(struct particle));
 
   double supremum = value_from_normal_distribution(pf->uwb_error_likelihood, 0) * message_stack_len(pf->mstack);
-  log_info("supremum %f", supremum);
 
   double variance = max_empirical_variance(old_particles, components);
   double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
@@ -248,7 +246,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf) {
           next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
           next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
 
-          double accept = message_stack_prob(pf, next_sample);
+          double accept = message_stack_prob(pf, next_sample, lambda);
 
           if(accept > U * supremum) {
             new_particles[c] = next_sample;
@@ -283,9 +281,11 @@ void sample_from_multinomial_direct(struct weighted_particle *wp, size_t *sample
     double alpha = (double) rand()/(RAND_MAX);
     size_t index = 0;
 
-    for (double agg = -alpha; agg < 0 && index < repetetions; agg += wp[index].weight) {
+    for (double agg = -alpha; agg < 0 && index < components-1; agg += wp[index].weight) {
       index++;
     }
+
+    assert(index < components);
 
     sample[index] += 1;
   }
@@ -305,8 +305,6 @@ void resample_kde(struct particle_filter_instance *pf, struct weighted_particle 
   // chapter 12 douce et al. optimal bandwidth assuming unit gaussian distribution of underlying distribution
   double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
 
-  log_info("h_opt %f", h_opt);
-
   size_t component_freq[components];
   sample_from_multinomial_direct(wp, component_freq, components, target_samples);
 
@@ -320,9 +318,14 @@ void resample_kde(struct particle_filter_instance *pf, struct weighted_particle 
       new_particles[sample_cnt].x_pos = wp[c].particle.x_pos + sample.x_pos*h_opt*sqrt(variance);
       new_particles[sample_cnt].y_pos = wp[c].particle.y_pos + sample.y_pos*h_opt*sqrt(variance);
 
+      assert(new_particles[sample_cnt].y_pos == new_particles[sample_cnt].y_pos);
+      assert(new_particles[sample_cnt].x_pos == new_particles[sample_cnt].x_pos);
+
       sample_cnt++;
     }
   }
+
+  assert(sample_cnt == target_samples);
 
   pf->local_particles = new_particles;
   pf->local_particles_length = target_samples;
@@ -345,8 +348,8 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
 
     sample_particles_from_gaussian(current_sample, 0.5, &next_sample, 1);
 
-    double prob_cur = message_stack_prob(pf, current_sample);
-    double prob_next = message_stack_prob(pf, next_sample);
+    double prob_cur = message_stack_prob(pf, current_sample, 1.0);
+    double prob_next = message_stack_prob(pf, next_sample, 1.0);
     double accept = prob_next / prob_cur;
     double alpha = (((double) rand())/(RAND_MAX));
 
@@ -361,7 +364,6 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
     if(i >= burn_in) {
       new_particles[i - burn_in] = current_sample;
     }
-
   }
 
   pf->local_particles = new_particles;
@@ -369,6 +371,28 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
 
   free(old_particles);
 }
+
+double calculate_progressive_factor(struct particle_filter_instance *pf, double sigma_max) {
+  struct message_stack *current_message = pf->mstack;
+  struct particle *current_particles = pf->local_particles;
+  size_t current_particles_length = pf->local_particles_length;
+
+  double weight_product = 1.0;
+  double max_prob = 0.0;
+
+  for (size_t i = 0; i < current_particles_length; ++i) {
+    double prob = -1.0 *  log(message_stack_prob(pf, current_particles[i], 1.0));
+    if (prob > max_prob && !isinf(prob)) {
+      max_prob = prob;
+    }
+  }
+
+  return max_prob / log(sigma_max);
+  /* return max_prob; */
+}
+
+
+
 
 // _____Implementation of public particle filter interface_____
 
@@ -425,14 +449,15 @@ void add_message(struct particle_filter_instance *pf_inst, struct message m) {
 // This is also not yet the version that autonomously finds the best message order.
 void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
-
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
   // First correct
-  correct(pf_inst, wp);
+  correct(pf_inst, wp, 1.0);
 
   // than perform resampling through density estimation
   resample_kde(pf_inst, wp, M);
+
+  free(wp);
 
   clear_message_stack(&pf_inst->mstack);
 }
@@ -442,10 +467,77 @@ void post_regularisation_bp(struct particle_filter_instance *pf_inst) {
 
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
-  regularized_reject_correct(pf_inst);
+  regularized_reject_correct(pf_inst, 1.0);
 
   clear_message_stack(&pf_inst->mstack);
 }
+
+void progressive_post_regularisation_bp(struct particle_filter_instance *pf_inst, double sigma_max, int n_max) {
+  int n;
+  double lambda;
+
+
+  // initial conditions
+  n = 0;
+  lambda = 1000;
+  // start with high lambda to start of
+
+  do {
+    if(n >= n_max || lambda < 1.0) {
+      lambda = 1.0;
+      n = n_max;
+    }
+
+    log_info("lambda = %f", lambda);
+
+    regularized_reject_correct(pf_inst, lambda);
+
+    lambda = calculate_progressive_factor(pf_inst, sigma_max);
+
+    n++;
+  } while (n <= n_max);
+
+
+  clear_message_stack(&pf_inst->mstack);
+}
+
+void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst, double sigma_max, int n_max) {
+  size_t M = pf_inst->local_particles_length;
+  int n;
+  double lambda;
+
+  n = 0;
+  lambda = 1000;
+
+  do {
+    if(n >= n_max-1 || lambda < 1.0) {
+      lambda = 1.0;
+      n = n_max;
+    }
+
+    struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
+
+    // First correct
+    correct(pf_inst, wp, lambda);
+
+    // than perform resampling through density estimation
+    resample_kde(pf_inst, wp, M);
+
+    free(wp);
+
+    // calculate next lambda
+    lambda = calculate_progressive_factor(pf_inst, sigma_max);
+    log_info("lambda = %f", lambda);
+
+    //TODO break on lamdba < 1.0
+
+    n++;
+  } while(n <= n_max);
+
+
+  clear_message_stack(&pf_inst->mstack);
+}
+
 
 
 void iterate(struct particle_filter_instance *pf_inst) {
@@ -453,7 +545,9 @@ void iterate(struct particle_filter_instance *pf_inst) {
   if(!message_stack_len(pf_inst->mstack)) {
     log_info("empty message stack. Doing nothing");
   } else {
-    post_regularisation_bp(pf_inst);
+    /* post_regularisation_bp(pf_inst); */
+    /* progressive_post_regularisation_bp(pf_inst, 4.0, 5); */
+    progressive_pre_regularisation_bp(pf_inst, 4.0, 10);
   }
 }
 
