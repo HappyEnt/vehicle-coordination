@@ -14,7 +14,7 @@ build:
 	make release=1 native
 
 native:
-	cargo $(MODE) $(RELEASE)
+	cargo $(MODE) --bins $(RELEASE)
 
 pi: 
-	cargo $(MODE) --target armv7-unknown-linux-gnueabihf $(RELEASE) --features "pi"
+	cargo $(MODE) --target armv7-unknown-linux-gnueabihf --bins $(RELEASE) --features "pi"

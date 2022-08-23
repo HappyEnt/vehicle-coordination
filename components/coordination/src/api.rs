@@ -1,4 +1,4 @@
-use ndarray::Array1;
+use orca_rs::ndarray::Array1;
 
 /// Payload received via the API.
 #[derive(Clone, Debug)]

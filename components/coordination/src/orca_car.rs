@@ -1,28 +1,26 @@
 use std::{error::Error, process, thread, time::Duration};
 
 use async_channel::{Receiver, Sender};
-use futures::FutureExt;
 use log::{debug, error, warn};
-use ndarray::{arr1, Array1};
-use orca_rs::{orca, participant::Participant};
+use orca_rs::{
+    ndarray::{arr1, Array1},
+    participant::Participant,
+};
 use tokio::time::timeout;
 
 use crate::{
     math::{dist, norm, signed_angle_between},
     picar::{Picar, PicarConfig},
-    wheels::Wheels,
 };
 
 type NewVelAdjustment = (Array1<f64>, Array1<f64>);
 
 const TURN_DURATION: u64 = 1000;
-const TURN_SPEED: f64 = 0.1;
 
 const DRIVE_DURATION: u64 = 1000;
-const DRIVE_SPEED: f64 = 0.2;
 
-const TIMEOUT: u64 = 1000;
-const DISTANCE_THRESHOLD: f64 = 20.0;
+const TIMEOUT: u64 = 2000;
+const DISTANCE_THRESHOLD: f64 = 0.2;
 
 #[derive(Clone)]
 enum CalibrationStage {
@@ -79,11 +77,13 @@ impl OrcaCar {
             warn!("Calling OrcaCar::update() twice without calling OrcaCar::tick()!");
         }
         self.old_velocity = self.velocity.clone();
+        debug!("self.old_velocity = {:?}", self.old_velocity);
         self.velocity = &position
             - match self.position.clone() {
                 None => arr1(&[0.0, 0.0]),
                 Some(pos) => pos,
             };
+        debug!("self.velocity = {:?}", self.velocity);
         self.position = Some(position);
         debug!("self.position = {:?}", self.position);
         if let Some(target) = target {
@@ -220,14 +220,16 @@ impl OrcaCar {
                                         error!("Error during picar.turn_right() ({})", e);
                                     }
                                     thread::sleep(Duration::from_millis(
-                                        ((angle / config.right_turn) * TURN_DURATION as f64) as u64,
+                                        ((angle / config.right_turn) * TURN_DURATION as f64 / 2.0)
+                                            as u64,
                                     ));
                                 } else {
                                     if let Err(e) = picar.turn_left().await {
                                         error!("Error during picar.turn_left() ({})", e);
                                     }
                                     thread::sleep(Duration::from_millis(
-                                        ((angle / config.right_turn) * TURN_DURATION as f64) as u64,
+                                        ((angle / config.left_turn) * TURN_DURATION as f64 / 2.0)
+                                            as u64,
                                     ));
                                 }
                                 // and driiiiiiivvvvveee
@@ -269,6 +271,7 @@ impl OrcaCar {
             &self.target.clone().unwrap(),
         ) < DISTANCE_THRESHOLD
         {
+            self.picar.stop().await?;
             process::exit(0);
             // TODO: Find threshold for this value
         }
@@ -278,17 +281,11 @@ impl OrcaCar {
 
         if let Some(position) = self.position.clone() {
             if let Some(target) = self.target.clone() {
-                let we = Participant {
-                    position,
-                    velocity: self.velocity.clone(),
-                    radius,
-                    confidence,
-                    vmax: 0.0,
-                    target,
-                    in_obstacle: false,
-                };
-
-                new_vel = orca(&we, &mut others, &[], 10.0);
+                let mut we =
+                    Participant::new(position.clone(), self.velocity.clone(), radius, confidence)
+                        .with_inner_state(self.config.max_speed, target);
+                we.update_position(&position);
+                new_vel = we.orca(&mut others, &[], 10.0);
             }
         }
 
