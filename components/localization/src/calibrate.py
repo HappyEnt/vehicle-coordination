@@ -3,7 +3,7 @@ import json
 from logging import basicConfig, warning, ERROR
 import math
 from time import sleep
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from requests import get
 from scipy.constants import speed_of_light
@@ -108,7 +108,7 @@ def build_tof_matrix_measured(
     return matrix
 
 
-def calibrate(messages: List[Message], pos) -> Optional[Tuple[Dict, Dict]]:
+def calibrate(messages: Iterable[Message], pos) -> Optional[Tuple[Dict, Dict]]:
     """Find an optimal calibration for the UWB boards.
 
     Args:

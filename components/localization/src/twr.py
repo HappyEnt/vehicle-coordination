@@ -1,6 +1,6 @@
 from logging import debug, info, warning
 from time import time
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
 
@@ -15,7 +15,7 @@ from data import (
 
 def perform_twr(
     message: Message,
-    msg_storage: List[Message],
+    msg_storage: Iterable[Message],
     tx_delays: Optional[Dict[int, float]] = None,
     rx_delays: Optional[Dict[int, float]] = None,
 ) -> List[Union[ActiveMeasurement, PassiveMeasurement]]:

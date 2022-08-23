@@ -1,6 +1,7 @@
 """This module contains implementations for ranging modules."""
 
 from abc import ABC, abstractmethod
+from collections import deque
 from logging import debug, info, warning
 from time import sleep
 from typing import Any, Callable, Dict, List, Union
@@ -16,6 +17,9 @@ from data import (
     parse_json_message,
 )
 from twr import perform_twr
+
+
+MESSAGE_STORAGE_SIZE = 100
 
 
 class RangingNode(ABC):
@@ -41,7 +45,7 @@ class RangingNode(ABC):
         self.measurement_cb: Callable[
             [List[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ] = measurement_cb
-        self.msg_storage: List[Message] = []
+        self.msg_storage: deque[Message] = deque(maxlen=MESSAGE_STORAGE_SIZE)
         self.active_measurements: List[ActiveMeasurement] = []
         self.tx_delays: Dict[int, float] = TX_DELAYS
         self.rx_delays: Dict[int, float] = RX_DELAYS
@@ -72,7 +76,7 @@ class RangingNode(ABC):
         )
 
         # TODO: Make more efficient
-        self.msg_storage.insert(0, message)
+        self.msg_storage.appendleft(message)
         debug(f"Measurement by {self.addr}: {measurements}")
         self.active_measurements.extend(
             list(filter(lambda x: isinstance(x, ActiveMeasurement), measurements))  # type: ignore
