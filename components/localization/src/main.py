@@ -5,7 +5,7 @@ from time import sleep
 
 from serial import Serial
 
-from localization import GridParticleNode, ClassicParticleNode
+from localization import GridParticleNode, ClassicParticleNode, ClassicAllAtOnce
 from ranging import DumpFileRangingNode, SerialRangingNode
 
 import sys
@@ -51,7 +51,7 @@ def main():
     elif args.log == "DEBUG":
         basicConfig(level=DEBUG)
 
-    localization_node = ClassicParticleNode()
+    localization_node = ClassicAllAtOnce()
     ranging_nodes = []
     if args.port:
         ranging_nodes.append(

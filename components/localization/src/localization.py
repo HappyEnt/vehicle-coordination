@@ -504,9 +504,9 @@ class ClassicAllAtOnce(BaseParticleNode):
                 recv_particle_arr.append(self.get_particles_from_server(other_id))
                 estimate_from_other_arr.append(self.get_estimate_from_server(other_id))
 
-                self.handle_measurement(
-                    distances, recv_particle_arr, estimate_from_other_arr
-                )
+            self.handle_measurement(
+                distances, recv_particle_arr, estimate_from_other_arr
+            )
             return True
         else:
             return False
