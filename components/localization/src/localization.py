@@ -225,14 +225,14 @@ class BaseParticleNode(LocalizationNode):
                 # TODO: Think about ID structure
                 if m.a >> 8 == self.int_id:
                     if m.b in measurement_dict:
-                        measurement_dict[m.b].append(m.distance)
+                        measurement_dict[m.b >> 8].append(m.distance)
                     else:
-                        measurement_dict[m.b] = [m.distance]
+                        measurement_dict[m.b >> 8] = [m.distance]
                 if m.b >> 8 == self.int_id:
                     if m.a in measurement_dict:
-                        measurement_dict[m.a].append(m.distance)
+                        measurement_dict[m.a >> 8].append(m.distance)
                     else:
-                        measurement_dict[m.a] = [m.distance]
+                        measurement_dict[m.a >> 8] = [m.distance]
             for (other_id, distances) in measurement_dict.items():
                 # _, _, _, particles = self.get_measurements_from_server(other_id)
 
@@ -487,14 +487,14 @@ class ClassicAllAtOnce(BaseParticleNode):
                 # TODO: Think about ID structure
                 if m.a >> 8 == self.int_id:
                     if m.b in measurement_dict:
-                        measurement_dict[m.b].append(m.distance)
+                        measurement_dict[m.b >> 8].append(m.distance)
                     else:
-                        measurement_dict[m.b] = [m.distance]
+                        measurement_dict[m.b >> 8] = [m.distance]
                 if m.b >> 8 == self.int_id:
                     if m.a in measurement_dict:
-                        measurement_dict[m.a].append(m.distance)
+                        measurement_dict[m.a >> 8].append(m.distance)
                     else:
-                        measurement_dict[m.a] = [m.distance]
+                        measurement_dict[m.a >> 8] = [m.distance]
 
             distances = []
             recv_particle_arr = []
@@ -503,10 +503,10 @@ class ClassicAllAtOnce(BaseParticleNode):
                 distances.append(sum(dists) / len(dists))
                 recv_particle_arr.append(self.get_particles_from_server(other_id))
                 estimate_from_other_arr.append(self.get_estimate_from_server(other_id))
-
-            self.handle_measurement(
-                distances, recv_particle_arr, estimate_from_other_arr
-            )
+            if distances:
+                self.handle_measurement(
+                    distances, recv_particle_arr, estimate_from_other_arr
+                )
             return True
         else:
             return False
