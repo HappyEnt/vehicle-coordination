@@ -5,8 +5,9 @@ import json
 from logging import debug, info, warning
 import math
 import random
-import time
-from typing import Dict, List, NoReturn, Tuple, Union
+from time import time, sleep
+# import time
+from typing import Any, Dict, Iterable, List, NoReturn, Tuple, Union
 import os
 
 import numpy as np
@@ -53,7 +54,7 @@ class LocalizationNode(ABC):
 
     @abstractmethod
     def receive_measurements(
-        self, ds: List[Union[ActiveMeasurement, PassiveMeasurement]]
+        self, ds: Iterable[Union[ActiveMeasurement, PassiveMeasurement]]
     ):
         pass
 
@@ -76,9 +77,9 @@ class BaseParticleNode(LocalizationNode):
             math.sqrt(self.car_size_width**2 + self.car_size_length**2)
         ) / 2  # convert a rectangle-shaped car into a single radius
         self.particles: List[
-            Union[Tuple[float, float], List[float]]
+            Union[Tuple[float, float], List[float], np.ndarray[Any, np.dtype[np.float64]]]
         ] = []  # we assume that the weights are equal for all particles
-        self.last_movement_update = time.time()
+        self.last_movement_update = time()
         self.velocity = [
             0.0,
             0.0,
@@ -94,7 +95,9 @@ class BaseParticleNode(LocalizationNode):
 
     def get_estimate(self):
         """
-        Returns the current estimated position of this node. This includes its id, a point and a radius.
+        Returns the current estimated position of this node.
+        
+        This includes its id, a point and a radius.
         """
         estimate_x = np.mean([p[0] for p in self.particles])
         estimate_y = np.mean([p[1] for p in self.particles])
@@ -179,7 +182,7 @@ class BaseParticleNode(LocalizationNode):
 
     def receive_measurements(self, ds):
         self.measurement_queue.extend(
-            list(filter(lambda x: isinstance(x, ActiveMeasurement), ds))  # type: ignore
+            filter(lambda x: isinstance(x, ActiveMeasurement), ds)  # type: ignore
         )
 
     @abstractmethod
@@ -193,8 +196,10 @@ class BaseParticleNode(LocalizationNode):
     def send_locations_to_coordination(self):
         """
         Send information to a coordination module.
-        The information includes the own position, the own size (radius of vehicle),
-        the own inaccuracy in the position estimation (as a radius) and the position and size of the other vehicles.
+
+        The information includes the own position, the own size (radius of vehicle), the own
+        inaccuracy in the position estimation (as a radius) and the position and size of the other
+        vehicles.
         """
         with grpc.insecure_channel(GRPC_CHANNEL) as channel:
             stub = interface_pb2_grpc.CoordinationStub(channel)
@@ -219,6 +224,12 @@ class BaseParticleNode(LocalizationNode):
             )
             self.last_movement_update = time.time()
             self.velocity = [response.new_velocity.x, response.new_velocity.y]
+
+            if config["EVALUATION"]["track_positions"] and config["EVALUATION"]["server_available"]:
+                real_position = ast.literal_eval(requests.get(SERVER + "/positions").text)
+                current_time = time()
+                with open("positions.txt", "a", encoding="utf-8") as file:
+                    file.write(json.JSONEncoder().encode({"time": current_time, "estimated_position": estimate[1], "real": real_position}) + "\n")
 
     def tick(self) -> bool:
         if self.measurement_queue:
@@ -562,7 +573,7 @@ class ClassicAllAtOnce(BaseParticleNode):
         while True:
             self.tick()
             # self.illustrate_nodes_and_particles((100,0))
-            time.sleep(0.1)
+            sleep(0.1)
 
 
 ############################################################################################################

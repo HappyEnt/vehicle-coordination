@@ -20,7 +20,7 @@ def perform_twr(
     rx_delays: Optional[Dict[int, float]] = None,
 ) -> List[Union[ActiveMeasurement, PassiveMeasurement]]:
     def find_message_sequence(
-        messages: List[Message], endpoint: TimingInfo, active_addr
+        messages: Iterable[Message], endpoint: TimingInfo, active_addr
     ) -> Optional[Tuple[Message, Message, Message]]:
         a_msg = None
         a_sn = None

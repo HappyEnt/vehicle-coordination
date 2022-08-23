@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 from logging import basicConfig, DEBUG, ERROR, INFO, WARNING
+import os
+import sys
 from threading import Thread
 from time import sleep
 
@@ -8,10 +10,10 @@ from serial import Serial
 from localization import GridParticleNode, ClassicParticleNode, ClassicAllAtOnce
 from ranging import DumpFileRangingNode, SerialRangingNode
 
-import sys
-import os
+
 dirname = os.path.dirname(__file__)
 sys.path.insert(0, dirname + "../src/")
+
 
 def main():
     parser = ArgumentParser()
@@ -55,7 +57,11 @@ def main():
     ranging_nodes = []
     if args.port:
         ranging_nodes.append(
-            SerialRangingNode(0, localization_node.receive_measurements, Serial(args.port, baudrate=115200))
+            SerialRangingNode(
+                0,
+                localization_node.receive_measurements,
+                Serial(args.port, baudrate=115200),
+            )
         )
     if args.file:
         ranging_nodes.append(
@@ -71,14 +77,9 @@ def main():
     for thread in ranging_threads:
         thread.start()
 
-    # while localization_node.tick():
-    #     sleep(0.1)
-    #         # localization_node.illustrate_nodes_and_particles(real_pos=(111.5,88.5))
-
-
     sleep(20)
-    localization_node.illustrate_nodes_and_particles(real_pos=(111.5,88.5))
-    # localization_node.illustrate_nodes_and_particles((100,0))
+    localization_node.illustrate_nodes_and_particles(real_pos=(111.5, 88.5))
+    localization_node.illustrate_nodes_and_particles((100,0))
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
 argparse
+grpcio
 matplotlib
 numpy
+protobuf
 pyserial
 requests
-types-requests
 scipy
-grpcio

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from logging import debug, info, warning
 from time import sleep
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, Iterable, List, MutableSequence, Union
 
 from serial import Serial
 
@@ -38,23 +38,17 @@ class RangingNode(ABC):
         self,
         ranging_id,
         measurement_cb: Callable[
-            [List[Union[ActiveMeasurement, PassiveMeasurement]]], Any
+            [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ],
     ):
-        self.addr: int = ranging_id
+        # self.addr: int = ranging_id
         self.measurement_cb: Callable[
-            [List[Union[ActiveMeasurement, PassiveMeasurement]]], Any
+            [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ] = measurement_cb
         self.msg_storage: deque[Message] = deque(maxlen=MESSAGE_STORAGE_SIZE)
         self.active_measurements: List[ActiveMeasurement] = []
         self.tx_delays: Dict[int, float] = TX_DELAYS
         self.rx_delays: Dict[int, float] = RX_DELAYS
-        self.calibrated: bool = False
-        self.calibrated_at: int = 0
-        self.real_positions = None
-
-    def set_calibration_ground_truth(self, positions):
-        self.real_positions = positions
 
     def handle_message(self, message: Message):
         """Process a RX or TX Message.
@@ -75,23 +69,11 @@ class RangingNode(ABC):
             )
         )
 
-        # TODO: Make more efficient
         self.msg_storage.appendleft(message)
-        debug(f"Measurement by {self.addr}: {measurements}")
         self.active_measurements.extend(
             list(filter(lambda x: isinstance(x, ActiveMeasurement), measurements))  # type: ignore
         )
-        # info(f"Performed {len(self.active_measurements)} measurements")
         self.measurement_cb(measurements)
-
-    def calibrate(self):
-        if not self.calibrated and self.real_positions:
-            calibration = calibrate(self.msg_storage, self.real_positions)
-            warning(f"Calibration {calibration}")
-            if calibration:
-                self.tx_delays, self.rx_delays = calibration
-                self.calibrated = True
-                self.calibrated_at = len(self.active_measurements)
 
     @abstractmethod
     def send_data(self, data):
@@ -115,7 +97,7 @@ class SerialRangingNode(RangingNode):
         self,
         ranging_id,
         measurement_callback: Callable[
-            [List[Union[ActiveMeasurement, PassiveMeasurement]]], None
+            [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], None
         ],
         serial_connection: Serial,
     ):
@@ -147,7 +129,7 @@ class DumpFileRangingNode(RangingNode):
         self,
         ranging_id: int,
         measurement_callback: Callable[
-            [List[Union[ActiveMeasurement, PassiveMeasurement]]], None
+            [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], None
         ],
         file_name: str,
     ):
@@ -161,8 +143,6 @@ class DumpFileRangingNode(RangingNode):
                 if decoded_message:
                     self.handle_message(decoded_message)
                     sleep(0.001)
-                if len(self.msg_storage) >= 100:
-                    self.calibrate()
 
     def send_data(self, data):
         print(data)

@@ -17,7 +17,7 @@ class ActiveMeasurement(NamedTuple):
     b: int
     """ID of the other node that participates in ranging."""
     distance: float
-    """"The distance between `a` and `b` as measured by `a`"""
+    """"The distance between ``a`` and ``b`` as measured by ``a``"""
     time: float
     """The unix time at which this measurement was done."""
 
@@ -47,7 +47,8 @@ class PassiveMeasurement(NamedTuple):
 class TimingInfo(NamedTuple):
     """A structure containing information about the time of sending or receiving a certain message.
 
-    Depending of the context this can either represent the time when node with ID ``addr`` sent a message with sequence number ``sn`` or the time at which that message was received.
+    Depending of the context this can either represent the time when node with ID ``addr`` sent a
+    message with sequence number ``sn`` or the time at which that message was received.
     """
 
     addr: int
@@ -70,13 +71,14 @@ class Message(NamedTuple):
 
     type: int
     """Whether this is a received or transmitted message.
-    
+
     See constants ``RX`` and ``TX`` from this module.
     """
     clock_offset_ratio: Optional[float]
     """A value which represents the difference in clock speeds of both modules.
-    
-    The ``clock_offset_ratio`` can be obtained by comparing the frequency of the incoming signal to the own transmission frequency. See *Carrier Frequency Offset*"""
+
+    The ``clock_offset_ratio`` can be obtained by comparing the frequency of the incoming signal to
+    the own transmission frequency. See *Carrier Frequency Offset*"""
     tx: TimingInfo
     """Information about the transmission."""
     rx: List[TimingInfo]
@@ -127,7 +129,7 @@ def jsonify_message(message: Message) -> str:
         message: The ranging mesesage to be encoded.
 
     Returns:
-        The jsonified message.+
+        The jsonified message.
     """
 
     def jsonify_timing_info(t):

@@ -1,7 +1,5 @@
-from components.localization.src.data import RX, TX
-from data import ActiveMeasurement, TimingInfo
+from data import ActiveMeasurement, TimingInfo, RX, TX, Message
 from ranging import RangingNode
-from data import Message
 
 
 MESSAGES = [
