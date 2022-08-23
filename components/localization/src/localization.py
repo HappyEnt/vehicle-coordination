@@ -45,6 +45,7 @@ GRPC_CHANNEL = "localhost:50052"
 
 VISUALISATION = False
 
+
 class LocalizationNode(ABC):
     """
     Base class for localization.
@@ -59,6 +60,7 @@ class LocalizationNode(ABC):
     @abstractmethod
     def run(self):
         pass
+
 
 ############################################################################################################
 class BaseParticleNode(LocalizationNode):
@@ -133,10 +135,16 @@ class BaseParticleNode(LocalizationNode):
         )
         return other_marker_id, float(dista), ast.literal_eval(other_pos), particles
 
+    def get_particles_from_server(self, other_marker_id):
+        particles = json.loads(
+            requests.get(SERVER + "/getparticles/" + str(other_marker_id)).text
+        )
+        return particles
+
     def get_estimate_from_server(self, other_id):
-        '''
+        """
         Get the estimate from a node from the server.
-        '''
+        """
         other_estimate = json.loads(
             requests.get(SERVER + "/getestimate/" + str(other_id)).text
         )
@@ -258,6 +266,7 @@ class BaseParticleNode(LocalizationNode):
             # self.illustrate_nodes_and_particles((100,0))
             time.sleep(0.1)
 
+
 ############################################################################################################
 # Particle nodes try to estimate their position using particles
 class ClassicParticleNode(BaseParticleNode):
@@ -355,11 +364,13 @@ class ClassicParticleNode(BaseParticleNode):
         # plt.pause(0.5)
         plt.show()
 
+
 ############################################################################################################
 class ClassicAllAtOnce(BaseParticleNode):
     """
     Class for dynamic nodes.
     """
+
     def __init__(self) -> None:
         super().__init__()
         # we initialize the particles with uniform random samples of the whole area
@@ -373,7 +384,9 @@ class ClassicAllAtOnce(BaseParticleNode):
             self.particles.append(p)
         self.weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
 
-    def handle_measurement(self, distances, recv_particles_arr, estimate_from_other_arr) -> None:
+    def handle_measurement(
+        self, distances, recv_particles_arr, estimate_from_other_arr
+    ) -> None:
         """
         Handle incoming measurements by updating own particles.
         """
@@ -395,7 +408,9 @@ class ClassicAllAtOnce(BaseParticleNode):
         # this means also that if particles had a bigger weight, they are just multiple times in the particles list
         # start = time.time()
         weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
-        weights_current_measurem : List[List[float]] = [] # list of weights for all current measurements
+        weights_current_measurem: List[
+            List[float]
+        ] = []  # list of weights for all current measurements
 
         for (i1, d) in enumerate(distances):
             recv_particles = recv_particles_arr[i1]
@@ -421,7 +436,7 @@ class ClassicAllAtOnce(BaseParticleNode):
                 weights_current[i] *= weight_factor
                 debug(f"Processing particle {p} new weight factor: {weight_factor}")
             weights_current_measurem.append(weights_current)
-        
+
         # calculate weight of all measurements together
         weights = [np.prod(i) for i in zip(*weights_current_measurem)]
 
@@ -438,7 +453,9 @@ class ClassicAllAtOnce(BaseParticleNode):
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
-    def illustrate_nodes_and_particles(self, real_pos=(-100, -100), estimate=(0, (-100, -100))):
+    def illustrate_nodes_and_particles(
+        self, real_pos=(-100, -100), estimate=(0, (-100, -100))
+    ):
         plt.clf()
         # _, estimate_x, estimate_y, _, _ = self.get_estimate()
         plt.scatter([real_pos[0]], [real_pos[1]], 100, marker="x", color="g")
@@ -460,6 +477,46 @@ class ClassicAllAtOnce(BaseParticleNode):
         plt.gca().invert_yaxis()
         # plt.pause(0.5)
         plt.show()
+
+    def tick(self) -> bool:
+        if self.measurement_queue:
+            measurements = self.measurement_queue[:]
+            self.measurement_queue = []
+            measurement_dict: Dict[int, List[float]] = {}
+            for m in measurements:
+                # TODO: Think about ID structure
+                if m.a >> 8 == self.int_id:
+                    if m.b in measurement_dict:
+                        measurement_dict[m.b].append(m.distance)
+                    else:
+                        measurement_dict[m.b] = [m.distance]
+                if m.b >> 8 == self.int_id:
+                    if m.a in measurement_dict:
+                        measurement_dict[m.a].append(m.distance)
+                    else:
+                        measurement_dict[m.a] = [m.distance]
+
+            distances = []
+            recv_particle_arr = []
+            estimate_from_other_arr = []
+            for (other_id, dists) in measurement_dict.items():
+                distances.append(sum(dists) / len(dists))
+                recv_particle_arr.append(self.get_particles_from_server(other_id))
+                estimate_from_other_arr.append(self.get_estimate_from_server(other_id))
+
+                self.handle_measurement(
+                    distances, recv_particle_arr, estimate_from_other_arr
+                )
+            return True
+        else:
+            return False
+
+    def run(self) -> NoReturn:
+        while True:
+            self.tick()
+            # self.illustrate_nodes_and_particles((100,0))
+            time.sleep(0.1)
+
 
 ############################################################################################################
 # Particle nodes try to estimate their position using particles
