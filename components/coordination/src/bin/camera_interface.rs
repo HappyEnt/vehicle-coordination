@@ -1,6 +1,14 @@
-use std::{collections::HashMap, error::Error};
+extern crate coordination;
 
-use crate::api::{ApiPayload, ParticipantInformation};
+use std::{collections::HashMap, error::Error, thread, time::Duration};
+
+use coordination::{
+    api::{ApiPayload, ParticipantInformation},
+    interface::{coordination_client::CoordinationClient, TickRequest, Vec2},
+};
+use orca_rs::ndarray::arr1;
+
+const SLEEP_TIMER: u64 = 1000;
 
 pub struct CameraInterface {
     url: String,
@@ -13,7 +21,7 @@ pub trait Callback: Sized {
 
 impl<F> Callback for F
 where
-    F: Fn(ApiPayload) -> (),
+    F: Fn(ApiPayload),
 {
     fn handle_payload(&self, payload: ApiPayload) {
         self(payload)
@@ -36,10 +44,9 @@ impl CameraInterface {
             .await?;
         // debug!("Fetched: {:?}", cur_positions);
 
-        let own_position = match cur_positions.get(&self.id.to_string()) {
-            None => None,
-            Some((x, y)) => Some(ndarray::arr1(&[*x, *y])),
-        };
+        let own_position = cur_positions
+            .get(&self.id.to_string())
+            .map(|(x, y)| arr1(&[*x, *y]));
 
         let mut others: Vec<ParticipantInformation> = vec![];
 
@@ -51,7 +58,7 @@ impl CameraInterface {
             let (x, y) = cur_positions.get(key).unwrap();
             others.push(ParticipantInformation {
                 id: key.parse::<u8>()?,
-                position: ndarray::arr1(&[*x, *y]),
+                position: arr1(&[*x, *y]),
                 radius: 0.0,
                 inaccuracy: 0.0,
             })
@@ -64,5 +71,32 @@ impl CameraInterface {
             inaccuracy: 0.0,
             others,
         })
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    #[cfg(not(feature = "pi"))]
+    let address = "http://192.168.1.101:50052";
+    #[cfg(feature = "pi")]
+    let address = "http://0.0.0.0:50052";
+
+    let camera = CameraInterface::new("http://192.168.87.78:8081/positions", 6);
+    let mut client = CoordinationClient::connect(address.to_owned()).await?;
+
+    loop {
+        let payload = camera.fetch().await?;
+
+        let tick_request = TickRequest {
+            id: 6,
+            position: payload.position.map(|pos| Vec2::from_pos(&pos)),
+            confidence: 0.0,
+            radius: 7.0,
+            others: vec![],
+        };
+
+        client.tick(tick_request).await?;
+
+        thread::sleep(Duration::from_millis(SLEEP_TIMER));
     }
 }

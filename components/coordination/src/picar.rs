@@ -1,11 +1,9 @@
 use crate::wheels::Wheels;
 use log::debug;
-use std::{error::Error, time::Duration};
+use std::error::Error;
 
-const TURN_DURATION: u64 = 1000;
 const TURN_SPEED: f64 = 0.1;
 
-const DRIVE_DURATION: u64 = 1000;
 const DRIVE_SPEED: f64 = 0.2;
 
 #[derive(Clone, Debug)]
