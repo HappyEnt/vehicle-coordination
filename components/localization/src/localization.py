@@ -60,7 +60,7 @@ class LocalizationNode(ABC):
     def run(self):
         pass
 
-
+############################################################################################################
 class BaseParticleNode(LocalizationNode):
     def __init__(self):
         car_config = configparser.ConfigParser()
@@ -258,7 +258,7 @@ class BaseParticleNode(LocalizationNode):
             # self.illustrate_nodes_and_particles((100,0))
             time.sleep(0.1)
 
-
+############################################################################################################
 # Particle nodes try to estimate their position using particles
 class ClassicParticleNode(BaseParticleNode):
     """
@@ -355,7 +355,113 @@ class ClassicParticleNode(BaseParticleNode):
         # plt.pause(0.5)
         plt.show()
 
+############################################################################################################
+class ClassicAllAtOnce(BaseParticleNode):
+    """
+    Class for dynamic nodes.
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        # we initialize the particles with uniform random samples of the whole area
+        for _ in range(NUM_PARTICLES):
+            p = np.random.uniform(
+                low=[0, 0],
+                high=[SIDE_LENGTH_X, SIDE_LENGTH_Y],
+                size=2
+                # low=[0.0, 0.0], high=[SIDE_LENGTH_X, SIDE_LENGTH_Y], size=2
+            )
+            self.particles.append(p)
+        self.weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
 
+    def handle_measurement(self, distances, recv_particles_arr, estimate_from_other_arr) -> None:
+        """
+        Handle incoming measurements by updating own particles.
+        """
+        # save position of other node using their id as key
+        # for i in estimate_from_other_arr:
+        #     self.other_nodes_pos[i[0]] = i
+
+        info("Handling measurement")
+
+        for (i, p) in enumerate(self.particles):
+            noisy_p = (
+                np.random.normal(p[0], MEASUREMENT_STDEV),
+                np.random.normal(p[1], MEASUREMENT_STDEV),
+            )
+            self.particles[i] = noisy_p
+
+        # we update our particles and resample them directly
+        # first initialize the weights -> we assume an equal weight for each particle
+        # this means also that if particles had a bigger weight, they are just multiple times in the particles list
+        # start = time.time()
+        weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
+        weights_current_measurem : List[List[float]] = [] # list of weights for all current measurements
+
+        for (i1, d) in enumerate(distances):
+            recv_particles = recv_particles_arr[i1]
+            weights_current = weights.copy()
+            for (i, p) in enumerate(self.particles):
+                weight_factor = 0.0
+                norm_vals = []
+                for rp in recv_particles:
+                    # estimate the probability P( p1, p2 | d)
+                    # P( p1, p2 | d) = P( d | p1, p2) * (P(p1, p2) / P(d))
+                    # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles share this as the same factor
+                    # as we normalize the weights, we can ignore this factor and can just use P( d | p1, p2) which we can easily compute
+                    # expected_d = distance.euclidean(p, rp)
+                    expected_d = math.sqrt((p[0] - rp[0]) ** 2 + (p[1] - rp[1]) ** 2)
+                    actual_measured_d = d
+                    # normalize the value using the mean ("expected") and the standard deviation
+                    norm_val = (actual_measured_d - expected_d) / MEASUREMENT_STDEV
+                    norm_vals.append(
+                        norm_val
+                    )  # collect values and compute later, to drastically increase performance of the algorithm
+                probabilities = norm.pdf(norm_vals)
+                weight_factor += sum(probabilities)
+                weights_current[i] *= weight_factor
+                debug(f"Processing particle {p} new weight factor: {weight_factor}")
+            weights_current_measurem.append(weights_current)
+        
+        # calculate weight of all measurements together
+        weights = [np.prod(i) for i in zip(*weights_current_measurem)]
+
+        # normalize
+        sum_weights = sum(weights)
+        normalized_weights = [x / sum_weights for x in weights]
+
+        # resample so that the weights are approximately uniform (w_i = 1 / NUM_PARTICLES)
+        self.particles = random.choices(
+            population=self.particles, weights=normalized_weights, k=len(self.particles)
+        )
+        self.send_estimate_to_server()
+        self.send_particles_to_server()
+        # end = time.time() - start
+        # info("Time elapsed: " + str(end))
+
+    def illustrate_nodes_and_particles(self, real_pos=(-100, -100), estimate=(0, (-100, -100))):
+        plt.clf()
+        # _, estimate_x, estimate_y, _, _ = self.get_estimate()
+        plt.scatter([real_pos[0]], [real_pos[1]], 100, marker="x", color="g")
+        plt.scatter([estimate[1][0]], [estimate[1][1]], 100, marker="x", color="b")
+        plt.scatter(0, 0, 100, marker="x", color="r")
+        plt.scatter(SIDE_LENGTH_X, 0, 100, marker="x", color="r")
+        plt.scatter(SIDE_LENGTH_X, SIDE_LENGTH_Y, 100, marker="x", color="r")
+        plt.scatter(0, SIDE_LENGTH_Y, 100, marker="x", color="r")
+        # we then scatter its particles
+        particles = self.get_particles()
+        plt.scatter(
+            np.array([p[0] for p in particles]),
+            np.array([p[1] for p in particles]),
+            25,
+            alpha=0.05,
+        )
+        plt.xlim([-0.2, SIDE_LENGTH_X + 0.2])
+        plt.ylim([-0.2, SIDE_LENGTH_Y + 0.2])
+        plt.gca().invert_yaxis()
+        # plt.pause(0.5)
+        plt.show()
+
+############################################################################################################
 # Particle nodes try to estimate their position using particles
 class GridParticleNode(BaseParticleNode):
     """
