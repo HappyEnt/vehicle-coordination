@@ -32,7 +32,7 @@ SIDE_LENGTH_Y = float(config["DEFAULT"]["testing_area_width"])  # size of area i
 
 NUM_PARTICLES = 1_000  # number of particles
 NUM_PART_EXCHANGE = (
-    500  # The amount of particles that actually gets transmitted to the other nodes
+    100  # The amount of particles that actually gets transmitted to the other nodes
 )
 GRID_SIZE = 100
 
@@ -419,18 +419,18 @@ class ClassicAllAtOnce(BaseParticleNode):
         Handle incoming measurements by updating own particles.
         """
         # save position of other node using their id as key
-        # for i in estimate_from_other_arr:
-        #     self.other_nodes_pos[i[0]] = i
+        for i in estimate_from_other_arr:
+            if i:
+                self.other_nodes_pos[i[0]] = i
 
+        print("Fast")
         info("Handling measurement")
-
         for (i, p) in enumerate(self.particles):
             noisy_p = (
                 np.random.normal(p[0], MEASUREMENT_STDEV),
                 np.random.normal(p[1], MEASUREMENT_STDEV),
             )
             self.particles[i] = noisy_p
-
         # we update our particles and resample them directly
         # first initialize the weights -> we assume an equal weight for each particle
         # this means also that if particles had a bigger weight, they are just multiple times in the particles list
@@ -440,9 +440,12 @@ class ClassicAllAtOnce(BaseParticleNode):
             List[float]
         ] = []  # list of weights for all current measurements
 
+        norm_vals_all_list = []
+        norm_vals_decoder = []
         for (i1, d) in enumerate(distances):
             recv_particles = recv_particles_arr[i1]
-            weights_current = weights.copy()
+            norm_vals_current_measure = []
+            norm_vals_decoder_inner = []
             for (i, p) in enumerate(self.particles):
                 weight_factor = 0.0
                 norm_vals = []
@@ -456,29 +459,45 @@ class ClassicAllAtOnce(BaseParticleNode):
                     actual_measured_d = d
                     # normalize the value using the mean ("expected") and the standard deviation
                     norm_val = (actual_measured_d - expected_d) / MEASUREMENT_STDEV
-                    norm_vals.append(
-                        norm_val
-                    )  # collect values and compute later, to drastically increase performance of the algorithm
-                probabilities = norm.pdf(norm_vals)
-                weight_factor += sum(probabilities)
-                weights_current[i] *= weight_factor
+                    norm_vals.append(norm_val)
+                    # collect values and compute later, to drastically increase performance of the algorithm (REALLY: DRASTICALLY)
+                    # because calling norm.pdf on an array rather than just from single values is WAY FASTER
+                    norm_vals_all_list.append(norm_val)
+
+                norm_vals_current_measure.append(norm_vals)
+                norm_vals_decoder_inner.append(len(norm_vals))
                 debug(f"Processing particle {p} new weight factor: {weight_factor}")
+
+            norm_vals_decoder.append(norm_vals_decoder_inner)
+
+        # calculate all norm values at once
+        probabilities_all = norm.pdf(norm_vals_all_list)
+
+        # calculate norm value list back and calculate weights
+        index = 0
+        for i, meas in enumerate(norm_vals_decoder):
+            weights_current = weights.copy()
+            for j, a in enumerate(meas):
+                arr = probabilities_all[index : index + a]
+                index = index + a
+                weight_factor = 0.0
+                weight_factor += sum(arr)
+                weights_current[j] *= weight_factor
             weights_current_measurem.append(weights_current)
 
         # calculate weight of all measurements together
         weights = [np.prod(i) for i in zip(*weights_current_measurem)]
-
+        
         # normalize
         sum_weights = sum(weights)
         normalized_weights = [x / sum_weights for x in weights]
-
         # resample so that the weights are approximately uniform (w_i = 1 / NUM_PARTICLES)
         self.particles = random.choices(
             population=self.particles, weights=normalized_weights, k=len(self.particles)
         )
         self.send_estimate_to_server()
         self.send_particles_to_server()
-        self.reset_particles()
+        print(self.get_estimate())
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
