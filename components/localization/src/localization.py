@@ -423,7 +423,6 @@ class ClassicAllAtOnce(BaseParticleNode):
             if i:
                 self.other_nodes_pos[i[0]] = i
 
-        print("Fast")
         info("Handling measurement")
         for (i, p) in enumerate(self.particles):
             noisy_p = (
@@ -487,7 +486,7 @@ class ClassicAllAtOnce(BaseParticleNode):
 
         # calculate weight of all measurements together
         weights = [np.prod(i) for i in zip(*weights_current_measurem)]
-        
+
         # normalize
         sum_weights = sum(weights)
         normalized_weights = [x / sum_weights for x in weights]
@@ -497,7 +496,7 @@ class ClassicAllAtOnce(BaseParticleNode):
         )
         self.send_estimate_to_server()
         self.send_particles_to_server()
-        print(self.get_estimate())
+        self.reset_particles()
         # end = time.time() - start
         # info("Time elapsed: " + str(end))
 
