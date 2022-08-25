@@ -25,6 +25,8 @@ PROTO UWBCrazyflie [
       Receiver {
         signalStrengthNoise 0.1
       }
+      Accelerometer {
+      }
     ]
   }
 }

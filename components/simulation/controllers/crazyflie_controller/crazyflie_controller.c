@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
   WbDeviceTag gyro = wb_robot_get_device("gyro");
   wb_gyro_enable(gyro, timestep);
   WbDeviceTag accelerometer = wb_robot_get_device("accelerometer");
-  wb_accelerometer_enable(accelerometer, timestep);
+  wb_accelerometer_enable(accelerometer, timestep); // grep data from accelerometer every second
   WbDeviceTag camera = wb_robot_get_device("camera");
   wb_camera_enable(camera, timestep);
   WbDeviceTag range_front = wb_robot_get_device("range_front");
@@ -133,10 +133,10 @@ int main(int argc, char **argv) {
   create_vis();
 
   // Wait for 2 seconds
-  while (wb_robot_step(timestep) != -1) {
-    if (wb_robot_get_time() > 2.0)
-      break;
-  }
+  /* while (wb_robot_step(timestep) != -1) { */
+  /*   if (wb_robot_get_time() > 2.0) */
+  /*     break; */
+  /* } */
 
   // Initialize variables
   actual_state_t actual_state = {0};
@@ -145,10 +145,14 @@ int main(int argc, char **argv) {
   double past_y_global = 0;
   double past_time = wb_robot_get_time();
   double past_pf_iteration = wb_robot_get_time();
+  double past_acc_meas  = wb_robot_get_time();
   double dx_since_last = 0;
   double dy_since_last = 0;
   double vx = 0; // velocity in x. updated by acceloremeter measurements
   double vy = 0; // velocity in y.
+
+  double gps_last_x = wb_gps_get_values(gps)[0];
+  double gps_last_y = wb_gps_get_values(gps)[1];
 
   // Initialize PID gains.
   gains_pid_t gains_pid;
@@ -179,6 +183,7 @@ int main(int argc, char **argv) {
   while (wb_robot_step(timestep) != -1) {
     const double dt = wb_robot_get_time() - past_time;
     const double dt_last_iteration = wb_robot_get_time() - past_pf_iteration;
+    const double dt_last_acceleration_measurement = wb_robot_get_time() - past_acc_meas;
 
     // Get measurements
     actual_state.roll = wb_inertial_unit_get_roll_pitch_yaw(imu)[0];
@@ -188,7 +193,7 @@ int main(int argc, char **argv) {
     // receiver measurements
     int queue_length = wb_receiver_get_queue_length(receiver);
 
-    if (dt_last_iteration > 1) {
+    if (dt_last_iteration > 0.2) {
       while(queue_length > 0) {
         const char *data = wb_receiver_get_data(receiver);
         int data_len = wb_receiver_get_data_size(receiver);
@@ -214,19 +219,31 @@ int main(int argc, char **argv) {
         queue_length--;
 
         if(queue_length <= 0) {
-          double dx = dx_since_last;
-          double dy = dy_since_last;
+          /* double dx = dx_since_last; */
+          /* double dy = dy_since_last; */
+
+          double gps_dx = (wb_gps_get_values(gps)[0] - gps_last_x);
+          double gps_dy = (wb_gps_get_values(gps)[1] - gps_last_y);
+          double gps_vx = gps_dx / dt_last_iteration;
+          double gps_vy = gps_dy / dt_last_iteration;
+          double dx = gps_dx;
+          double dy = gps_dy;
+
+          gps_last_x = wb_gps_get_values(gps)[0];
+          gps_last_y = wb_gps_get_values(gps)[1];
 
           double dist = sqrt(dx*dx + dy*dy);
 
           printf("distance travelled. %f, %f\n", dx, dy);
-          printf("velocity. %f, %f\n", vx, vy);
+          printf("acc velocity. %f\n", vx);
+          printf("gps velocity. %f\n", gps_vx);
 
-          if(fabs(dist) > 1e5) {
+          if(fabs(dist) > 1e-6) {
+            printf("predicting next\n");
             predict(pf_inst, dist);
 
-            dx_since_last = 0;
-            dy_since_last = 0;
+            /* dx_since_last = 0; */
+            /* dy_since_last = 0; */
           }
 
           iterate(pf_inst);
@@ -238,13 +255,16 @@ int main(int argc, char **argv) {
       }
     }
 
-    // update dx, dy values
-    const double *acc_measurements = wb_accelerometer_get_values(accelerometer);
-    vx += acc_measurements[0] * dt;
-    vy += acc_measurements[1] * dt;
-    dx_since_last += vx * dt;
-    dy_since_last += vy * dt;
+    if (dt_last_acceleration_measurement * 1000 > wb_accelerometer_get_sampling_period(accelerometer)) {
+      const double *acc_measurements = wb_accelerometer_get_values(accelerometer);
+      const double step = (double) wb_accelerometer_get_sampling_period(accelerometer)/1000;
+      vx += acc_measurements[0] * step;
+      vy += acc_measurements[1] * step;
+      dx_since_last += vx * step;
+      dy_since_last += vy * step;
 
+      past_acc_meas = wb_robot_get_time();
+    }
 
     actual_state.altitude = wb_gps_get_values(gps)[2];
     double x_global = wb_gps_get_values(gps)[0];

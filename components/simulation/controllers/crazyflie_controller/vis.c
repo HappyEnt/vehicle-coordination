@@ -32,11 +32,8 @@ void vis(struct particle_filter_instance *pf_inst)
 
   fflush(temp);
 
-  /* char * commandsForGnuplot[] = {"replot", "set xrange [-20:20]", "set yrange [-20:20]"}; */
   char * commandsForGnuplot[] = {"replot"};
-  /* char * commandsForGnuplot[] = {}; */
   int commands = sizeof(commandsForGnuplot) / sizeof(char*);
-  /* int commands = 0; */
 
   for (size_t i=0; i < commands; i++)
     {
@@ -47,10 +44,8 @@ void vis(struct particle_filter_instance *pf_inst)
 }
 
 void create_vis() {
-  char * commandsForGnuplot[] = {"set title \"TITLEEEEE\"", "set xrange [-5:5]", "set yrange [-5:5]", "set term qt noraise", "plot 'data.temp'"};
-  /* char * commandsForGnuplot[] = {"set title \"TITLEEEEE\"",  "set xrange [-20:20]", "set yrange [-20:20]", "plot 'data.temp'", "pause 1", "reread"}; */
+  char * commandsForGnuplot[] = {"set title \"TITLEEEEE\"", "set xrange [-5:5]", "set yrange [-5:5]", "set term qt noraise", "plot 'data.temp' with points pt 3"};
   int commands = sizeof(commandsForGnuplot) / sizeof(char*);
-  /* char * commandsForGnuplot[] = {"set title \"TITLEEEEE\"", "plot 'data.temp'"}; */
 
   gnuplotPipe = popen ("gnuplot -persistent", "w");
   temp = fopen("data.temp","w");

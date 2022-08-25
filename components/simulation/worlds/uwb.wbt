@@ -2,25 +2,35 @@
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
-EXTERNPROTO "../protos/UWBCrazyflie.proto"
 EXTERNPROTO "../protos/Anchor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/CircleArena.proto"
+EXTERNPROTO "../protos/UWBCrazyflie.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.14950783323757078 0.09688165752990494 0.9840027196277787 1.6019116167719554
-  position -0.4064946208038013 -5.197958401916536 1.4443564959307866
+  orientation 0.1369349882854631 0.8928898484261093 -0.42894816418870463 0.4480827589335824
+  position -9.804860899251677 1.838283293651296 3.8985732886831403
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
-RectangleArena {
-  floorSize 20 20
+Anchor {
+  translation -0.5 -3.21 0.5
+  name "robot(1)"
 }
 Anchor {
-  translation -0.6 0 0.15
+  translation -3.86 0 0.5
+  rotation 0 1 0 0
+}
+CircleArena {
+  radius 4
 }
 UWBCrazyflie {
+}
+Anchor {
+  translation 3.72 0 0.5
+  rotation 0 1 0 0
+  name "robot(2)"
 }
