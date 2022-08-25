@@ -1,0 +1,14 @@
+image: python:3.9
+
+stages:
+  - Build
+
+build_doc:
+  stage: Build
+  script:
+    - apt install -y doxygen
+    - python3 -m pip install -r requirements-doc.txt
+    - sphinx-build -b html resources/source/ resources/build
+  artifacts:
+    paths:
+      - resources/build/html

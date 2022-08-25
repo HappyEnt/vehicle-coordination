@@ -1,0 +1,4 @@
+breathe
+sphinx
+sphinx-rtd-theme
+git+https://github.com/hendrick404/sphinx-rust.git
