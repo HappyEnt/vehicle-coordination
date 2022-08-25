@@ -1,0 +1,2 @@
+-r components/localization/requirements-full.txt
+-r requirements-doc.txt
