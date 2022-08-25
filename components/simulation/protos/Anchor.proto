@@ -1,0 +1,43 @@
+#VRML_SIM R2022b utf8
+# Describe the functionality of your PROTO here.
+
+EXTERNPROTO "/Users/christian/Projects/vehicle-coordination/components/simulation/protos/Anchor.proto"
+
+
+PROTO Anchor [
+  field SFVec3f translation 0 0 0
+  field SFRotation rotation 0 0 1 0
+  field SFString name "robot"
+  field SFString controller "anchor_controller"
+]
+{
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    model "anchor"
+
+    children [
+    DEF TRANSCEIVER Transform {
+        translation 0 0 -0.015
+        children [
+          Group {
+             children IS extensionSlot
+          }
+          CadShape {
+            url [
+              "/Users/christian/Projects/vehicle-coordination/components/simulation/meshes/anchor.obj"
+            ]
+          }
+        ]
+      }
+      Emitter {
+        range 10
+        baudRate 115200
+      }
+      GPS {
+      }
+    ]
+  }
+}
