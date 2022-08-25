@@ -229,7 +229,6 @@ class BaseParticleNode(LocalizationNode):
             with grpc.insecure_channel(GRPC_CHANNEL) as channel:
                 stub = interface_pb2_grpc.CoordinationStub(channel)
                 others_list = []
-                print(self.other_nodes_pos)
                 for key, val in self.other_nodes_pos.items():
                     other = interface_pb2.TickRequest.Participant(
                         id=int(key),
@@ -269,6 +268,7 @@ class BaseParticleNode(LocalizationNode):
                             )
                             + "\n"
                         )
+                info("Sent data to coordination")
         except grpc._channel._InactiveRpcError as e:
             warning(str(e))
 
