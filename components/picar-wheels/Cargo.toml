@@ -12,13 +12,18 @@ path = "src/daemon.rs"
 [[bin]]
 name = "picar"
 path = "src/client.rs"
- 
+
 [dependencies]
 rppal = "0.13.1"
 tonic = "0.7"
 prost = "0.10"
-tokio = { version = "1.20.0", features = ["macros", "rt-multi-thread"]}
+tokio = { version = "1.20.0", features = ["macros", "rt-multi-thread"] }
 async-channel = "1.6.1"
 
 [build-dependencies]
 tonic-build = "0.7"
+
+[profile.release]
+strip = true    # Automatically strip symbols from the binary.
+panic = "abort"
+lto = true
