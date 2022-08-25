@@ -10,7 +10,7 @@
 static double from_normal(double x) {
   double sqpi = sqrt(2 * M_PI);
   double expc = exp(-(x*x)/2);
-  
+
   return (1.0 / sqpi) * expc;
 }
 
@@ -26,7 +26,7 @@ void sample_particles_from_gaussian(struct particle mean , double std_dev, struc
     double s2 = (((double) rand() + 1)/(double)((unsigned)RAND_MAX + 2));
 
     double mag = std_dev * sqrt(-2 * log(s1));
-    
+
     ps[p].x_pos   = mag * cos(2 * M_PI * s2) + mean.x_pos;
     ps[p].y_pos   = mag * sin(2 * M_PI * s2) + mean.y_pos;
 
@@ -46,7 +46,7 @@ void sample_particles_from_unit_gaussian(struct particle *ps, size_t amount) {
 
   unit_gaus_mean.x_pos = 0;
   unit_gaus_mean.y_pos = 0;
-  
+
   sample_particles_from_gaussian(unit_gaus_mean , 1, ps, amount);
 }
 
@@ -59,15 +59,15 @@ struct normal_distribution *generate_normal_distribution(
 
   struct normal_distribution *result_distribution =
     malloc(sizeof(struct normal_distribution));
-  
+
   if(cache_histogram) {
     // because of the symmetry of the normal distribution, we only generate half of the distribution
     double bucket_size = 4.0/buckets;
-    
+
     result_distribution->cached_distribution = malloc(sizeof(double) * buckets);
-    result_distribution->bucket_size = bucket_size;    
+    result_distribution->bucket_size = bucket_size;
   } else {
-    result_distribution->cached_distribution = NULL; 
+    result_distribution->cached_distribution = NULL;
   }
 
 
@@ -76,7 +76,7 @@ struct normal_distribution *generate_normal_distribution(
 
   if(cache_histogram) {
     double *cached_distribution = result_distribution->cached_distribution;
-  
+
     for (size_t i = 0; i < buckets; ++i) {
       double x = i * result_distribution->bucket_size;
       cached_distribution[i] = from_normal(x);
@@ -97,13 +97,23 @@ double value_from_normal_distribution(struct normal_distribution *distribution,
   if(distribution->cached_distribution == NULL) {
     return from_normal(distance1(x,distribution->mean)/distribution->std_dev)/distribution->std_dev;
   }
-  
+
   if (x > 4 * distribution->std_dev) {
     return 0.0;
   }
 
   size_t tx = (distance1(distribution->mean, x) / distribution->std_dev) / distribution->bucket_size;
   return distribution->cached_distribution[tx] / distribution->std_dev; // TODO maybe interpolate
+}
+
+void sample_from_2d_uniform(struct particle *target_particles, size_t amount, double lower_x, double upper_x, double lower_y, double upper_y) {
+  for (size_t p = 0; p < amount; p++) {
+    double x = lower_x + (((double) rand())/(RAND_MAX)) * (upper_x - lower_x);
+    double y = lower_y + (((double) rand())/(RAND_MAX)) * (upper_y - lower_y);
+
+    target_particles[p].x_pos = x;
+    target_particles[p].y_pos = y;
+  }
 }
 
 double distance1(double x, double y) {

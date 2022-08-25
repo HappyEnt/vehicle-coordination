@@ -13,7 +13,7 @@
 #include <memory.h>
 #include <assert.h>
 
-#include <omp.h>
+/* #include <omp.h> */
 
 #define USE_CACHE 0
 #define DIM 2
@@ -59,7 +59,10 @@ int pop_message(struct message_stack **ms, struct message *m) {
 }
 
 void clear_message_stack(struct message_stack **ms) {
-  while(pop_message(ms, NULL) != 0);
+  struct message curr;
+  while(pop_message(ms, &curr) != 0) {
+    free(curr.particles);
+  };
 }
 
 
@@ -231,9 +234,9 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
 
   double variance = max_empirical_variance(old_particles, components);
   double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
-#pragma omp parallel shared(new_particles)
-  {
-#pragma omp for
+/* #pragma omp parallel shared(new_particles) */
+/*   { */
+/* #pragma omp for */
     {
       for(size_t c = 0; c < components; c++) {
         while(true) {
@@ -255,7 +258,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
         }
       }
     }
-  }
+  /* } */
 
   pf->local_particles = new_particles;
   pf->local_particles_length = components;
@@ -438,7 +441,17 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 }
 
 void add_message(struct particle_filter_instance *pf_inst, struct message m) {
-  push_message(&pf_inst->mstack, m);
+  // take ownership of data
+  struct particle *particles = malloc(sizeof(struct particle) * m.particles_length);
+  memcpy(particles, m.particles, sizeof(struct particle) * m.particles_length);
+
+  struct message m_cpy = {
+    .measured_distance = m.measured_distance,
+    .particles = particles,
+    .particles_length = m.particles_length
+  };
+
+  push_message(&pf_inst->mstack, m_cpy);
 }
 
 // Notes
@@ -488,7 +501,7 @@ void progressive_post_regularisation_bp(struct particle_filter_instance *pf_inst
       n = n_max;
     }
 
-    log_info("lambda = %f", lambda);
+    debug("lambda = %f", lambda);
 
     regularized_reject_correct(pf_inst, lambda);
 
@@ -527,7 +540,7 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
 
     // calculate next lambda
     lambda = calculate_progressive_factor(pf_inst, sigma_max);
-    log_info("lambda = %f", lambda);
+    debug("lambda = %f", lambda);
 
     //TODO break on lamdba < 1.0
 
@@ -539,7 +552,6 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
 }
 
 
-
 void iterate(struct particle_filter_instance *pf_inst) {
   /* pre_regularisation_bp(pf_inst); */
   if(!message_stack_len(pf_inst->mstack)) {
@@ -547,7 +559,7 @@ void iterate(struct particle_filter_instance *pf_inst) {
   } else {
     /* post_regularisation_bp(pf_inst); */
     /* progressive_post_regularisation_bp(pf_inst, 4.0, 5); */
-    progressive_pre_regularisation_bp(pf_inst, 4.0, 10);
+    progressive_pre_regularisation_bp(pf_inst, 10.0, 25);
   }
 }
 

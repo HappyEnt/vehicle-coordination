@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
   while (wb_robot_step(TIME_STEP) != -1) {
     const double dt = wb_robot_get_time() - past_time;
 
-    if(dt > 1) {
+    // send position every 100 milliseconds
+    if(dt > 0.1) {
       char data[sizeof(struct particle)];
 
       double x_global = wb_gps_get_values(gps)[0];

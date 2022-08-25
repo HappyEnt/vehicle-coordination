@@ -35,6 +35,7 @@
 #include <webots/distance_sensor.h>
 #include <webots/gps.h>
 #include <webots/gyro.h>
+#include <webots/accelerometer.h>
 #include <webots/inertial_unit.h>
 #include <webots/keyboard.h>
 #include <webots/motor.h>
@@ -49,6 +50,33 @@
 
 // Add external controller
 #include "pid_controller.h"
+#include "vis.h"
+
+#define PARTICLES 250
+
+struct particle_filter_instance *pf_inst = NULL;
+
+void clean_init_filter() {
+
+  if (pf_inst != NULL) {
+    destroy_particle_filter_instance(pf_inst);
+  }
+
+  create_particle_filter_instance(&pf_inst);
+
+  // create uniform distribution over space for now representing the prior knowledge.
+  struct particle *own_particles = malloc(sizeof(struct particle) * PARTICLES);
+  sample_from_2d_uniform(own_particles, PARTICLES, -10, 10, -10, 10);
+
+  set_particle_array(pf_inst, own_particles, PARTICLES);
+}
+
+void deinit_filter() {
+  if(pf_inst != NULL) {
+    destroy_particle_filter_instance(pf_inst);
+    pf_inst = NULL;
+  }
+}
 
 int main(int argc, char **argv) {
   printf(" Initiliazing drone! \n");
@@ -79,6 +107,8 @@ int main(int argc, char **argv) {
   wb_keyboard_enable(timestep);
   WbDeviceTag gyro = wb_robot_get_device("gyro");
   wb_gyro_enable(gyro, timestep);
+  WbDeviceTag accelerometer = wb_robot_get_device("accelerometer");
+  wb_accelerometer_enable(accelerometer, timestep);
   WbDeviceTag camera = wb_robot_get_device("camera");
   wb_camera_enable(camera, timestep);
   WbDeviceTag range_front = wb_robot_get_device("range_front");
@@ -96,8 +126,11 @@ int main(int argc, char **argv) {
   wb_receiver_enable(receiver, timestep);
   wb_receiver_set_channel(receiver, 1);
 
-  // Signal strength is calculted by the inverse squared distance between emitter and receiver
-  /* s = 1 / r² */
+
+  // initialize particle filter
+  clean_init_filter();
+
+  create_vis();
 
   // Wait for 2 seconds
   while (wb_robot_step(timestep) != -1) {
@@ -111,6 +144,11 @@ int main(int argc, char **argv) {
   double past_x_global = 0;
   double past_y_global = 0;
   double past_time = wb_robot_get_time();
+  double past_pf_iteration = wb_robot_get_time();
+  double dx_since_last = 0;
+  double dy_since_last = 0;
+  double vx = 0; // velocity in x. updated by acceloremeter measurements
+  double vy = 0; // velocity in y.
 
   // Initialize PID gains.
   gains_pid_t gains_pid;
@@ -140,6 +178,7 @@ int main(int argc, char **argv) {
 
   while (wb_robot_step(timestep) != -1) {
     const double dt = wb_robot_get_time() - past_time;
+    const double dt_last_iteration = wb_robot_get_time() - past_pf_iteration;
 
     // Get measurements
     actual_state.roll = wb_inertial_unit_get_roll_pitch_yaw(imu)[0];
@@ -149,28 +188,62 @@ int main(int argc, char **argv) {
     // receiver measurements
     int queue_length = wb_receiver_get_queue_length(receiver);
 
-    while(queue_length > 0) {
-      const char *data = wb_receiver_get_data(receiver);
-      int data_len = wb_receiver_get_data_size(receiver);
-      int particles = data_len / sizeof(struct particle);
-      double rssi = wb_receiver_get_signal_strength(receiver);
+    if (dt_last_iteration > 1) {
+      while(queue_length > 0) {
+        const char *data = wb_receiver_get_data(receiver);
+        int data_len = wb_receiver_get_data_size(receiver);
+        int particles = data_len / sizeof(struct particle);
+        double rssi = wb_receiver_get_signal_strength(receiver);
 
-      struct particle *foreign_particles = malloc(sizeof(struct particle) * particles);
-      double measurement = sqrt((double)1.0 / rssi);
+        struct particle *foreign_particles = malloc(sizeof(struct particle) * particles);
+        double measurement = sqrt((double)1.0 / rssi);
 
-      memcpy(foreign_particles, data, sizeof(struct particle) * particles);
+        memcpy(foreign_particles, data, sizeof(struct particle) * particles);
 
-      printf("got: ");
-      for (size_t i = 0; i < particles; ++i) {
-        printf("(%f, %f)", foreign_particles[i].x_pos, foreign_particles[i].y_pos);
-      } printf("\n");
+        struct message m = {
+          .measured_distance = measurement,
+          .particles = foreign_particles,
+          .particles_length = particles
+        };
 
+        add_message(pf_inst, m);
 
-      printf("distance: %f\n", measurement);
+        free(foreign_particles);
 
-      wb_receiver_next_packet(receiver);
-      queue_length--;
+        wb_receiver_next_packet(receiver);
+        queue_length--;
+
+        if(queue_length <= 0) {
+          double dx = dx_since_last;
+          double dy = dy_since_last;
+
+          double dist = sqrt(dx*dx + dy*dy);
+
+          printf("distance travelled. %f, %f\n", dx, dy);
+          printf("velocity. %f, %f\n", vx, vy);
+
+          if(fabs(dist) > 1e5) {
+            predict(pf_inst, dist);
+
+            dx_since_last = 0;
+            dy_since_last = 0;
+          }
+
+          iterate(pf_inst);
+
+          past_pf_iteration = wb_robot_get_time();
+
+          vis(pf_inst);
+        }
+      }
     }
+
+    // update dx, dy values
+    const double *acc_measurements = wb_accelerometer_get_values(accelerometer);
+    vx += acc_measurements[0] * dt;
+    vy += acc_measurements[1] * dt;
+    dx_since_last += vx * dt;
+    dy_since_last += vy * dt;
 
 
     actual_state.altitude = wb_gps_get_values(gps)[2];

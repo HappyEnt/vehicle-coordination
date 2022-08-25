@@ -7,11 +7,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3") # O3 results in interesting bugs...
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_compile_options(-Wall -Wextra -pedantic)
 
 
 # find boost
@@ -30,13 +32,16 @@ endif()
 
 set(CMAKE_C_COMPILER "/opt/homebrew/opt/llvm/bin/clang")
 set(CMAKE_CXX_COMPILER "/opt/homebrew/opt/llvm/bin/clang++")
-set(CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm")  
+set(CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm")
+
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+# CMAKE_OSX_ARCHITECTURES=
 
 # -DCMAKE_BUILD_TYPE=ASAN -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++
 
 
 add_library(BeliefPropagation SHARED particle-belief-propagation.h particle-belief-propagation.c util.h util.c)
-target_link_libraries(BeliefPropagation m OpenMP::OpenMP_CXX)
+target_link_libraries(BeliefPropagation m) #   -fsanitize=address
 
 # add the executable
 add_executable(test-particle-filter test-particle-filter.c)
@@ -49,5 +54,5 @@ target_link_libraries(particle-filter-consumer BeliefPropagation Boost::boost)
 
 if(UNIX AND NOT APPLE)
   target_link_libraries(particle-filter-consumer rt pthread)
-  target_link_libraries(BeliefPropagation rt pthread)  
-endif()  
+  target_link_libraries(BeliefPropagation rt pthread)
+endif()

@@ -13,7 +13,7 @@ struct particle {
 };
 
 struct weighted_particle {
-  struct particle particle; 
+  struct particle particle;
   double weight;
 };
 
@@ -40,7 +40,10 @@ struct normal_distribution *generate_normal_distribution(
                                                          bool cache_histogram);
 
 void destroy_normal_distribution(struct normal_distribution *distribution);
-  
+
 double value_from_normal_distribution(struct normal_distribution *distribution,
                                       double x);
+
+void sample_from_2d_uniform(struct particle *target_particles, size_t amount, double lower_x, double upper_x, double lower_y, double upper_y);
+
 #endif /* UTIL_H */
