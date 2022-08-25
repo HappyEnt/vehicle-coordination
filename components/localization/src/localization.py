@@ -144,18 +144,26 @@ class BaseParticleNode(LocalizationNode):
         return other_marker_id, float(dista), ast.literal_eval(other_pos), particles
 
     def get_particles_from_server(self, other_marker_id):
-        particles = json.loads(
-            requests.get(SERVER + "/getparticles/" + str(other_marker_id)).text
-        )
+        try:
+            particles = json.loads(
+                requests.get(SERVER + "/getparticles/" + str(other_marker_id)).text
+            )
+        except requests.exceptions.ConnectionError as e:
+            warning(str(e))
+            return None
         return particles
 
     def get_estimate_from_server(self, other_id):
         """
         Get the estimate from a node from the server.
         """
-        other_estimate = json.loads(
-            requests.get(SERVER + "/getestimate/" + str(other_id)).text
-        )
+        try:
+            other_estimate = json.loads(
+                requests.get(SERVER + "/getestimate/" + str(other_id)).text
+            )
+        except requests.exceptions.ConnectionError as e:
+            warning(str(e))
+            return None
         return other_estimate
 
     def send_particles_to_server(self):
@@ -167,7 +175,12 @@ class BaseParticleNode(LocalizationNode):
         particles = self.get_particles_for_exchange()
         dict1["particles"] = list(particles)
         json1 = json.dumps(dict1)
-        postr = requests.post(SERVER + "/setparticles", json=json1)
+
+        try:
+            postr = requests.post(SERVER + "/setparticles", json=json1)
+        except requests.exceptions.ConnectionError as e:
+            warning(str(e))
+
         if postr.status_code != 200:
             warning(postr.text)
 
@@ -181,7 +194,11 @@ class BaseParticleNode(LocalizationNode):
         dict1["marker_id"] = self.int_id
         dict1["estimate"] = estimate
         json1 = json.dumps(dict1)
-        postr = requests.post(SERVER + "/setestimate", json=json1)
+        try:
+            postr = requests.post(SERVER + "/setestimate", json=json1)
+        except requests.exceptions.ConnectionError as e:
+            warning(str(e))
+            return
         if postr.status_code != 200:
             warning(postr.text)
 
@@ -198,7 +215,7 @@ class BaseParticleNode(LocalizationNode):
     def illustrate_nodes_and_particles(self, real_pos, estimate=(-100, -100)):
         pass
 
-    def send_locations_to_coordination(self):
+    def send_locations_to_coordination(self, estimate = None):
         """
         Send information to a coordination module.
 
@@ -206,49 +223,53 @@ class BaseParticleNode(LocalizationNode):
         inaccuracy in the position estimation (as a radius) and the position and size of the other
         vehicles.
         """
-        with grpc.insecure_channel(GRPC_CHANNEL) as channel:
-            stub = interface_pb2_grpc.CoordinationStub(channel)
+        if not estimate:
             estimate = self.get_estimate()
-            others_list = []
-            for key, val in self.other_nodes_pos:
-                other = interface_pb2.TickRequest.Participant(
-                    id=int(key),
-                    position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),
-                    radius=val[2],
-                    confidence=val[3],
-                )
-                others_list.append(other)
-            response = stub.Tick(
-                interface_pb2.TickRequest(
-                    id=self.int_id,
-                    position=interface_pb2.Vec2(x=estimate[1][0], y=estimate[1][1]),
-                    radius=self.car_radius,
-                    confidence=estimate[2],
-                    others=others_list,
-                )
-            )
-            self.last_movement_update = time.time()
-            self.velocity = [response.new_velocity.x, response.new_velocity.y]
-
-            if (
-                config["EVALUATION"]["track_positions"]
-                and config["EVALUATION"]["server_available"]
-            ):
-                real_position = ast.literal_eval(
-                    requests.get(SERVER + "/positions").text
-                )
-                current_time = time()
-                with open("positions.txt", "a", encoding="utf-8") as file:
-                    file.write(
-                        json.JSONEncoder().encode(
-                            {
-                                "time": current_time,
-                                "estimated_position": estimate[1],
-                                "real": real_position,
-                            }
-                        )
-                        + "\n"
+        try:
+            with grpc.insecure_channel(GRPC_CHANNEL) as channel:
+                stub = interface_pb2_grpc.CoordinationStub(channel)
+                others_list = []
+                for key, val in self.other_nodes_pos:
+                    other = interface_pb2.TickRequest.Participant(
+                        id=int(key),
+                        position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),
+                        radius=val[2],
+                        confidence=val[3],
                     )
+                    others_list.append(other)
+                response = stub.Tick(
+                    interface_pb2.TickRequest(
+                        id=self.int_id,
+                        position=interface_pb2.Vec2(x=estimate[1][0], y=estimate[1][1]),
+                        radius=self.car_radius,
+                        confidence=estimate[2],
+                        others=others_list,
+                    )
+                )
+                self.last_movement_update = time.time()
+                self.velocity = [response.new_velocity.x, response.new_velocity.y]
+
+                if (
+                    config["EVALUATION"]["track_positions"]
+                    and config["EVALUATION"]["server_available"]
+                ):
+                    real_position = ast.literal_eval(
+                        requests.get(SERVER + "/positions").text
+                    )
+                    current_time = time()
+                    with open("positions.txt", "a", encoding="utf-8") as file:
+                        file.write(
+                            json.JSONEncoder().encode(
+                                {
+                                    "time": current_time,
+                                    "estimated_position": estimate[1],
+                                    "real": real_position,
+                                }
+                            )
+                            + "\n"
+                        )
+        except grpc._channel._InactiveRpcError as e:
+            warning(str(e))
 
     def tick(self) -> bool:
         if self.measurement_queue:
@@ -531,7 +552,9 @@ class ClassicAllAtOnce(BaseParticleNode):
         self.particles = random.choices(
             population=self.particles, weights=normalized_weights, k=len(self.particles)
         )
-        self.send_estimate_to_server()
+        estimate = self.get_estimate()
+        self.send_estimate_to_server(estimate)
+        self.send_locations_to_coordination(estimate)
         self.send_particles_to_server()
         self.reset_particles()
         # end = time.time() - start
@@ -585,8 +608,14 @@ class ClassicAllAtOnce(BaseParticleNode):
             estimate_from_other_arr = []
             for (other_id, dists) in measurement_dict.items():
                 distances.append(sum(dists) / len(dists))
-                recv_particle_arr.append(self.get_particles_from_server(other_id))
-                estimate_from_other_arr.append(self.get_estimate_from_server(other_id))
+                particles_other = self.get_particles_from_server(other_id)
+                if particles_other == None:
+                    break
+                recv_particle_arr.append(particles_other)
+                estimate_from_other = self.get_estimate_from_server(other_id)
+                if estimate_from_other == None:
+                    break
+                estimate_from_other_arr.append(estimate_from_other)
             if distances:
                 self.handle_measurement(
                     distances, recv_particle_arr, estimate_from_other_arr
