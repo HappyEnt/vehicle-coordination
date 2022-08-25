@@ -229,7 +229,8 @@ class BaseParticleNode(LocalizationNode):
             with grpc.insecure_channel(GRPC_CHANNEL) as channel:
                 stub = interface_pb2_grpc.CoordinationStub(channel)
                 others_list = []
-                for key, val in self.other_nodes_pos:
+                print(self.other_nodes_pos)
+                for key, val in self.other_nodes_pos.items():
                     other = interface_pb2.TickRequest.Participant(
                         id=int(key),
                         position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),
@@ -246,7 +247,7 @@ class BaseParticleNode(LocalizationNode):
                         others=others_list,
                     )
                 )
-                self.last_movement_update = time.time()
+                self.last_movement_update = time()
                 self.velocity = [response.new_velocity.x, response.new_velocity.y]
 
                 if (
