@@ -4,13 +4,15 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from scipy.constants import speed_of_light
 
-from config import TIME_UNIT
 from data import (
     ActiveMeasurement,
     Message,
     PassiveMeasurement,
     TimingInfo,
 )
+
+
+TIME_UNIT = 15.65 / 1_000_000_000_000
 
 
 def find_message_sequence(

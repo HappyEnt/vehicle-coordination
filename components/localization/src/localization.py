@@ -495,8 +495,9 @@ class ClassicAllAtOnce(BaseParticleNode):
                     # normalize the value using the mean ("expected") and the standard deviation
                     norm_val = (actual_measured_d - expected_d) / MEASUREMENT_STDEV
                     norm_vals.append(norm_val)
-                    # collect values and compute later, to drastically increase performance of the algorithm (REALLY: DRASTICALLY)
-                    # because calling norm.pdf on an array rather than just from single values is WAY FASTER
+                    # collect values and compute later, to drastically increase performance of the
+                    # algorithm (REALLY: DRASTICALLY) because calling norm.pdf on an array rather
+                    # than just from single values is WAY FASTER
                     norm_vals_all_list.append(norm_val)
 
                 norm_vals_current_measure.append(norm_vals)

@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Iterable, List, Union
 
 from serial import Serial
 
-from config import RX_DELAYS, TX_DELAYS
+from calibrate import RX_DELAYS, TX_DELAYS
 from data import (
     ActiveMeasurement,
     Message,

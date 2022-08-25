@@ -1,3 +1,4 @@
+from collections import deque
 from data import ActiveMeasurement, TimingInfo, RX, TX, Message
 from ranging import RangingNode
 
@@ -31,10 +32,8 @@ MESSAGES = [
 
 
 class MockRangingNode(RangingNode):
-    def __init__(self, ranging_id, measurement_callback):
-        super().__init__(
-            ranging_id=ranging_id, measurement_cb=measurement_callback
-        )
+    def __init__(self, measurement_callback):
+        super().__init__( measurement_cb=measurement_callback)
 
     def run(self):
         pass
@@ -59,8 +58,8 @@ def test_ranging():
             < 1
         )
 
-    ranging_node = MockRangingNode(0xBBBB, cb)
-    ranging_node.msg_storage = MESSAGES[1:]
+    ranging_node = MockRangingNode(cb)
+    ranging_node.msg_storage = deque(MESSAGES[1:])
     print(ranging_node.msg_storage)
     ranging_node.handle_message(MESSAGES[0])
 
