@@ -9,28 +9,33 @@ EXTERNPROTO "../protos/UWBCrazyflie.proto"
 WorldInfo {
 }
 Viewpoint {
-  orientation 0.1369349882854631 0.8928898484261093 -0.42894816418870463 0.4480827589335824
-  position -9.804860899251677 1.838283293651296 3.8985732886831403
+  orientation 0.38924692990329207 0.14390032062548566 -0.909823897952095 2.2465736143116475
+  position 6.830975203714331 12.048136015065044 12.990598874255529
+  follow "Crazyflie"
+  followType "Pan and Tilt Shot"
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
 Anchor {
-  translation -0.5 -3.21 0.5
+  translation -0.31 -3.69 0.5
   name "robot(1)"
 }
 Anchor {
-  translation -3.86 0 0.5
+  translation -0.36 3.84 0.5
   rotation 0 1 0 0
 }
 CircleArena {
   radius 4
+  subdivision 4
 }
 UWBCrazyflie {
+  translation 2.7 1.18 0.585
+  signalStrengthNoise 0
 }
-Anchor {
-  translation 3.72 0 0.5
-  rotation 0 1 0 0
-  name "robot(2)"
+UWBCrazyflie {
+  translation -3.39 -0.64 0.455
+  name "Crazyflie(1)"
+  signalStrengthNoise 0
 }

@@ -44,6 +44,7 @@
 #include <webots/receiver.h>
 
 // Visualization could be done using https://cyberbotics.com/doc/reference/display
+// Should be exchanged later with a ros implementation See https://github.com/cyberbotics/webots_ros 
 
 #include <particle-belief-propagation.h>
 #include <util.h>
@@ -54,24 +55,23 @@
 
 #define PARTICLES 250
 
-struct particle_filter_instance *pf_inst = NULL;
 
-void clean_init_filter() {
+void clean_init_filter(struct particle_filter_instance **pf_inst) {
 
   if (pf_inst != NULL) {
-    destroy_particle_filter_instance(pf_inst);
+    destroy_particle_filter_instance(*pf_inst);
   }
 
-  create_particle_filter_instance(&pf_inst);
+  create_particle_filter_instance(pf_inst);
 
   // create uniform distribution over space for now representing the prior knowledge.
   struct particle *own_particles = malloc(sizeof(struct particle) * PARTICLES);
   sample_from_2d_uniform(own_particles, PARTICLES, -10, 10, -10, 10);
 
-  set_particle_array(pf_inst, own_particles, PARTICLES);
+  set_particle_array(*pf_inst, own_particles, PARTICLES);
 }
 
-void deinit_filter() {
+void deinit_filter(struct particle_filter_instance *pf_inst) {
   if(pf_inst != NULL) {
     destroy_particle_filter_instance(pf_inst);
     pf_inst = NULL;
@@ -79,6 +79,11 @@ void deinit_filter() {
 }
 
 int main(int argc, char **argv) {
+  srand(time(0));
+
+  struct particle_filter_instance *pf_inst = NULL;
+  struct vis_instance vis;
+
   printf(" Initiliazing drone! \n");
 
   wb_robot_init();
@@ -128,15 +133,9 @@ int main(int argc, char **argv) {
 
 
   // initialize particle filter
-  clean_init_filter();
+  clean_init_filter(&pf_inst);
 
-  create_vis();
-
-  // Wait for 2 seconds
-  /* while (wb_robot_step(timestep) != -1) { */
-  /*   if (wb_robot_get_time() > 2.0) */
-  /*     break; */
-  /* } */
+  create_vis(&vis, wb_robot_get_name());
 
   // Initialize variables
   actual_state_t actual_state = {0};
@@ -234,12 +233,11 @@ int main(int argc, char **argv) {
 
           double dist = sqrt(dx*dx + dy*dy);
 
-          printf("distance travelled. %f, %f\n", dx, dy);
-          printf("acc velocity. %f\n", vx);
-          printf("gps velocity. %f\n", gps_vx);
+          /* printf("distance travelled. %f, %f\n", dx, dy); */
+          /* printf("acc velocity. %f\n", vx); */
+          /* printf("gps velocity. %f\n", gps_vx); */
 
           if(fabs(dist) > 1e-6) {
-            printf("predicting next\n");
             predict(pf_inst, dist);
 
             /* dx_since_last = 0; */
@@ -248,9 +246,12 @@ int main(int argc, char **argv) {
 
           iterate(pf_inst);
 
+          struct particle mean = calculate_empirical_mean(pf_inst->local_particles, pf_inst->local_particles_length);
+          printf("measurement error: (%f, %f)\n", mean.x_pos - gps_last_x, mean.y_pos - gps_last_y);
+
           past_pf_iteration = wb_robot_get_time();
 
-          vis(pf_inst);
+          visualize(&vis, pf_inst);
         }
       }
     }

@@ -557,9 +557,9 @@ void iterate(struct particle_filter_instance *pf_inst) {
   if(!message_stack_len(pf_inst->mstack)) {
     log_info("empty message stack. Doing nothing");
   } else {
-    /* post_regularisation_bp(pf_inst); */
-    /* progressive_post_regularisation_bp(pf_inst, 4.0, 5); */
-    progressive_pre_regularisation_bp(pf_inst, 10.0, 25);
+    post_regularisation_bp(pf_inst);
+    /* progressive_post_regularisation_bp(pf_inst, 4.0, 20); */
+    /* progressive_pre_regularisation_bp(pf_inst, 10.0, 25); */
   }
 }
 

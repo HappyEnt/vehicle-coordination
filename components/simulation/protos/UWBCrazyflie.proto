@@ -8,7 +8,7 @@ PROTO UWBCrazyflie [
   field SFRotation rotation 0 0 1 0 # Is `Transform.rotation`.
   field SFString name "Crazyflie" # Is `Solid.name`.
   field SFString controller "crazyflie_controller"
-
+  field SFFloat  signalStrengthNoise     0.1
 ]
 {
   Crazyflie {
@@ -23,7 +23,7 @@ PROTO UWBCrazyflie [
         baudRate 115200
       }
       Receiver {
-        signalStrengthNoise 0.1
+        signalStrengthNoise IS signalStrengthNoise
       }
       Accelerometer {
       }

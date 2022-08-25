@@ -9,6 +9,7 @@ PROTO Anchor [
   field SFRotation rotation 0 0 1 0
   field SFString name "robot"
   field SFString controller "anchor_controller"
+  field SFFloat  range     10
 ]
 {
   Robot {
@@ -33,8 +34,8 @@ PROTO Anchor [
         ]
       }
       Emitter {
-        range 10
-        baudRate 115200
+        range IS range
+#         baudRate 115200
       }
       GPS {
       }
