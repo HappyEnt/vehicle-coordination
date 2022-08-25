@@ -44,20 +44,21 @@ SERVER = "http://192.168.87.78:8081"
 GRPC_CHANNEL = "localhost:50052"
 
 VISUALISATION = False
-
+channel = grpc.insecure_channel(GRPC_CHANNEL)
+stub = interface_pb2_grpc.CoordinationStub(channel)
 
 class LocalizationNode(ABC):
     """
     Base class for localization.
     """
 
-    @abstractmethod
+    # @abstractmethod
     def receive_measurements(
         self, ds: Iterable[Union[ActiveMeasurement, PassiveMeasurement]]
     ):
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def run(self):
         pass
 
@@ -90,7 +91,7 @@ class BaseParticleNode(LocalizationNode):
         ] = {}  # positions of other nodes, key is the id of the other nodes
         self.measurement_queue: List[ActiveMeasurement] = []
 
-    @abstractmethod
+    # @abstractmethod
     def reset_particles(self):
         pass
 
@@ -207,11 +208,11 @@ class BaseParticleNode(LocalizationNode):
             filter(lambda x: isinstance(x, ActiveMeasurement), ds)  # type: ignore
         )
 
-    @abstractmethod
+    # @abstractmethod
     def handle_measurement(self, d, recv_particles, estimate_from_other) -> None:
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def illustrate_nodes_and_particles(self, real_pos, estimate=(-100, -100)):
         pass
 
@@ -226,49 +227,52 @@ class BaseParticleNode(LocalizationNode):
         if not estimate:
             estimate = self.get_estimate()
         try:
-            with grpc.insecure_channel(GRPC_CHANNEL) as channel:
-                stub = interface_pb2_grpc.CoordinationStub(channel)
-                others_list = []
-                for key, val in self.other_nodes_pos.items():
-                    other = interface_pb2.TickRequest.Participant(
-                        id=int(key),
-                        position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),
-                        radius=val[2],
-                        confidence=val[3],
-                    )
-                    others_list.append(other)
-                response = stub.Tick(
-                    interface_pb2.TickRequest(
-                        id=self.int_id,
-                        position=interface_pb2.Vec2(x=estimate[1][0], y=estimate[1][1]),
-                        radius=self.car_radius,
-                        confidence=estimate[2],
-                        others=others_list,
-                    )
+            # stub = interface_pb2_grpc.CoordinationStub(channel)
+            others_list = []
+            print("started")
+            print(self.other_nodes_pos)
+            for key, val in self.other_nodes_pos.items():
+                other = interface_pb2.TickRequest.Participant(
+                    id=int(key),
+                    position=interface_pb2.Vec2(x=val[1][0], y=val[1][1]),
+                    radius=val[2],
+                    confidence=val[3],
                 )
-                self.last_movement_update = time()
-                self.velocity = [response.new_velocity.x, response.new_velocity.y]
+                others_list.append(other)
+            print("ended")
+            others_list = []
+            response = stub.Tick(
+                interface_pb2.TickRequest(
+                    id=self.int_id,
+                    position=interface_pb2.Vec2(x=estimate[1][0], y=estimate[1][1]),
+                    radius=self.car_radius,
+                    confidence=estimate[2],
+                    others=others_list,
+                )
+            )
+            self.last_movement_update = time()
+            self.velocity = [response.new_velocity.x, response.new_velocity.y]
 
-                if (
-                    config["EVALUATION"]["track_positions"]
-                    and config["EVALUATION"]["server_available"]
-                ):
-                    real_position = ast.literal_eval(
-                        requests.get(SERVER + "/positions").text
-                    )
-                    current_time = time()
-                    with open("positions.txt", "a", encoding="utf-8") as file:
-                        file.write(
-                            json.JSONEncoder().encode(
-                                {
-                                    "time": current_time,
-                                    "estimated_position": estimate[1],
-                                    "real": real_position,
-                                }
-                            )
-                            + "\n"
+            if (
+                config["EVALUATION"]["track_positions"]
+                and config["EVALUATION"]["server_available"]
+            ):
+                real_position = ast.literal_eval(
+                    requests.get(SERVER + "/positions").text
+                )
+                current_time = time()
+                with open("positions.txt", "a", encoding="utf-8") as file:
+                    file.write(
+                        json.JSONEncoder().encode(
+                            {
+                                "time": current_time,
+                                "estimated_position": estimate[1],
+                                "real": real_position,
+                            }
                         )
-                info("Sent data to coordination")
+                        + "\n"
+                    )
+            info("Sent data to coordination")
         except grpc._channel._InactiveRpcError as e:
             warning(str(e))
 
