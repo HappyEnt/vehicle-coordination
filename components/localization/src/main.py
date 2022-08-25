@@ -1,9 +1,8 @@
 from argparse import ArgumentParser
-from logging import basicConfig, DEBUG, ERROR, INFO, WARNING
+from logging import basicConfig, DEBUG, ERROR, INFO, WARNING, warning
 import os
 import sys
 from threading import Thread
-from time import sleep
 
 from serial import Serial
 
@@ -41,6 +40,15 @@ def main():
         default="INFO",
         help="The log level. One of: ERROR, WARNING, INFO, DEBUG",
     )
+    parser.add_argument(
+        "--localization",
+        metavar="LOCAL",
+        type=str,
+        default="PF",
+        help="The localization algorithm to be used. The default is PF (Particle Filter)."
+        "Currently available are: PF (Particle Filter), GPF (Grid Particle Filter), "
+        "CPF (Classic Particle Filter without simultaneous filtering.",
+    )
 
     args = parser.parse_args()
 
@@ -53,19 +61,28 @@ def main():
     elif args.log == "DEBUG":
         basicConfig(level=DEBUG)
 
-    localization_node = ClassicAllAtOnce()
+    if args.localization == "CPF":
+        localization_node = ClassicParticleNode()
+    elif args.localization == "GPF":
+        localization_node = GridParticleNode()
+    else:
+        warning(
+            f"Unrecognised argument for localization: {args.localization}."
+            "Falling back to default PF"
+        )
+        localization_node = ClassicAllAtOnce()
+
     ranging_nodes = []
     if args.port:
         ranging_nodes.append(
             SerialRangingNode(
-                0,
                 localization_node.receive_measurements,
                 Serial(args.port, baudrate=115200),
             )
         )
     if args.file:
         ranging_nodes.append(
-            DumpFileRangingNode(4, localization_node.receive_measurements, args.file)
+            DumpFileRangingNode(localization_node.receive_measurements, args.file)
         )
 
     localization_thread = Thread(target=localization_node.run)
@@ -76,10 +93,6 @@ def main():
     ]
     for thread in ranging_threads:
         thread.start()
-
-    sleep(20)
-    localization_node.illustrate_nodes_and_particles(real_pos=(111.5, 88.5))
-    localization_node.illustrate_nodes_and_particles((100,0))
 
 
 if __name__ == "__main__":

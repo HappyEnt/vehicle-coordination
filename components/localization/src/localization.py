@@ -6,7 +6,6 @@ from logging import debug, info, warning
 import math
 import random
 from time import time, sleep
-# import time
 from typing import Any, Dict, Iterable, List, NoReturn, Tuple, Union
 import os
 
@@ -63,7 +62,7 @@ class LocalizationNode(ABC):
         pass
 
 
-############################################################################################################
+####################################################################################################
 class BaseParticleNode(LocalizationNode):
     def __init__(self):
         car_config = configparser.ConfigParser()
@@ -77,7 +76,9 @@ class BaseParticleNode(LocalizationNode):
             math.sqrt(self.car_size_width**2 + self.car_size_length**2)
         ) / 2  # convert a rectangle-shaped car into a single radius
         self.particles: List[
-            Union[Tuple[float, float], List[float], np.ndarray[Any, np.dtype[np.float64]]]
+            Union[
+                Tuple[float, float], List[float], np.ndarray[Any, np.dtype[np.float64]]
+            ]
         ] = []  # we assume that the weights are equal for all particles
         self.last_movement_update = time()
         self.velocity = [
@@ -96,7 +97,7 @@ class BaseParticleNode(LocalizationNode):
     def get_estimate(self):
         """
         Returns the current estimated position of this node.
-        
+
         This includes its id, a point and a radius.
         """
         estimate_x = np.mean([p[0] for p in self.particles])
@@ -166,7 +167,9 @@ class BaseParticleNode(LocalizationNode):
         particles = self.get_particles_for_exchange()
         dict1["particles"] = list(particles)
         json1 = json.dumps(dict1)
-        postr = requests.post(SERVER + "/setparticles", json=json1).text
+        postr = requests.post(SERVER + "/setparticles", json=json1)
+        if postr.status_code != 200:
+            warning(postr.text)
 
     def send_estimate_to_server(self, estimate=None):
         """
@@ -178,7 +181,9 @@ class BaseParticleNode(LocalizationNode):
         dict1["marker_id"] = self.int_id
         dict1["estimate"] = estimate
         json1 = json.dumps(dict1)
-        postr = requests.post(SERVER + "/setestimate", json=json1).text
+        postr = requests.post(SERVER + "/setestimate", json=json1)
+        if postr.status_code != 200:
+            warning(postr.text)
 
     def receive_measurements(self, ds):
         self.measurement_queue.extend(
@@ -225,11 +230,25 @@ class BaseParticleNode(LocalizationNode):
             self.last_movement_update = time.time()
             self.velocity = [response.new_velocity.x, response.new_velocity.y]
 
-            if config["EVALUATION"]["track_positions"] and config["EVALUATION"]["server_available"]:
-                real_position = ast.literal_eval(requests.get(SERVER + "/positions").text)
+            if (
+                config["EVALUATION"]["track_positions"]
+                and config["EVALUATION"]["server_available"]
+            ):
+                real_position = ast.literal_eval(
+                    requests.get(SERVER + "/positions").text
+                )
                 current_time = time()
                 with open("positions.txt", "a", encoding="utf-8") as file:
-                    file.write(json.JSONEncoder().encode({"time": current_time, "estimated_position": estimate[1], "real": real_position}) + "\n")
+                    file.write(
+                        json.JSONEncoder().encode(
+                            {
+                                "time": current_time,
+                                "estimated_position": estimate[1],
+                                "real": real_position,
+                            }
+                        )
+                        + "\n"
+                    )
 
     def tick(self) -> bool:
         if self.measurement_queue:
@@ -279,10 +298,10 @@ class BaseParticleNode(LocalizationNode):
         while True:
             self.tick()
             # self.illustrate_nodes_and_particles((100,0))
-            time.sleep(0.1)
+            sleep(0.1)
 
 
-############################################################################################################
+####################################################################################################
 # Particle nodes try to estimate their position using particles
 class ClassicParticleNode(BaseParticleNode):
     """
@@ -330,7 +349,8 @@ class ClassicParticleNode(BaseParticleNode):
 
         # we update our particles and resample them directly
         # first initialize the weights -> we assume an equal weight for each particle
-        # this means also that if particles had a bigger weight, they are just multiple times in the particles list
+        # this means also that if particles had a bigger weight, they are just multiple times in the
+        #  particles list
         # start = time.time()
         weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
         for (i, p) in enumerate(self.particles):
@@ -339,16 +359,18 @@ class ClassicParticleNode(BaseParticleNode):
             for rp in recv_particles:
                 # estimate the probability P( p1, p2 | d)
                 # P( p1, p2 | d) = P( d | p1, p2) * (P(p1, p2) / P(d))
-                # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles share this as the same factor
-                # as we normalize the weights, we can ignore this factor and can just use P( d | p1, p2) which we can easily compute
+                # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles
+                # share this as the same factor
+                # as we normalize the weights, we can ignore this factor and can just use
+                # P( d | p1, p2) which we can easily compute
                 # expected_d = distance.euclidean(p, rp)
                 expected_d = math.sqrt((p[0] - rp[0]) ** 2 + (p[1] - rp[1]) ** 2)
                 actual_measured_d = d
                 # normalize the value using the mean ("expected") and the standard deviation
                 norm_val = (actual_measured_d - expected_d) / MEASUREMENT_STDEV
-                norm_vals.append(
-                    norm_val
-                )  # collect values and compute later, to drastically increase performance of the algorithm
+                # collect values and compute later, to drastically increase performance of the
+                # algorithm
+                norm_vals.append(norm_val)
             probabilities = norm.pdf(norm_vals)
             weight_factor += sum(probabilities)
             weights[i] *= weight_factor
@@ -393,7 +415,7 @@ class ClassicParticleNode(BaseParticleNode):
         plt.show()
 
 
-############################################################################################################
+####################################################################################################
 class ClassicAllAtOnce(BaseParticleNode):
     """
     Class for dynamic nodes.
@@ -424,7 +446,7 @@ class ClassicAllAtOnce(BaseParticleNode):
             self.particles.append(p)
 
     def handle_measurement(
-        self, distances, recv_particles_arr, estimate_from_other_arr
+        self, d, recv_particles_arr, estimate_from_other_arr
     ) -> None:
         """
         Handle incoming measurements by updating own particles.
@@ -436,23 +458,24 @@ class ClassicAllAtOnce(BaseParticleNode):
 
         info("Handling measurement")
         for (i, p) in enumerate(self.particles):
-            noisy_p = (
+            self.particles[i] = (
                 np.random.normal(p[0], MEASUREMENT_STDEV),
                 np.random.normal(p[1], MEASUREMENT_STDEV),
             )
-            self.particles[i] = noisy_p
         # we update our particles and resample them directly
         # first initialize the weights -> we assume an equal weight for each particle
-        # this means also that if particles had a bigger weight, they are just multiple times in the particles list
+        # this means also that if particles had a bigger weight, they are just multiple times in
+        # the particles list
+
         # start = time.time()
+
         weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
-        weights_current_measurem: List[
-            List[float]
-        ] = []  # list of weights for all current measurements
+        # list of weights for all current measurements
+        weights_current_measurem: List[List[float]] = []
 
         norm_vals_all_list = []
         norm_vals_decoder = []
-        for (i1, d) in enumerate(distances):
+        for (i1, d) in enumerate(d):
             recv_particles = recv_particles_arr[i1]
             norm_vals_current_measure = []
             norm_vals_decoder_inner = []
@@ -462,8 +485,10 @@ class ClassicAllAtOnce(BaseParticleNode):
                 for rp in recv_particles:
                     # estimate the probability P( p1, p2 | d)
                     # P( p1, p2 | d) = P( d | p1, p2) * (P(p1, p2) / P(d))
-                    # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles share this as the same factor
-                    # as we normalize the weights, we can ignore this factor and can just use P( d | p1, p2) which we can easily compute
+                    # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles
+                    #  share this as the same factor
+                    # as we normalize the weights, we can ignore this factor and can just use
+                    # P( d | p1, p2) which we can easily compute
                     # expected_d = distance.euclidean(p, rp)
                     expected_d = math.sqrt((p[0] - rp[0]) ** 2 + (p[1] - rp[1]) ** 2)
                     actual_measured_d = d
@@ -576,7 +601,7 @@ class ClassicAllAtOnce(BaseParticleNode):
             sleep(0.1)
 
 
-############################################################################################################
+####################################################################################################
 # Particle nodes try to estimate their position using particles
 class GridParticleNode(BaseParticleNode):
     """
@@ -594,6 +619,9 @@ class GridParticleNode(BaseParticleNode):
                 )
                 self.particles.append(p)
         self.measurement_queue: List[ActiveMeasurement] = []
+        self.weights = [1.0 / (GRID_SIZE**2)] * GRID_SIZE**2
+
+    def reset_particles(self):
         self.weights = [1.0 / (GRID_SIZE**2)] * GRID_SIZE**2
 
     def handle_measurement(self, d, recv_particles, estimate_from_other) -> None:
@@ -614,9 +642,12 @@ class GridParticleNode(BaseParticleNode):
 
         # we update our particles and resample them directly
         # first initialize the weights -> we assume an equal weight for each particle
-        # this means also that if particles had a bigger weight, they are just multiple times in the particles list
+        # this means also that if particles had a bigger weight, they are just multiple times in
+        # the particles list
+
         # start = time.time()
         # weights = [1.0 / NUM_PARTICLES] * NUM_PARTICLES
+
         weights = self.weights
         for (i, p) in enumerate(self.particles):
             weight_factor = 0.0
@@ -624,16 +655,18 @@ class GridParticleNode(BaseParticleNode):
             for rp in recv_particles:
                 # estimate the probability P( p1, p2 | d)
                 # P( p1, p2 | d) = P( d | p1, p2) * (P(p1, p2) / P(d))
-                # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles share this as the same factor
-                # as we normalize the weights, we can ignore this factor and can just use P( d | p1, p2) which we can easily compute
+                # we just assume that P(p1, p2) and P(d) are uniform and therefore all particles
+                # share this as the same factor
+                # as we normalize the weights, we can ignore this factor and can just use
+                # P( d | p1, p2) which we can easily compute
                 # expected_d = distance.euclidean(p, rp)
                 expected_d = math.sqrt((p[0] - rp[0]) ** 2 + (p[1] - rp[1]) ** 2)
                 actual_measured_d = d
                 # normalize the value using the mean ("expected") and the standard deviation
                 norm_val = (actual_measured_d - expected_d) / MEASUREMENT_STDEV
-                norm_vals.append(
-                    norm_val
-                )  # collect values and compute later, to drastically increase performance of the algorithm
+                # collect values and compute later, to drastically increase performance of the
+                # algorithm
+                norm_vals.append(norm_val)
             probabilities = norm.pdf(norm_vals) / MEASUREMENT_STDEV
             weight_factor += sum(probabilities)
             weights[i] *= weight_factor

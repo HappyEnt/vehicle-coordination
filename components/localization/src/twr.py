@@ -13,67 +13,71 @@ from data import (
 )
 
 
+def find_message_sequence(
+    messages: Iterable[Message], endpoint: TimingInfo, active_addr
+) -> Optional[Tuple[Message, Message, Message]]:
+    a_msg = None
+    a_sn = None
+    b_msg = None
+    b_sn = None
+    c_msg = None
+    for msg in messages:
+        if a_sn and msg.tx.addr == endpoint.addr and msg.tx.sn == a_sn:
+            try:
+                # ts = max([ts for ts in msg.rx if ts.addr == active_addr])
+                a_msg = Message(
+                    type=msg.type,
+                    clock_offset_ratio=msg.clock_offset_ratio,
+                    tx=msg.tx,
+                    # rx=[ts]
+                    rx=[],
+                )
+                assert b_msg and c_msg
+                return (a_msg, b_msg, c_msg)
+            except ValueError:
+                continue
+        elif b_sn and msg.tx.addr == active_addr and msg.tx.sn == b_sn:
+            try:
+                ts = max(ts for ts in msg.rx if ts.addr == endpoint.addr)
+                b_msg = Message(
+                    type=msg.type,
+                    clock_offset_ratio=msg.clock_offset_ratio,
+                    tx=msg.tx,
+                    rx=[ts],
+                )
+                a_sn = ts.sn
+            except ValueError:
+                continue
+        elif msg.tx.addr == endpoint.addr and msg.tx.sn == endpoint.sn:
+            try:
+                ts = max(ts for ts in msg.rx if ts.addr == active_addr)
+                c_msg = Message(
+                    type=msg.type,
+                    clock_offset_ratio=msg.clock_offset_ratio,
+                    tx=msg.tx,
+                    rx=[ts],
+                )
+                b_sn = ts.sn
+            except ValueError:
+                continue
+
+    return None
+
+
+def get_ts(rx: List[TimingInfo], reference: TimingInfo) -> int:
+    for i in rx:
+        if i == reference:
+            return i.ts
+    assert False
+
+
 def perform_twr(
     message: Message,
     msg_storage: Iterable[Message],
     tx_delays: Optional[Dict[int, float]] = None,
     rx_delays: Optional[Dict[int, float]] = None,
 ) -> List[Union[ActiveMeasurement, PassiveMeasurement]]:
-    def find_message_sequence(
-        messages: Iterable[Message], endpoint: TimingInfo, active_addr
-    ) -> Optional[Tuple[Message, Message, Message]]:
-        a_msg = None
-        a_sn = None
-        b_msg = None
-        b_sn = None
-        c_msg = None
-        for msg in messages:
-            if a_sn and msg.tx.addr == endpoint.addr and msg.tx.sn == a_sn:
-                try:
-                    # ts = max([ts for ts in msg.rx if ts.addr == active_addr])
-                    a_msg = Message(
-                        type=msg.type,
-                        clock_offset_ratio=msg.clock_offset_ratio,
-                        tx=msg.tx,
-                        # rx=[ts]
-                        rx=[],
-                    )
-                    assert b_msg and c_msg
-                    return (a_msg, b_msg, c_msg)
-                except ValueError:
-                    continue
-            elif b_sn and msg.tx.addr == active_addr and msg.tx.sn == b_sn:
-                try:
-                    ts = max(ts for ts in msg.rx if ts.addr == endpoint.addr)
-                    b_msg = Message(
-                        type=msg.type,
-                        clock_offset_ratio=msg.clock_offset_ratio,
-                        tx=msg.tx,
-                        rx=[ts],
-                    )
-                    a_sn = ts.sn
-                except ValueError:
-                    continue
-            elif msg.tx.addr == endpoint.addr and msg.tx.sn == endpoint.sn:
-                try:
-                    ts = max(ts for ts in msg.rx if ts.addr == active_addr)
-                    c_msg = Message(
-                        type=msg.type,
-                        clock_offset_ratio=msg.clock_offset_ratio,
-                        tx=msg.tx,
-                        rx=[ts],
-                    )
-                    b_sn = ts.sn
-                except ValueError:
-                    continue
 
-        return None
-
-    def get_ts(rx: List[TimingInfo], reference: TimingInfo) -> int:
-        for i in rx:
-            if i == reference:
-                return i.ts
-        assert False
 
     measurements: List[Union[ActiveMeasurement,PassiveMeasurement]] = []
 
@@ -142,7 +146,8 @@ def perform_twr(
             distance = tof * TIME_UNIT * speed_of_light
             if distance < 0 or distance > 1_000_000:
                 warning(
-                    f"Extremely unlikely distance of {distance}, R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
+                    f"Extremely unlikely distance of {distance}, " \
+                        "R_A: {r_a}, R_B: {r_b}, D_A: {d_a}, D_B: {d_b}"
                 )
             debug(
                 f"Distance between {message.tx.addr} and {rx_timing_info.addr}: {distance}"

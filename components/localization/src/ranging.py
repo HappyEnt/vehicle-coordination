@@ -2,13 +2,11 @@
 
 from abc import ABC, abstractmethod
 from collections import deque
-from logging import debug, info, warning
 from time import sleep
-from typing import Any, Callable, Dict, Iterable, List, MutableSequence, Union
+from typing import Any, Callable, Dict, Iterable, List, Union
 
 from serial import Serial
 
-from calibrate import calibrate
 from config import RX_DELAYS, TX_DELAYS
 from data import (
     ActiveMeasurement,
@@ -36,7 +34,7 @@ class RangingNode(ABC):
 
     def __init__(
         self,
-        ranging_id,
+        # ranging_id,
         measurement_cb: Callable[
             [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ],
@@ -95,13 +93,12 @@ class SerialRangingNode(RangingNode):
 
     def __init__(
         self,
-        ranging_id,
         measurement_callback: Callable[
             [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], None
         ],
         serial_connection: Serial,
     ):
-        super().__init__(ranging_id, measurement_callback)
+        super().__init__(measurement_callback)
         self.serial_connection = serial_connection
 
     def send_data(self, data):
@@ -114,9 +111,6 @@ class SerialRangingNode(RangingNode):
                 if message:
                     self.handle_message(message)
 
-            # if len(self.active_measurements) >= 500:
-            #     self.calibrate()
-
 
 class DumpFileRangingNode(RangingNode):
     """Extension of the `RangingNode` to work with a dump file.
@@ -127,13 +121,12 @@ class DumpFileRangingNode(RangingNode):
 
     def __init__(
         self,
-        ranging_id: int,
         measurement_callback: Callable[
             [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], None
         ],
         file_name: str,
     ):
-        super().__init__(ranging_id, measurement_callback)
+        super().__init__(measurement_callback)
         self.file_name = file_name
 
     def run(self):

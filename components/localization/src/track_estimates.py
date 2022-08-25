@@ -1,18 +1,14 @@
-'''
+"""
 This file can track the estimated position of cars, using the server.
-'''
+"""
+
+import ast
+import os
+import requests
+import sys
+import time
 
 import matplotlib.pyplot as plt
-import requests
-import json
-import ast
-import sys
-import logging
-import time
-import os
-from logging import info
-import np
-import random
 
 dirname = os.path.dirname(__file__)
 
@@ -20,14 +16,23 @@ SERVER = "http://192.168.87.78:8081"
 SIDE_LENGTH_X = 2.155
 SIDE_LENGTH_Y = 1.655
 
-ANCHORS = [0,1,2,3]
+ANCHORS = [0, 1, 2, 3]
+
 
 def show(anchors, positions, positions_id, figure, axis):
     axis.cla()
     if positions:
-        axis.scatter([x[0] for x in positions], [y[1] for y in positions], 10, marker="o", color="b")
+        axis.scatter(
+            [x[0] for x in positions],
+            [y[1] for y in positions],
+            10,
+            marker="o",
+            color="b",
+        )
     # axis.scatter(pos[0], pos[1], 100, marker="x", color="g")
-    axis.scatter([x[0] for x in anchors], [y[1] for y in anchors], 100, marker="x", color="r")
+    axis.scatter(
+        [x[0] for x in anchors], [y[1] for y in anchors], 100, marker="x", color="r"
+    )
     # we then scatter its particles
     axis.set_xlim([-0.2, SIDE_LENGTH_X + 0.2])
     axis.set_ylim([SIDE_LENGTH_Y + 0.2, -0.2])
@@ -36,28 +41,33 @@ def show(anchors, positions, positions_id, figure, axis):
         print(labels)
         for i, label in enumerate(labels):
             plt.annotate(label, (positions[i][0], positions[i][1] - 0.025))
-    
+
     plt.draw()
     # plt.pause(2)
     # plt.pause(0.1)
+
 
 def show_estimates(anchors, estimates):
     axis.cla()
     axis.set_xlim([-0.2, SIDE_LENGTH_X + 0.2])
     axis.set_ylim([SIDE_LENGTH_Y + 0.2, -0.2])
     print(anchors)
-    axis.scatter([x[0] for x in anchors], [y[1] for y in anchors], 100, marker="x", color="r")
+    axis.scatter(
+        [x[0] for x in anchors], [y[1] for y in anchors], 100, marker="x", color="r"
+    )
     for k, val in estimates.items():
         if not (int(k) in ANCHORS):
             axis.scatter(val[1][0], val[1][1], 10, marker="o", color="b")
-            circle1 = plt.Circle((val[1][0], val[1][1]), val[3], color='r', fill=False)
+            circle1 = plt.Circle((val[1][0], val[1][1]), val[3], color="r", fill=False)
             axis.add_patch(circle1)
     plt.draw()
+
 
 def show_line_plot(x, y):
     axis.cla()
     axis.plot(x, y)
     plt.draw()
+
 
 if __name__ == "__main__":
     if requests.get(SERVER + "/").status_code != 200:
@@ -65,7 +75,7 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         print("Server found")
-    
+
     anchors = ast.literal_eval((requests.get(SERVER + "/anchors").text))
     anchor_list = [x[1] for x in anchors.items()]
     figure, axis = plt.subplots()

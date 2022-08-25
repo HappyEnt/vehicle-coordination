@@ -1,11 +1,8 @@
 from copy import deepcopy
-import json
 from logging import basicConfig, warning, ERROR
 import math
-from time import sleep
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Mapping, MutableSequence, Optional, Tuple, Union
 
-from requests import get
 from scipy.constants import speed_of_light
 import scipy.optimize
 
@@ -14,16 +11,14 @@ from data import ActiveMeasurement, Message, parse_json_message
 from twr import perform_twr
 
 
-CAMERA_SERVER_LENGTH_UNIT = 0.01
+# CAMERA_SERVER_LENGTH_UNIT = 0.01
 
-# AVG_DELAY = 16450
-# DELAY_SPAN = 10.0 * 1e-9 * TIME_UNIT
 # TODO: find optimal range
-AVG_DELAY = 0  # 1e-9 * TIME_UNIT  # 1 ns
-DELAY_SPAN = 1e-7 / TIME_UNIT
+AVG_DELAY: float = 0
+DELAY_SPAN: float = 1e-7 / TIME_UNIT
 
 
-MIN_CALIBRATION_DIST = 0.2
+MIN_CALIBRATION_DIST: float = 0.2
 
 
 def build_tof_matrix(
@@ -55,7 +50,7 @@ def build_tof_matrix(
 
 
 def build_tof_matrix_measured(
-    messages: List[Message],
+    messages: MutableSequence[Message],
     rx_delays: Optional[Dict[int, float]] = None,
     tx_delays: Optional[Dict[int, float]] = None,
 ) -> Dict[int, Dict[int, float]]:
@@ -74,12 +69,10 @@ def build_tof_matrix_measured(
     while messages_copy:
         message = messages_copy.pop(0)
         measurements.extend(
-            list(
                 filter(
                     lambda x: isinstance(x, ActiveMeasurement),
                     perform_twr(
                         message, messages, tx_delays=tx_delays, rx_delays=rx_delays
-                    ),
                 )
             )  # type: ignore
         )
@@ -96,19 +89,31 @@ def build_tof_matrix_measured(
                 temp_matrix[measurement.a][measurement.b][1] + 1,
             )
     matrix: Dict[int, Dict[int, float]] = {}
-    for i in temp_matrix.keys():
+    # for i in temp_matrix.keys():
+    #     matrix[i] = {}
+    #     for j in temp_matrix[i].keys():
+    #         matrix[i][j] = (
+    #             sum(temp_matrix[i][j][0])
+    #             / temp_matrix[i][j][1]
+    #             / speed_of_light
+    #             / TIME_UNIT
+    #         )
+
+    for i, m_i in temp_matrix.items():
         matrix[i] = {}
-        for j in temp_matrix[i].keys():
+        for j, m_ij in m_i.items():
             matrix[i][j] = (
-                sum(temp_matrix[i][j][0])
-                / temp_matrix[i][j][1]
+                sum(m_ij[0])
+                / m_ij[1]
                 / speed_of_light
                 / TIME_UNIT
             )
     return matrix
 
 
-def calibrate(messages: Iterable[Message], pos) -> Optional[Tuple[Dict, Dict]]:
+def calibrate(
+    messages: MutableSequence[Message], pos: Dict[int, Union[List[float], Tuple[float, float]]]
+) -> Optional[Tuple[Dict[int, float], Dict[int, float]]]:
     """Find an optimal calibration for the UWB boards.
 
     Args:
@@ -119,14 +124,14 @@ def calibrate(messages: Iterable[Message], pos) -> Optional[Tuple[Dict, Dict]]:
         Optimal RX and TX delays or None.
     """
 
-    def convert_to_delays(res) -> Tuple[Dict, Dict]:
+    def convert_to_delays(res) -> Tuple[Dict[int, float], Dict[int, float]]:
         assert len(participants) * 2 == len(res)
         tx_times = {}
         rx_times = {}
-        for i in range(len(participants)):
-            tx_times[participants[i]] = res[i]
-        for i in range(len(participants)):
-            rx_times[participants[i]] = res[i + len(participants)]
+        for (i, p) in enumerate(participants):
+            tx_times[p] = res[i]
+        for (i, p) in enumerate(participants):
+            rx_times[p] = res[i + len(participants)]
         return tx_times, rx_times
 
     def accuracy(res):
@@ -143,7 +148,7 @@ def calibrate(messages: Iterable[Message], pos) -> Optional[Tuple[Dict, Dict]]:
         return err_sum / err_num
 
     participants: List[int] = []
-    # Build EDMs for the real (measured by the camera system) and measured (by UWB ranging) distances
+    # Build EDMs for the real and measured distances
     # pos = get_real_positions()
     if not pos:
         warning("Could not get distance information from camera server")
@@ -163,23 +168,19 @@ def calibrate(messages: Iterable[Message], pos) -> Optional[Tuple[Dict, Dict]]:
         [AVG_DELAY] * (len(participants) * 2),
         # bounds=[(AVG_DELAY - DELAY_SPAN, AVG_DELAY + DELAY_SPAN)] * (len(participants) * 2),
         method="Powell",
-        # options= {
-        #     "ftol" : 0.000000000001 / TIME_UNIT,
-        #     "xtol" : 0.000000000001 / TIME_UNIT
-        # }
     )
     return convert_to_delays(res.x)
 
 
 if __name__ == "__main__":
     basicConfig(level=ERROR)
-    real_positions = {
-        0x0000: [0, 0],
-        0x0100: [2.15, 0],
-        0x0200: [2.15, 1.655],
-        0x0300: [0, 1.655],
+    real_positions: Mapping[int,Tuple[float,float]] = {
+        0x0000: (0, 0),
+        0x0100: (2.15, 0),
+        0x0200: (2.15, 1.655),
+        0x0300: (0, 1.655),
     }
-    sreenlog_file = "screenlog.0"
+    sreenlog_file = "screenlog.2"
     with open(sreenlog_file, "r", encoding="UTF-8") as file:
         msg_list: List[Message] = list(
             filter(lambda x: x is not None, map(parse_json_message, file.readlines()))
@@ -189,9 +190,9 @@ if __name__ == "__main__":
         calibration_result = calibrate(msg_list, real_positions)
 
         if calibration_result:
-            tx_times, rx_times = calibration_result
+            optimal_tx_times, optimal_rx_times = calibration_result
             print("Calibration result:")
-            print(f"RX Delays : {rx_times}")
-            print(f"TX Delays : {tx_times}")
+            print(f"RX Delays : {optimal_rx_times}")
+            print(f"TX Delays : {optimal_tx_times}")
         else:
             print("Calibration error")
