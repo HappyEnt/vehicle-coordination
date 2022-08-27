@@ -19,6 +19,10 @@
 #define USE_CACHE 0
 #define DIM 2
 
+// protos
+void belief_to_message(struct message *m, double std_dev);
+void sample_kde(struct message m, struct particle *target_particles, size_t target_samples);
+
 void push_message(struct message_stack **ms, struct message m) {
   if(*ms == NULL)  {
     struct message_stack *new_ms = malloc(sizeof(struct message_stack));
@@ -221,8 +225,7 @@ double max_empirical_weighted_variance(struct weighted_particle *particles, size
 
 double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
   return pow(components, - 1.0 / (dimensions + 4)) * pow((4.0/(dimensions + 2)), 1.0 / (dimensions + 4)) * 0.5;
-  /* return pow(components, - 1.0 / (dimensions + 4)) * 0.5; */
-  /* return pow (components, -1.0/3.0) * 0.2; */
+    /* return pow (components, -1.0/3.0) * 0.2; */
 }
 
 // for now we generate exactly the same amoutn of new samples as we had in our previous belief estimate
@@ -502,6 +505,30 @@ void add_belief(struct particle_filter_instance *pf_inst, struct message m) {
   push_message(&pf_inst->mstack, m_cpy);
 }
 
+
+void redistribute_particles(struct particle_filter_instance *pf_inst, struct message proposal_distribution, double fraction) {
+  size_t start_index, amount;
+  struct message m_cp = proposal_distribution;
+
+  if (proposal_distribution.type != DENSITY_ESTIMATION) {
+    struct particle *p_cp = malloc(sizeof(struct particle) * m_cp.particles_length);
+    memcpy(p_cp, m_cp.particles, sizeof(struct particle) * m_cp.particles_length);
+    m_cp.particles = p_cp;
+
+    belief_to_message(&m_cp, pf_inst->uwb_error_likelihood->std_dev);
+  }
+
+  amount = pf_inst->local_particles_length * fraction;
+  start_index = pf_inst->local_particles_length - amount;
+
+  assert (amount + start_index <= pf_inst->local_particles_length);
+
+  sample_kde(m_cp, pf_inst->local_particles + start_index, amount);
+
+  free(m_cp.particles);
+}
+
+
 // Notes
 // regularisation (approximation of belief) using KDE -> doucet et al.
 
@@ -525,6 +552,8 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
 
 void post_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
+
+  redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute
 
   regularized_reject_correct(pf_inst, 1.0);
 
@@ -575,6 +604,9 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
     }
 
     struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
+
+    // redistribute according to first message received
+    redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute
 
     // First correct
     correct(pf_inst, wp, lambda);
@@ -705,7 +737,7 @@ void non_parametric_bp(struct particle_filter_instance *pf_inst) {
   own_belief_m.variance = max_empirical_variance(own_belief_m.particles, own_belief_m.particles_length);
   own_belief_m.type = DENSITY_ESTIMATION;
 
-  add_belief(pf_inst, own_belief_m);
+  /* add_belief(pf_inst, own_belief_m); */
 
   // multiply messages
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * proposal_amount);
@@ -727,10 +759,10 @@ void iterate(struct particle_filter_instance *pf_inst) {
   if(!message_stack_len(pf_inst->mstack)) {
     log_info("empty message stack. Doing nothing");
   } else {
-    /* post_regularisation_bp(pf_inst); */
+    post_regularisation_bp(pf_inst);
     /* progressive_post_regularisation_bp(pf_inst, 10.0, 10); */
     /* progressive_pre_regularisation_bp(pf_inst, 10.0, 25); */
-    non_parametric_bp(pf_inst);
+    /* non_parametric_bp(pf_inst); */
   }
 }
 

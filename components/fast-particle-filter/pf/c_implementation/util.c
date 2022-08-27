@@ -115,10 +115,8 @@ double value_from_independent_2D_distribution_(struct particle x, struct particl
   diff.y_pos = distance1(x.y_pos, mean.y_pos);
   prob_x = from_normal(diff.x_pos/std_dev);
   prob_y = from_normal(diff.y_pos/std_dev);
-
   return (prob_x * prob_y) / (std_dev*std_dev);
 }
-
 
 void sample_from_2d_uniform(struct particle *target_particles, size_t amount, double lower_x, double upper_x, double lower_y, double upper_y) {
   for (size_t p = 0; p < amount; p++) {
