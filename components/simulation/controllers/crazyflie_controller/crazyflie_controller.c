@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
           /* printf("gps velocity. %f\n", gps_vx); */
 
           if(fabs(dist) > 1e-6) {
-            predict(pf_inst, dist);
+            predict_dist(pf_inst, dist);
 
             /* dx_since_last = 0; */
             /* dy_since_last = 0; */
@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    if(dt_last_send_belief > 20.5)  {
+    if(dt_last_send_belief > 0.5)  {
       unsigned int bytes = sizeof(struct particle) * pf_inst->local_particles_length;
       char data[bytes];
 

@@ -58,7 +58,8 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
 void add_belief(struct particle_filter_instance *pf_inst, struct message m);
 
 // TODO find out what kind of actions will exist
-void predict(struct particle_filter_instance *pf_inst, double moved_distance);
+void predict_dist(struct particle_filter_instance *pf_inst, double moved_distance);
+void predict_dist_2D(struct particle_filter_instance *pf_inst, double moved_x, double moved_y);
 void iterate(struct particle_filter_instance *pf_inst);
 
 // _____Test Interface_____

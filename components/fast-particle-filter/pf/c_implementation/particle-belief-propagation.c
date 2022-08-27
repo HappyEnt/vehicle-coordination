@@ -539,6 +539,8 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
   struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
+  redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute
+
   // First correct
   correct(pf_inst, wp, 1.0);
 
@@ -570,6 +572,7 @@ void progressive_post_regularisation_bp(struct particle_filter_instance *pf_inst
   lambda = 1000;
   // start with high lambda to start of
 
+
   do {
     if(n >= n_max || lambda < 1.0) {
       lambda = 1.0;
@@ -577,6 +580,8 @@ void progressive_post_regularisation_bp(struct particle_filter_instance *pf_inst
     }
 
     debug("lambda = %f", lambda);
+
+    redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute
 
     regularized_reject_correct(pf_inst, lambda);
 
@@ -597,6 +602,9 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
   n = 0;
   lambda = 100;
 
+  // redistribute according to first message received
+  redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute
+
   do {
     if(n >= n_max-1 || lambda < 1.0) {
       lambda = 1.0;
@@ -605,8 +613,6 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
 
     struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
-    // redistribute according to first message received
-    redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute
 
     // First correct
     correct(pf_inst, wp, lambda);
@@ -760,13 +766,25 @@ void iterate(struct particle_filter_instance *pf_inst) {
     log_info("empty message stack. Doing nothing");
   } else {
     post_regularisation_bp(pf_inst);
+    /* pre_regularisation_bp(pf_inst); */
     /* progressive_post_regularisation_bp(pf_inst, 10.0, 10); */
     /* progressive_pre_regularisation_bp(pf_inst, 10.0, 25); */
     /* non_parametric_bp(pf_inst); */
   }
 }
 
-void predict(struct particle_filter_instance *pf_inst, double moved_distance) {
+void predict_dist_2D(struct particle_filter_instance *pf_inst, double moved_x, double moved_y) {
+  for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
+    struct particle *current_particle  = &pf_inst->local_particles[p];
+
+    // TODO add noise
+
+    current_particle->x_pos = current_particle->x_pos + moved_x;
+    current_particle->y_pos = current_particle->y_pos + moved_y;
+  }
+}
+
+void predict_dist(struct particle_filter_instance *pf_inst, double moved_distance) {
   for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
     double dir = (((double) rand())/(RAND_MAX)) * 2* M_PI;
 
