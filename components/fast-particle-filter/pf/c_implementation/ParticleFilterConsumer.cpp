@@ -29,7 +29,7 @@ int ParticleFilterConsumer::startConsumerLoop() {
       set_particle_array(this->pf_inst, particles, 1000);
       initial_message = 0;
     }
-    
+
     this->message_queue->receive(particles, sizeof(particles), recvd_size, priority);
 
     if(recvd_size != sizeof(particles)) {
@@ -41,11 +41,11 @@ int ParticleFilterConsumer::startConsumerLoop() {
     m.measured_distance = 2;
     m.particles = particles;
     m.particles_length = 1000;
-    
-    
+
+
     // free(calculate_likelihood(1000, particles, particles, 1000, 1000));
 
-    add_message(this->pf_inst, m);
+    add_belief(this->pf_inst, m);
     iterate(this->pf_inst);
 
     // std::cout << "consumed new particle cloud" << std::endl;

@@ -54,7 +54,7 @@ class CParticleFilter(AbstractParticleFilter):
             m.particles = foreign_particle_arr
             m.particles_length = len(foreign_particle_arr)
 
-            lib.add_message(self.pf_inst, m[0])
+            lib.add_belief(self.pf_inst, m[0])
 
             # we have ownership, prevent memory from being freed by storing in instance variable
             self.message_list.append((m, foreign_particle_arr, particle))

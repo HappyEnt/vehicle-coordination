@@ -106,6 +106,20 @@ double value_from_normal_distribution(struct normal_distribution *distribution,
   return distribution->cached_distribution[tx] / distribution->std_dev; // TODO maybe interpolate
 }
 
+// evaluate two dimensional normal distribution with independent variables x,y and identical variance sigma
+double value_from_independent_2D_distribution_(struct particle x, struct particle mean, double std_dev) {
+  double prob_x, prob_y;
+  struct particle diff;
+
+  diff.x_pos = distance1(x.x_pos, mean.x_pos);
+  diff.y_pos = distance1(x.y_pos, mean.y_pos);
+  prob_x = from_normal(diff.x_pos/std_dev);
+  prob_y = from_normal(diff.y_pos/std_dev);
+
+  return (prob_x * prob_y) / (std_dev*std_dev);
+}
+
+
 void sample_from_2d_uniform(struct particle *target_particles, size_t amount, double lower_x, double upper_x, double lower_y, double upper_y) {
   for (size_t p = 0; p < amount; p++) {
     double x = lower_x + (((double) rand())/(RAND_MAX)) * (upper_x - lower_x);

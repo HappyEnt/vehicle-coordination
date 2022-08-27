@@ -29,6 +29,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <webots/camera.h>
@@ -44,7 +45,7 @@
 #include <webots/receiver.h>
 
 // Visualization could be done using https://cyberbotics.com/doc/reference/display
-// Should be exchanged later with a ros implementation See https://github.com/cyberbotics/webots_ros 
+// Should be exchanged later with a ros implementation See https://github.com/cyberbotics/webots_ros
 
 #include <particle-belief-propagation.h>
 #include <util.h>
@@ -53,7 +54,7 @@
 #include "pid_controller.h"
 #include "vis.h"
 
-#define PARTICLES 250
+#define PARTICLES 1000
 
 
 void clean_init_filter(struct particle_filter_instance **pf_inst) {
@@ -126,6 +127,7 @@ int main(int argc, char **argv) {
   wb_distance_sensor_enable(range_right, timestep);
 
   WbDeviceTag emitter = wb_robot_get_device("emitter");
+  wb_emitter_set_channel(emitter, 1);
 
   WbDeviceTag receiver = wb_robot_get_device("receiver");
   wb_receiver_enable(receiver, timestep);
@@ -144,11 +146,19 @@ int main(int argc, char **argv) {
   double past_y_global = 0;
   double past_time = wb_robot_get_time();
   double past_pf_iteration = wb_robot_get_time();
+  double past_send_belief  = wb_robot_get_time();
   double past_acc_meas  = wb_robot_get_time();
   double dx_since_last = 0;
   double dy_since_last = 0;
   double vx = 0; // velocity in x. updated by acceloremeter measurements
   double vy = 0; // velocity in y.
+  double constant_velocity_x = 0;
+  double constant_velocity_y = 0;
+
+  if(argc > 2) {
+      constant_velocity_x = atof(argv[1]);
+      constant_velocity_y = atof(argv[2]);
+  }
 
   double gps_last_x = wb_gps_get_values(gps)[0];
   double gps_last_y = wb_gps_get_values(gps)[1];
@@ -182,6 +192,7 @@ int main(int argc, char **argv) {
   while (wb_robot_step(timestep) != -1) {
     const double dt = wb_robot_get_time() - past_time;
     const double dt_last_iteration = wb_robot_get_time() - past_pf_iteration;
+    const double dt_last_send_belief = wb_robot_get_time() - past_send_belief;
     const double dt_last_acceleration_measurement = wb_robot_get_time() - past_acc_meas;
 
     // Get measurements
@@ -207,10 +218,11 @@ int main(int argc, char **argv) {
         struct message m = {
           .measured_distance = measurement,
           .particles = foreign_particles,
-          .particles_length = particles
+          .particles_length = particles,
+          .type = DUMB_PARTICLES,
         };
 
-        add_message(pf_inst, m);
+        add_belief(pf_inst, m);
 
         free(foreign_particles);
 
@@ -255,6 +267,17 @@ int main(int argc, char **argv) {
         }
       }
     }
+
+    if(dt_last_send_belief > 20.5)  {
+      unsigned int bytes = sizeof(struct particle) * pf_inst->local_particles_length;
+      char data[bytes];
+
+      memcpy(data, pf_inst->local_particles, bytes);
+
+      wb_emitter_send(emitter, data, bytes);
+      past_send_belief = wb_robot_get_time();
+    }
+
 
     if (dt_last_acceleration_measurement * 1000 > wb_accelerometer_get_sampling_period(accelerometer)) {
       const double *acc_measurements = wb_accelerometer_get_values(accelerometer);
@@ -325,8 +348,8 @@ int main(int argc, char **argv) {
     desired_state.yaw_rate = yaw_desired;
 
     // PID velocity controller with fixed height
-    desired_state.vy = sideways_desired;
-    desired_state.vx = forward_desired;
+    desired_state.vy = sideways_desired + constant_velocity_y;
+    desired_state.vx = forward_desired + constant_velocity_x;
     pid_velocity_fixed_height_controller(actual_state, &desired_state, gains_pid, dt, &motor_power);
 
     // Setting motorspeed

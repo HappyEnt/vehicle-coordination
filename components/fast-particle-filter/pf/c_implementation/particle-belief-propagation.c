@@ -3,6 +3,7 @@
 
 #include "debug.h"
 
+/* #include <exception.h> */
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -129,7 +130,7 @@ double message_stack_prob(struct particle_filter_instance *pf, struct particle s
   return pow(weight_product, 1.0/lambda);
 }
 
-void resample(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles, size_t input_length, size_t target_length) {
+void resample_local_particles(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles, size_t input_length, size_t target_length) {
   /* pf_inst->local_particles, pf_inst->local_particles_length, */
   struct particle *resampled_particles = malloc(sizeof(struct particle) * target_length);
 
@@ -139,7 +140,6 @@ void resample(struct particle_filter_instance *pf, struct weighted_particle *wei
   pf->local_particles_length = target_length;
 }
 
-
 // calculates new particle set for belief
 void correct(struct particle_filter_instance *pf, struct weighted_particle *weighted_particles, double lambda) {
   double total_weight = 0.0; // implicitly shared by being definde outside the following parallel block
@@ -148,7 +148,7 @@ void correct(struct particle_filter_instance *pf, struct weighted_particle *weig
   size_t samples = pf->local_particles_length;
 
   for (size_t i = 0; i < samples; ++i) {
-    weighted_particles[i].particle = particles[i];
+    weighted_particles[i].particle = pf->local_particles[i];
     weighted_particles[i].weight = 1.0/samples;
   }
 
@@ -221,6 +221,8 @@ double max_empirical_weighted_variance(struct weighted_particle *particles, size
 
 double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
   return pow(components, - 1.0 / (dimensions + 4)) * pow((4.0/(dimensions + 2)), 1.0 / (dimensions + 4)) * 0.5;
+  /* return pow(components, - 1.0 / (dimensions + 4)) * 0.5; */
+  /* return pow (components, -1.0/3.0) * 0.2; */
 }
 
 // for now we generate exactly the same amoutn of new samples as we had in our previous belief estimate
@@ -294,16 +296,16 @@ void sample_from_multinomial_direct(struct weighted_particle *wp, size_t *sample
   }
 }
 
-void resample_kde(struct particle_filter_instance *pf, struct weighted_particle *wp, size_t target_samples) {
+// takes a weighted set of particles and resamples by performing kernel density estimation
+void resample_local_particles_kde(struct particle_filter_instance *pf, struct weighted_particle *wp, size_t target_samples) {
   struct particle *old_particles = pf->local_particles;
   size_t components = pf->local_particles_length;
 
-  // from each message draw k * M particles
   struct particle *new_particles = malloc(target_samples * sizeof(struct particle));
 
   // todo has to be calculated from message
-  double variance = max_empirical_variance(old_particles, components);
-  /* double variance = max_empirical_weighted_variance(wp, components);   */
+  /* double variance = max_empirical_variance(old_particles, components); */
+  double variance = max_empirical_weighted_variance(wp, components);
 
   // chapter 12 douce et al. optimal bandwidth assuming unit gaussian distribution of underlying distribution
   double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
@@ -334,6 +336,51 @@ void resample_kde(struct particle_filter_instance *pf, struct weighted_particle 
   pf->local_particles_length = target_samples;
 
   free(old_particles);
+}
+
+void sample_kde(struct message m, struct particle *target_particles, size_t target_samples) {
+  if(m.type != DENSITY_ESTIMATION) {
+    log_err("can only sample from message with kernel density estimation");
+  }
+
+  for(size_t s = 0; s < target_samples; s++) {
+    size_t c = (double) rand() / RAND_MAX * m.particles_length;
+
+    struct particle sample;
+    sample_particles_from_unit_gaussian(&sample, 1);
+
+    target_particles[s].x_pos = m.particles[c].x_pos + sample.x_pos * m.h_opt * sqrt(m.variance);
+    target_particles[s].y_pos = m.particles[c].y_pos + sample.y_pos * m.h_opt * sqrt(m.variance);
+  }
+}
+
+// this is similar to message_prob, but message prob implements whats described in particle belief propagation [ihler09]
+// while this implements the scheme similar to NBP [ihler05]
+double evaluate_message_at(struct message m, struct particle pos) {
+  size_t components = m.particles_length;
+  struct particle *particles = m.particles;
+
+  double acc = 0.0;
+
+  for (size_t c = 0; c < components; ++c) {
+    // for  now only consider normal distributons with covariate matrices of the form Sigma = (sigma * I)
+    acc += value_from_independent_2D_distribution_(pos, particles[c], (sqrt(m.variance) * m.h_opt));
+  }
+
+  return acc / components;
+}
+
+double evaluate_message_stack_at(struct message_stack *ms, struct particle pos) {
+  struct message_stack *current_message = ms;
+
+  double acc = 1.0;
+  while (current_message != NULL) {
+    acc *= evaluate_message_at(current_message->item, pos);
+
+    current_message = current_message->next;
+  }
+
+  return acc;
 }
 
 
@@ -395,8 +442,6 @@ double calculate_progressive_factor(struct particle_filter_instance *pf, double 
 }
 
 
-
-
 // _____Implementation of public particle filter interface_____
 
 // TODO pass sensor parameters through structure
@@ -440,7 +485,7 @@ int get_particle_array(struct particle_filter_instance *pf_inst, struct particle
   return pf_inst->local_particles_length;
 }
 
-void add_message(struct particle_filter_instance *pf_inst, struct message m) {
+void add_belief(struct particle_filter_instance *pf_inst, struct message m) {
   // take ownership of data
   struct particle *particles = malloc(sizeof(struct particle) * m.particles_length);
   memcpy(particles, m.particles, sizeof(struct particle) * m.particles_length);
@@ -448,7 +493,10 @@ void add_message(struct particle_filter_instance *pf_inst, struct message m) {
   struct message m_cpy = {
     .measured_distance = m.measured_distance,
     .particles = particles,
-    .particles_length = m.particles_length
+    .particles_length = m.particles_length,
+    .h_opt = m.h_opt,
+    .variance = m.variance,
+    .type = m.type
   };
 
   push_message(&pf_inst->mstack, m_cpy);
@@ -468,7 +516,7 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   correct(pf_inst, wp, 1.0);
 
   // than perform resampling through density estimation
-  resample_kde(pf_inst, wp, M);
+  resample_local_particles_kde(pf_inst, wp, M);
 
   free(wp);
 
@@ -477,8 +525,6 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
 
 void post_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
-
-  struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * M);
 
   regularized_reject_correct(pf_inst, 1.0);
 
@@ -520,7 +566,7 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
   double lambda;
 
   n = 0;
-  lambda = 1000;
+  lambda = 100;
 
   do {
     if(n >= n_max-1 || lambda < 1.0) {
@@ -534,7 +580,7 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
     correct(pf_inst, wp, lambda);
 
     // than perform resampling through density estimation
-    resample_kde(pf_inst, wp, M);
+    resample_local_particles_kde(pf_inst, wp, M);
 
     free(wp);
 
@@ -551,15 +597,140 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
   clear_message_stack(&pf_inst->mstack);
 }
 
+void multiply_messages(struct particle_filter_instance *pf_inst, struct weighted_particle *wp,  struct particle *proposal_particles, size_t proposal_amount) {
+  for (size_t i = 0; i < proposal_amount; ++i) {
+    wp[i].particle = proposal_particles[i];
+    wp[i].weight = 1.0/proposal_amount; // this is probably not needed as we are normalizing at the end anyway
+  }
+
+  for (size_t p = 0; p < proposal_amount; p++) {
+    wp[p].weight *= evaluate_message_stack_at(pf_inst->mstack, wp[p].particle);
+  }
+
+  // normalize weights
+  double total_weight = 0;
+  for (size_t i = 0; i < proposal_amount; ++i) {
+    total_weight += wp[i].weight;
+  }
+
+  for (size_t i = 0; i < proposal_amount; ++i) {
+    wp[i].weight /= total_weight;
+  }
+}
+
+void upsample_message_stack(struct message_stack *ms, size_t target_amount) {
+  struct message_stack *current_message = ms;
+
+  while(current_message != NULL) {
+    size_t current_length = current_message->item.particles_length;
+    if(current_length < target_amount) {
+      struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * current_length);
+      struct particle *new_particles = malloc(sizeof(struct particle) * target_amount);
+
+      for(size_t p = 0; p < current_length; p++) {
+        wp[p].particle = current_message->item.particles[p];
+        wp[p].weight = 1.0/current_length;
+      }
+
+      low_variance_resampling(wp, new_particles, current_length, target_amount);
+
+      free(current_message->item.particles);
+      current_message->item.particles_length = target_amount;
+      current_message->item.particles = new_particles;
+    }
+    current_message = current_message->next;
+  }
+}
+
+// convert belief received from other node into message by incorporating measurement
+void belief_to_message(struct message *m, double std_dev) {
+  // modify message in place
+  size_t components = m->particles_length;
+  struct particle *particles = m->particles;
+
+  for(size_t c = 0; c < components; c++) {
+    struct particle tmp_p = particles[c];
+
+    double angle = ((double) rand() / RAND_MAX) * 2 * M_PI;
+
+    tmp_p.x_pos += m->measured_distance * cos(angle);
+    tmp_p.y_pos += m->measured_distance * sin(angle);
+    sample_particles_from_gaussian(tmp_p, std_dev, particles + c, 1);
+  }
+
+  m->h_opt = opt_unit_gaussian_bandwidth(components, DIM);
+  m->variance = max_empirical_variance(particles, components);
+  m->type = DENSITY_ESTIMATION;
+
+  log_info("h_opt %f", m->h_opt);
+}
+
+
+void generate_messages_from_beliefs(struct particle_filter_instance *pf_inst) {
+  // despite the nomenclature I used before, until now we only have beliefs stored in the message sdtack
+  // this procedure converts the beliefs into proper messages
+  struct message_stack *current_message = pf_inst->mstack;
+
+  while(current_message != NULL) {
+    belief_to_message(&current_message->item, pf_inst->uwb_error_likelihood->std_dev);
+
+    current_message = current_message->next;
+  }
+}
+
+void non_parametric_bp(struct particle_filter_instance *pf_inst) {
+  // step 1 upsample messages from message stack if necessary
+  // this is mostly needed to get anchors to work which only send one particle
+  upsample_message_stack(pf_inst->mstack, pf_inst->local_particles_length);
+
+  // step 2 use ONE message as proposal distribution
+  generate_messages_from_beliefs(pf_inst);
+
+  // generate proposal samples
+  size_t proposal_amount = pf_inst->local_particles_length;
+  struct particle *proposal_particles = malloc(sizeof(struct particle) * proposal_amount);
+  struct message proposal_distribution = pf_inst->mstack->item;   // for now use the first message we received as proposal distribution
+
+  if (message_stack_len(pf_inst->mstack) <= 0) {
+    log_err("empty message stack");
+  }
+
+  sample_kde(proposal_distribution, proposal_particles, proposal_amount);
+
+  // add current belief as message (we perform prediction and correction asynchronously)
+  struct message own_belief_m;
+  own_belief_m.particles = pf_inst->local_particles;
+  own_belief_m.particles_length = pf_inst->local_particles_length;
+  own_belief_m.h_opt = opt_unit_gaussian_bandwidth(pf_inst->local_particles_length, DIM);
+  own_belief_m.variance = max_empirical_variance(own_belief_m.particles, own_belief_m.particles_length);
+  own_belief_m.type = DENSITY_ESTIMATION;
+
+  add_belief(pf_inst, own_belief_m);
+
+  // multiply messages
+  struct weighted_particle *wp = malloc(sizeof(struct weighted_particle) * proposal_amount);
+
+  multiply_messages(pf_inst, wp, proposal_particles, proposal_amount);
+
+  // resample
+  resample_local_particles_kde(pf_inst, wp, proposal_amount);
+  /* resample_local_particles(pf_inst, wp, proposal_amount, proposal_amount); */
+
+  // clear
+  clear_message_stack(&pf_inst->mstack);
+  free(wp);
+}
+
 
 void iterate(struct particle_filter_instance *pf_inst) {
   /* pre_regularisation_bp(pf_inst); */
   if(!message_stack_len(pf_inst->mstack)) {
     log_info("empty message stack. Doing nothing");
   } else {
-    post_regularisation_bp(pf_inst);
-    /* progressive_post_regularisation_bp(pf_inst, 4.0, 20); */
+    /* post_regularisation_bp(pf_inst); */
+    /* progressive_post_regularisation_bp(pf_inst, 10.0, 10); */
     /* progressive_pre_regularisation_bp(pf_inst, 10.0, 25); */
+    non_parametric_bp(pf_inst);
   }
 }
 

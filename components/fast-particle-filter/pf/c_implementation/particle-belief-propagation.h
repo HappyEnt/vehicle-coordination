@@ -17,8 +17,17 @@ enum actions {
 
 struct message {
   double measured_distance;
+
   struct particle *particles;
   size_t particles_length;
+
+  enum {
+    DENSITY_ESTIMATION, // determines how we sample from the message
+    DUMB_PARTICLES,
+  } type;
+
+  double h_opt; // only used in case of non parametric belief propagation
+  double variance;
 };
 
 struct message_stack {
@@ -46,7 +55,7 @@ void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst);
 void set_particle_array(struct particle_filter_instance *pf_inst, struct particle *particles, size_t length);
 int get_particle_array(struct particle_filter_instance *pf_inst, struct particle **particles);
 
-void add_message(struct particle_filter_instance *pf_inst, struct message m);
+void add_belief(struct particle_filter_instance *pf_inst, struct message m);
 
 // TODO find out what kind of actions will exist
 void predict(struct particle_filter_instance *pf_inst, double moved_distance);
