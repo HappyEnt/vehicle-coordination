@@ -24,7 +24,6 @@
 #/*
  * You may want to add macros here.
  */
-#define TIME_STEP 64
 
 /*
  * This is the main program.
@@ -59,11 +58,11 @@ int main(int argc, char **argv) {
    */
   double past_time = wb_robot_get_time();
 
-  while (wb_robot_step(TIME_STEP) != -1) {
+  while (wb_robot_step(timestep) != -1) {
     const double dt = wb_robot_get_time() - past_time;
 
     // send position every 100 milliseconds
-    if(dt > 0.1) {
+    if(dt > 0.2 && wb_robot_get_time() > 5) {
       char data[sizeof(struct particle)];
 
       double x_global = wb_gps_get_values(gps)[0];
@@ -71,7 +70,8 @@ int main(int argc, char **argv) {
 
       struct particle p = {
         .x_pos = x_global,
-        .y_pos = y_global
+        .y_pos = y_global,
+        .weight = 1.0
       };
 
       memcpy(data, &p, sizeof(struct particle));

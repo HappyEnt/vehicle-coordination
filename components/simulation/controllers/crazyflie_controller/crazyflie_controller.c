@@ -67,9 +67,10 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
 
   // create uniform distribution over space for now representing the prior knowledge.
   struct particle *own_particles = malloc(sizeof(struct particle) * PARTICLES);
-  sample_from_2d_uniform(own_particles, PARTICLES, -10, 10, -10, 10);
+  sample_from_2d_uniform(own_particles, PARTICLES, -40, 40, -40, 40);
 
-  set_particle_array(*pf_inst, own_particles, PARTICLES);
+  /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
+  set_particle_amount(*pf_inst, PARTICLES);
 }
 
 void deinit_filter(struct particle_filter_instance *pf_inst) {
@@ -160,6 +161,7 @@ int main(int argc, char **argv) {
       constant_velocity_y = atof(argv[2]);
   }
 
+  int has_fix = 0;
   double gps_last_x = wb_gps_get_values(gps)[0];
   double gps_last_y = wb_gps_get_values(gps)[1];
 
@@ -203,7 +205,7 @@ int main(int argc, char **argv) {
     // receiver measurements
     int queue_length = wb_receiver_get_queue_length(receiver);
 
-    if (dt_last_iteration > 0.2) {
+    if (dt_last_iteration > 0.2 && wb_robot_get_time() > 5) {
       while(queue_length > 0) {
         const char *data = wb_receiver_get_data(receiver);
         int data_len = wb_receiver_get_data_size(receiver);
@@ -232,6 +234,11 @@ int main(int argc, char **argv) {
         if(queue_length <= 0) {
           /* double dx = dx_since_last; */
           /* double dy = dy_since_last; */
+          if(!has_fix) {
+            gps_last_x = wb_gps_get_values(gps)[0];
+            gps_last_y = wb_gps_get_values(gps)[1];
+            has_fix = 1;
+          }
 
           double gps_dx = (wb_gps_get_values(gps)[0] - gps_last_x);
           double gps_dy = (wb_gps_get_values(gps)[1] - gps_last_y);
@@ -250,6 +257,7 @@ int main(int argc, char **argv) {
           /* printf("gps velocity. %f\n", gps_vx); */
 
           if(fabs(dist) > 1e-6) {
+            printf("predict node %s", wb_robot_get_name());
             predict_dist(pf_inst, dist);
 
             /* dx_since_last = 0; */
@@ -268,7 +276,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    if(dt_last_send_belief > 0.5)  {
+    if(dt_last_send_belief > 0.5 && wb_robot_get_time() > 5 && pf_inst->local_particles != NULL) {
       unsigned int bytes = sizeof(struct particle) * pf_inst->local_particles_length;
       char data[bytes];
 

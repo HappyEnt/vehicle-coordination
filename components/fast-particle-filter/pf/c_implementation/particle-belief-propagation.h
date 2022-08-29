@@ -8,6 +8,8 @@
 #include <time.h>
 #include <stdbool.h>
 
+#include <gsl/gsl_rng.h>
+
 enum actions {
   CONTROL_ACTION, // for mobility model p(x_t | x_t-1)
   TDOA_MEASUREMENT, // Time difference of Arrival -> 3 Sets of particles
@@ -39,8 +41,12 @@ struct particle_filter_instance {
   // the minimum we have to store is the particle set
   struct particle *local_particles;
   size_t local_particles_length;
+  bool has_prior;
+
   // Any other data that is usefull
   struct normal_distribution *uwb_error_likelihood;
+
+  gsl_rng *r;
 
   struct message_stack *mstack;
 };
@@ -53,6 +59,7 @@ void create_particle_filter_instance(struct particle_filter_instance **pf_inst);
 void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst);
 
 void set_particle_array(struct particle_filter_instance *pf_inst, struct particle *particles, size_t length);
+void set_particle_amount(struct particle_filter_instance *pf_inst, size_t amount);
 int get_particle_array(struct particle_filter_instance *pf_inst, struct particle **particles);
 
 void add_belief(struct particle_filter_instance *pf_inst, struct message m);

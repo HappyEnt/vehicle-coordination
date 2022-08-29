@@ -20,6 +20,7 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost COMPONENTS system REQUIRED)
+find_package(GSL REQUIRED)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -33,14 +34,14 @@ set(CMAKE_C_COMPILER "/opt/homebrew/opt/llvm/bin/clang")
 set(CMAKE_CXX_COMPILER "/opt/homebrew/opt/llvm/bin/clang++")
 set(CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm")
 
-set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+set(CMAKE_OSX_ARCHITECTURES "arm64")
 # CMAKE_OSX_ARCHITECTURES=
 
 # -DCMAKE_BUILD_TYPE=ASAN -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++
 
 
 add_library(BeliefPropagation SHARED particle-belief-propagation.h particle-belief-propagation.c util.h util.c)
-target_link_libraries(BeliefPropagation m) #   -fsanitize=address
+target_link_libraries(BeliefPropagation GSL::gsl m) #   -fsanitize=address
 
 # add the executable
 add_executable(test-particle-filter test-particle-filter.c)

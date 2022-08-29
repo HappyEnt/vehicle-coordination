@@ -19,18 +19,15 @@ void visualize(struct vis_instance *vis, struct particle_filter_instance *pf_ins
   struct particle *particles = pf_inst->local_particles;
   size_t amount = pf_inst->local_particles_length;
 
-  if (ftruncate(fileno(vis->data), 0) == -1) {
-    printf("Could not truncate\n");
-  }
-  fflush(vis->data);
+  FILE *data = fopen(vis->path, "w");
 
   for (unsigned int i = 0; i < amount; ++i) {
     double x = particles[i].x_pos;
     double y = particles[i].y_pos;
-    fprintf(vis->data, "%lf %lf \n", x, y); //Write the data to a temporary file
+    fprintf(data, "%f %f \n", x, y); //Write the data to a temporary file
   }
 
-  fflush(vis->data);
+  fflush(data);
 
   char * commandsForGnuplot[] = {"replot"};
   int commands = sizeof(commandsForGnuplot) / sizeof(char*);
@@ -50,17 +47,21 @@ void create_vis(struct vis_instance *vis, const char *name) {
   char path[80];
   char plot_cmd[80];
 
+  FILE *data;
+
   strcpy(vis->name, name);
 
   sprintf(path, "data-%s.data", vis->name);
   sprintf(plot_cmd, "plot '%s' with points pt 3", path);
 
+  strcpy(vis->path, path);
+
   vis->gnuplotPipe = popen ("gnuplot -persistent", "w");
 
-  vis->data = fopen(path,"w");
+  data = fopen(path,"w");
 
-  fprintf(vis->data, "%lf %lf \n", 0.0, 0.0); //Write the data to a temporary file
-  fflush(vis->data);
+  fprintf(data, "%f %f \n", 0.0, 0.0); //Write the data to a temporary file
+  fflush(data);
 
   printf("sending %d commands \n", commands);
 

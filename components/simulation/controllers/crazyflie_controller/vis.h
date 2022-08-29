@@ -7,7 +7,8 @@
 
 struct vis_instance {
   char name[80];
-  FILE *data;
+  char path[80];
+
   FILE * gnuplotPipe;
 };
 

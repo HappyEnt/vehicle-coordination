@@ -10,13 +10,8 @@
 struct particle {
   double x_pos; // [x_pos] = m
   double y_pos; // [y_pos] = m
-};
-
-struct weighted_particle {
-  struct particle particle;
   double weight;
 };
-
 
 struct normal_distribution {
   double mean;

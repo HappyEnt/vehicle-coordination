@@ -7,6 +7,8 @@
 #include <assert.h>
 #include "debug.h"
 
+#include <gsl/gsl_randist.h>
+
 static double from_normal(double x) {
   double sqpi = sqrt(2 * M_PI);
   double expc = exp(-(x*x)/2);
@@ -125,6 +127,7 @@ void sample_from_2d_uniform(struct particle *target_particles, size_t amount, do
 
     target_particles[p].x_pos = x;
     target_particles[p].y_pos = y;
+    target_particles[p].weight = 1.0/amount;
   }
 }
 
