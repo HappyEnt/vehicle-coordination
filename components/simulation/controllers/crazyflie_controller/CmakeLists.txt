@@ -15,9 +15,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(GSL REQUIRED)
 
 # Link with the Webots controller library.
-link_directories($ENV{WEBOTS_HOME}/lib/controller "/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation/build")
+link_directories($ENV{WEBOTS_HOME}/lib/controller "../../../fast-particle-filter/pf/c_implementation/build")
 set (LIBRARIES ${CMAKE_SHARED_LIBRARY_PREFIX}Controller${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_SHARED_LIBRARY_PREFIX}CppController${CMAKE_SHARED_LIBRARY_SUFFIX})
-include_directories($ENV{WEBOTS_HOME}/include/controller/c $ENV{WEBOTS_HOME}/include/controller/cpp "/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation")
+include_directories($ENV{WEBOTS_HOME}/include/controller/c $ENV{WEBOTS_HOME}/include/controller/cpp "../../../fast-particle-filter/pf/c_implementation")
 
 # Setup the target executable.
 add_executable(${PROJECT} ${SOURCES})

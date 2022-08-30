@@ -8,7 +8,9 @@ PROTO UWBCrazyflie [
   field SFRotation rotation 0 0 1 0 # Is `Transform.rotation`.
   field SFString name "Crazyflie" # Is `Solid.name`.
   field SFString controller "crazyflie_controller"
+  field MFString   controllerArgs  ""    # Is `Robot.controllerArgs`.
   field SFFloat  signalStrengthNoise     0.1
+  field SFFloat range 1
 ]
 {
   Crazyflie {
@@ -16,11 +18,12 @@ PROTO UWBCrazyflie [
     rotation IS rotation
     name IS name
     controller IS controller
+    controllerArgs IS controllerArgs
 
     extensionSlot [
       Emitter {
-        range 10
-        baudRate 115200
+        range IS range
+        # baudRate 115200
       }
       Receiver {
         signalStrengthNoise IS signalStrengthNoise

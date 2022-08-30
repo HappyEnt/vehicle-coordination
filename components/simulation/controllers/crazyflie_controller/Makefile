@@ -65,8 +65,8 @@
 ###
 ###-----------------------------------------------------------------------------
 
-INCLUDE = -I"/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation"
-LIBRARIES = -L"/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation/build/" -lBeliefPropagation
+INCLUDE = -I"../../../components/fast-particle-filter/pf/c_implementation"
+LIBRARIES = -L"../../../components/fast-particle-filter/pf/c_implementation/build/" -lBeliefPropagation
 C_SOURCES = crazyflie_controller.c pid_controller.c vis.c
 
 NO_FAT_BINARY = 1

@@ -8,15 +8,6 @@
 #include <time.h>
 #include <stdbool.h>
 
-#include <gsl/gsl_rng.h>
-
-enum actions {
-  CONTROL_ACTION, // for mobility model p(x_t | x_t-1)
-  TDOA_MEASUREMENT, // Time difference of Arrival -> 3 Sets of particles
-  TWR_MEASUREMENT,  // Two Way Ranging -> 2 Sets of particles
-  SELF_MEASUREMENT, // z_self for example pedometer measurement
-};
-
 struct message {
   double measured_distance;
 
@@ -37,19 +28,7 @@ struct message_stack {
   struct message_stack *next;
 };
 
-struct particle_filter_instance {
-  // the minimum we have to store is the particle set
-  struct particle *local_particles;
-  size_t local_particles_length;
-  bool has_prior;
-
-  // Any other data that is usefull
-  struct normal_distribution *uwb_error_likelihood;
-
-  gsl_rng *r;
-
-  struct message_stack *mstack;
-};
+struct particle_filter_instance;
 
 
 // _____Public Interface_____

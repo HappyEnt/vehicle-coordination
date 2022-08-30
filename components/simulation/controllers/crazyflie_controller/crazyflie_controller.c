@@ -54,7 +54,7 @@
 #include "pid_controller.h"
 #include "vis.h"
 
-#define PARTICLES 1000
+#define PARTICLES 300
 
 
 void clean_init_filter(struct particle_filter_instance **pf_inst) {
@@ -266,7 +266,10 @@ int main(int argc, char **argv) {
 
           iterate(pf_inst);
 
-          struct particle mean = calculate_empirical_mean(pf_inst->local_particles, pf_inst->local_particles_length);
+          struct particle *particles;
+          size_t particle_length = get_particle_array(pf_inst, &particles);
+
+          struct particle mean = calculate_empirical_mean(particles, particle_length);
           printf("measurement error: (%f, %f)\n", mean.x_pos - gps_last_x, mean.y_pos - gps_last_y);
 
           past_pf_iteration = wb_robot_get_time();
@@ -276,14 +279,20 @@ int main(int argc, char **argv) {
       }
     }
 
-    if(dt_last_send_belief > 0.5 && wb_robot_get_time() > 5 && pf_inst->local_particles != NULL) {
-      unsigned int bytes = sizeof(struct particle) * pf_inst->local_particles_length;
-      char data[bytes];
+    if(dt_last_send_belief > 0.5 && wb_robot_get_time() > 5) {
+      struct particle *particles;
+      size_t particle_length = get_particle_array(pf_inst, &particles);
 
-      memcpy(data, pf_inst->local_particles, bytes);
+      if(particles != NULL) {
+        unsigned int bytes = sizeof(struct particle) * particle_length;
+        char data[bytes];
 
-      wb_emitter_send(emitter, data, bytes);
-      past_send_belief = wb_robot_get_time();
+        memcpy(data, particles, bytes);
+
+        wb_emitter_send(emitter, data, bytes);
+        past_send_belief = wb_robot_get_time();
+      }
+
     }
 
 

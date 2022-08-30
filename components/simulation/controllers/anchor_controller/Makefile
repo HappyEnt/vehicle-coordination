@@ -67,8 +67,8 @@
 
 ### Do not modify: this includes Webots global Makefile.include
 
-INCLUDE = -I"/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation"
-LIBRARIES = -L"/Users/christian/Projects/vehicle-coordination/components/fast-particle-filter/pf/c_implementation/build/" -lBeliefPropagation
+INCLUDE = -I"../../../components/fast-particle-filter/pf/c_implementation"
+LIBRARIES = -L"../../../components/fast-particle-filter/pf/c_implementation/build/" -lBeliefPropagation
 NO_FAT_BINARY = 1
 
 null :=

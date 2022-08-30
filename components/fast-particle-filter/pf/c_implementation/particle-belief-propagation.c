@@ -32,6 +32,21 @@ void low_variance_resample_local_particles_kde(
 void __sample_from_unit_gaussian(struct particle_filter_instance *pf, struct particle *ps, size_t amount);
 void generate_messages_from_beliefs(struct particle_filter_instance *pf_inst, struct message_stack *mstack);
 
+// definitions
+struct particle_filter_instance {
+  // the minimum we have to store is the particle set
+  struct particle *local_particles;
+  size_t local_particles_length;
+  bool has_prior;
+
+  // Any other data that is usefull
+  struct normal_distribution *uwb_error_likelihood;
+
+  gsl_rng *r;
+
+  struct message_stack *mstack;
+};
+
 void push_message(struct message_stack **ms, struct message m) {
   if(*ms == NULL)  {
     struct message_stack *new_ms = malloc(sizeof(struct message_stack));

@@ -16,8 +16,8 @@
 /* void vis(struct particle_filter_instance *pf_inst) */
 void visualize(struct vis_instance *vis, struct particle_filter_instance *pf_inst)
 {
-  struct particle *particles = pf_inst->local_particles;
-  size_t amount = pf_inst->local_particles_length;
+  struct particle *particles;
+  size_t amount = get_particle_array(pf_inst, &particles);
 
   FILE *data = fopen(vis->path, "w");
 

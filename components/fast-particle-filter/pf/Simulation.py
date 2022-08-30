@@ -14,7 +14,7 @@ import numpy as np
 def generate_uniform_distribution(side_length, num_particles):
     particles = []
     for i in range(num_particles):
-        p = tuple(np.random.uniform(low=-side_length, high=side_length, size=2))
+        p = list(np.random.uniform(low=-side_length, high=side_length, size=2)) + [1.0 / num_particles]
         particles.append(p)
     return particles
 
@@ -24,7 +24,7 @@ def particle_node_set_uniform_prior(node, side_length, num_particles):
     node.set_particles(generate_uniform_distribution(side_length, num_particles))
 
 def particle_node_set_dirac_delta_dist(node):
-    node.set_particles([node.get_pos()])
+    node.set_particles([node.get_pos()] + [1.0])
 
 
 
@@ -562,3 +562,4 @@ start_interactive_sim(particles = 500)
 # sim.add_nodes(anchors)
 # sim.illustrate()
 # sim.run_simulation_loop()
+x

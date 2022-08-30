@@ -8,7 +8,6 @@ from AbstractParticleFilter import AbstractParticleFilter
 class CParticleFilter(AbstractParticleFilter):
     cache_normal_distribution = False
 
-
     def __init__(self, cache_distribution):
         "create and initialize c implementation particle filter instance"
 
@@ -38,6 +37,10 @@ class CParticleFilter(AbstractParticleFilter):
             particle_arr[i] = ffi.new("struct particle*", particles[i])[0]
         lib.set_particle_array(self.pf_inst, particle_arr, len(particles))
 
+    # Setting a prior through set_particles is optional. Instead also a amount of internal particles can be set.
+    # The prior is than deduced from the first message that is received by the node
+    def set_particle_amount(self, amount):
+        lib.set_particle_amount(self.pf_inst, 250);
 
     def add_message(self, message):
         if message.get_type() == "TWR":
@@ -62,7 +65,7 @@ class CParticleFilter(AbstractParticleFilter):
             raise NotImplementedError
 
     def predict(self, moved_distance):
-        lib.predict(self.pf_inst, moved_distance)
+        lib.predict_dist(self.pf_inst, moved_distance)
 
     def iterate(self):
             lib.iterate(self.pf_inst)
