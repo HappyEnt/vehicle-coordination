@@ -177,13 +177,22 @@ double message_stack_prob(struct particle_filter_instance *pf, struct message_st
 void resample_local_particles(struct particle_filter_instance *pf, size_t target_length) {
   struct particle *new_particles = malloc(target_length * sizeof(struct particle));
 
-  //  low_variance_resampling(pf, pf->local_particles, new_particles, pf->local_particles_length, target_length);
   low_variance_resample_local_particles_kde(pf, pf->local_particles, new_particles, pf->local_particles_length, target_length);
   //  // multinomial_resampling(pf, pf->local_particles, new_particles, pf->local_particles_length, target_length);
 
   pf->local_particles = new_particles;
   pf->local_particles_length = target_length;
 }
+
+void resample_local_particles_with_replacement (struct particle_filter_instance *pf, size_t target_length) {
+  struct particle *new_particles = malloc(target_length * sizeof(struct particle));
+
+  low_variance_resampling(pf, pf->local_particles, new_particles, pf->local_particles_length, target_length);
+
+  pf->local_particles = new_particles;
+  pf->local_particles_length = target_length;
+}
+
 
 // calculates new particle set for belief
 void correct(struct particle_filter_instance *pf, double lambda) {
@@ -275,8 +284,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
           struct particle next_sample;
           next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
           next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
-          /* next_sample.weight = 1.0 / components; */
-          next_sample.weight = old_particles[I].weight;
+          next_sample.weight = 1.0 / components;
 
           double accept = message_stack_prob(pf, pf->mstack, next_sample, lambda);
 
@@ -294,14 +302,6 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
 
   free(old_particles);
 }
-// See chapter 12 douce et al.
-void progressive_weight_correction(struct particle_filter_instance *pf) {
-  // a factorization of the likelihood function results naturally from the belief propagation graph
-  // the following works on the assumption of gaussian error noise, but can be extended to other
-  // models as well see douce et al.
-
-  // TODO
-}
 
 void sample_from_multinomial(struct particle *particles, unsigned int *sample, size_t components, size_t repetetions) {
   double weights[components];
@@ -316,6 +316,7 @@ void sample_from_multinomial(struct particle *particles, unsigned int *sample, s
 
 
 // takes a weighted set of particles and resamples by performing kernel density estimation
+// samples from multinomial distribution. In practice the low-variance version below works better.
 void resample_local_particles_kde(struct particle_filter_instance *pf, size_t target_samples) {
   struct particle *particles = pf->local_particles;
   size_t components = pf->local_particles_length;
@@ -367,6 +368,8 @@ void low_variance_resample_local_particles_kde(
 
   struct particle *particles = pf->local_particles;
   size_t components = pf->local_particles_length;
+
+
 
   // todo has to be calculated from message
   /* double variance = max_empirical_variance(old_particles, components); */
@@ -489,6 +492,38 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
 
   free(old_particles);
 }
+
+void move_metropolis(struct particle_filter_instance *pf, size_t burn_in_per_sample) {
+  struct particle *particles = pf->local_particles;
+  size_t components = pf->local_particles_length;
+
+  for(size_t i = 0; i < components; i++) {
+    struct particle current_sample = particles[0];
+
+    for(size_t s = 0; s < burn_in_per_sample; s++) {
+      struct particle next_sample;
+
+
+      sample_particles_from_gaussian(current_sample, 2, &next_sample, 1);
+
+      double prob_cur = message_stack_prob(pf, pf->mstack, current_sample, 1.0);
+      double prob_next = message_stack_prob(pf, pf->mstack, next_sample, 1.0);
+      double accept = prob_next / prob_cur;
+
+      accept = accept < 1.0 ? accept : 1.0;
+
+      double alpha = gsl_rng_uniform(pf->r);
+
+      /* log_info("probs: %f / %f", prob_next, prob_cur); */
+
+      if (alpha < accept || prob_cur < 1e-12) {
+        current_sample = next_sample;
+      }
+    }
+    particles[i] = current_sample;
+  }
+}
+
 
 double calculate_progressive_factor(struct particle_filter_instance *pf, double sigma_max) {
   struct message_stack *current_message = pf->mstack;
@@ -631,11 +666,11 @@ void redistribute_particles(struct particle_filter_instance *pf_inst, struct mes
   generate_messages_from_beliefs(pf_inst, stack_cpy);
 
   // if a current belief already exists, take it into consideration
-  if(pf_inst->has_prior) {
+  if(pf_inst->has_prior && false) {
     struct message own_belief_m;
     own_belief_m.particles = current_particles;
     own_belief_m.particles_length = pf_inst->local_particles_length;
-    own_belief_m.h_opt = opt_unit_gaussian_bandwidth(pf_inst->local_particles_length, DIM);
+    own_belief_m.h_opt = opt_unit_gaussian_bandwidth(own_belief_m.particles_length, DIM);
     own_belief_m.variance = max_empirical_variance(own_belief_m.particles, own_belief_m.particles_length);
     own_belief_m.type = DENSITY_ESTIMATION;
 
@@ -684,7 +719,7 @@ double effective_sample_size_estimator(struct particle_filter_instance *pf_inst)
 void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
 
-  /* redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute */
+  redistribute_particles(pf_inst, pf_inst->mstack->item, 0.04); // redistribute
 
   log_info("got messages %zu", message_stack_len(pf_inst->mstack));
 
@@ -697,7 +732,7 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
 
   // than perform resampling through density estimation
   /* if(ess < (double) M / 2) { */
-      resample_local_particles(pf_inst, M);
+    resample_local_particles(pf_inst, M);
   /* } */
 
   clear_message_stack(&pf_inst->mstack);
@@ -871,6 +906,8 @@ void generate_messages_from_beliefs(struct particle_filter_instance *pf_inst, st
 }
 
 void non_parametric_bp(struct particle_filter_instance *pf_inst) {
+  /* redistribute_particles(pf_inst, pf_inst->mstack->item, 0.2); // redistribute */
+
   // step 1 upsample messages from message stack if necessary
   // this is mostly needed to get anchors to work which only send one particle
   upsample_message_stack(pf_inst, pf_inst->mstack, pf_inst->local_particles_length);
@@ -895,7 +932,11 @@ void non_parametric_bp(struct particle_filter_instance *pf_inst) {
   own_belief_m.particles_length = pf_inst->local_particles_length;
   own_belief_m.h_opt = opt_unit_gaussian_bandwidth(pf_inst->local_particles_length, DIM);
   own_belief_m.variance = max_empirical_variance(own_belief_m.particles, own_belief_m.particles_length);
+  /* own_belief_m.variance = 0.1; */
   own_belief_m.type = DENSITY_ESTIMATION;
+
+  // TODO TODO TODO TODO
+  // Use A = min (std dev, interquartile range)  as it better handles bimodal distributions
 
   add_belief(pf_inst, own_belief_m);
 
@@ -909,6 +950,27 @@ void non_parametric_bp(struct particle_filter_instance *pf_inst) {
   resample_local_particles(pf_inst, proposal_amount);
 
   // clear
+  clear_message_stack(&pf_inst->mstack);
+}
+
+void resample_move_bp(struct particle_filter_instance *pf_inst) {
+  log_info("performing method: resample-move");
+
+  size_t M = pf_inst->local_particles_length;
+
+  /* redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute */
+
+  log_info("got messages %zu", message_stack_len(pf_inst->mstack));
+
+  // First correct
+  correct(pf_inst, 1.0);
+
+  // resample using classical low variance sampling
+  resample_local_particles_with_replacement(pf_inst, M);
+
+  // move each particle (metropolis hastings)
+  move_metropolis(pf_inst, 50);
+
   clear_message_stack(&pf_inst->mstack);
 }
 
@@ -935,11 +997,12 @@ void iterate(struct particle_filter_instance *pf_inst) {
 
     log_info("processing %zu messages", message_stack_len(pf_inst->mstack));
 
-    /* post_regularisation_bp(pf_inst); */
-    pre_regularisation_bp(pf_inst);
+    post_regularisation_bp(pf_inst);
+    /* pre_regularisation_bp(pf_inst); */
     /* progressive_post_regularisation_bp(pf_inst, 5.0, 5); */
     /* progressive_pre_regularisation_bp(pf_inst, 5, 10); */
     /* non_parametric_bp(pf_inst); */
+    /* resample_move_bp(pf_inst); */
   }
 }
 
