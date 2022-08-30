@@ -1,0 +1,7 @@
+picar_wheels:
+  trigger:
+    include: components/picar-wheels/.gitlab-ci.yml
+
+localization:
+  trigger:
+    include: components/localization/.gitlab-ci.yml

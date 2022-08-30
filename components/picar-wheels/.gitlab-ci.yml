@@ -1,0 +1,41 @@
+image: alpine
+
+stages:
+  - build
+  - release
+
+build_picar_wheels:
+  stage: build
+  image: rust:1.61-buster
+  variables:
+    CC_armv7_unknown_linux_gnueabihf: arm-linux-gnueabihf-gcc
+    # CXX_armv7_unknown_linux_gnueabihf:
+    AR_armv7_unknown_linux_gnueabihf: arm-linux-gnueabihf-ar
+    CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+  # TODO: maybe introduce own image for this
+  script:
+    - |
+      cd components/picar-wheels
+      apt update -y && apt upgrade -y && apt install gcc-arm-linux-gnueabihf cmake -y 
+      rustup target add armv7-unknown-linux-gnueabihf
+      cargo build --bins --release
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - ./components/picar-wheels/target/
+    policy: pull-push
+  artifacts:
+    paths:
+      - ./components/picar-wheels/target/armv7-unknown-linux-gnueabihf/release/picar
+      - ./components/picar-wheels/target/armv7-unknown-linux-gnueabihf/release/picar-daemon
+
+release_picar_wheels:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(\d+\.)(\d+\.)(\*|\d+)$/
+  stage: release
+  image: curlimages/curl:7.83.1
+  script:
+    - |
+      cd components/picar-wheels
+      curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ./target/armv7-unknown-linux-gnueabihf/release/picar ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/picar/${CI_COMMIT_TAG}/picar
+      curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ./target/armv7-unknown-linux-gnueabihf/release/picar-daemon ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/picar-daemon/${CI_COMMIT_TAG}/picar-daemon

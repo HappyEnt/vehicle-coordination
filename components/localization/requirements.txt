@@ -1,0 +1,8 @@
+argparse
+grpcio
+matplotlib
+numpy
+protobuf
+pyserial
+requests
+scipy
