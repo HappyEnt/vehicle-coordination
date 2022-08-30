@@ -5,6 +5,12 @@ ffibuilder = FFI()
 # globals needed to use the shared object. It must be in valid C syntax.
 ffibuilder.cdef("""
 
+struct particle {
+  double x_pos; // [x_pos] = m
+  double y_pos; // [y_pos] = m
+  double weight;
+};
+
 struct message {
   double measured_distance;
 
@@ -57,7 +63,8 @@ ffibuilder.set_source("_pf_cffi",
                       include_dirs=['./'],
                       library_dirs=['./build'],
                       libraries=['BeliefPropagation'],
-                      extra_link_args=['-Wl,-rpath,./build']
+                      extra_link_args=['-Wl,-rpath,./c_implementation/build']
+                      # ORIGIN does not seem to work here. Maybe not supported on MacOS?
                       )   # library name, for the linker
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ def particle_node_set_uniform_prior(node, side_length, num_particles):
     node.set_particles(generate_uniform_distribution(side_length, num_particles))
 
 def particle_node_set_dirac_delta_dist(node):
-    node.set_particles([node.get_pos()] + [1.0])
+    node.set_particles([node.get_pos() + [1.0]])
 
 
 
@@ -143,9 +143,9 @@ class ParticleNode(Node):
 
         avg = (0.0, 0.0)
         for p in particles:
-            avg = (avg[0] + p[0], avg[1]+ p[1])
+            avg = [avg[0] + p[0], avg[1]+ p[1]]
 
-        avg = (avg[0] / len(particles), avg[1] / len(particles))
+        avg = [avg[0] / len(particles), avg[1] / len(particles)]
         return avg
 
     def handle_event(self, event):
@@ -156,7 +156,7 @@ class ParticleNode(Node):
             print(self.get_pos())
             x, y = self.get_pos()
             dx, dy = event.get_displacement()
-            self.set_pos( (x + dx, y + dy) )
+            self.set_pos( [x + dx, y + dy] )
             self.particle_filter_instance.predict(event.get_action())
         elif isinstance(event, Iterate):
             self.particle_filter_instance.iterate()
@@ -224,7 +224,7 @@ class Simulation():
                 elif new_x < -15 and new_y < -15:
                     node.set_vel((5, 0))
 
-                node.set_pos((new_x, new_y))
+                node.set_pos([new_x, new_y])
 
             self.draw_plot()
             plt.draw()
@@ -303,6 +303,7 @@ class LowLevelSimulation():
             self.ax.scatter([pos[0]], [pos[1]], 100, marker="x", c=colors[j])
 
             particles = node.get_particles()
+            print(particles)
             self.ax.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.25, edgecolor='none')
 
             est_pos = node.get_estimated_pos()
@@ -347,14 +348,14 @@ def start_interactive_sim(particles = 50):
     SIM_SPACE_LENGTH = 40.0
 
     anchors = [
-        ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
-        ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
-        ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
+        ParticleNode([0.0, 0.0], ReferenceParticleFilter()),
+        ParticleNode([ANCHOR_SPACING, 0.0], ReferenceParticleFilter()),
+        ParticleNode([ANCHOR_SPACING/2, ANCHOR_SPACING], ReferenceParticleFilter())
     ]
 
     tags = [
-        ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-        ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+        ParticleNode([ANCHOR_SPACING*1, ANCHOR_SPACING*0.25], CParticleFilter(cache_distribution)),
+        ParticleNode([0, ANCHOR_SPACING*0.75], CParticleFilter(cache_distribution)),
     ]
 
     events = [
@@ -413,14 +414,14 @@ def benchmark_particles():
 
     for particles in range(1000, 3000, 250):
         anchors = [
-            ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
-            ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
-            ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
+            ParticleNode([0.0, 0.0], ReferenceParticleFilter()),
+            ParticleNode([ANCHOR_SPACING, 0.0], ReferenceParticleFilter()),
+            ParticleNode([ANCHOR_SPACING/2, ANCHOR_SPACING], ReferenceParticleFilter())
         ]
 
         tags = [
-            ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-            ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+            ParticleNode([ANCHOR_SPACING*1, ANCHOR_SPACING*0.25], CParticleFilter(cache_distribution)),
+            ParticleNode([0, ANCHOR_SPACING*0.75], CParticleFilter(cache_distribution)),
         ]
 
         events = [
@@ -481,14 +482,14 @@ def benchmark_particles_statistics(repetetions, particles):
 
     for _ in range(0, repetetions):
         anchors = [
-            ParticleNode((0.0, 0.0), ReferenceParticleFilter()),
-            ParticleNode((ANCHOR_SPACING, 0.0), ReferenceParticleFilter()),
-            ParticleNode((ANCHOR_SPACING/2, ANCHOR_SPACING), ReferenceParticleFilter())
+            ParticleNode([0.0, 0.0], ReferenceParticleFilter()),
+            ParticleNode([ANCHOR_SPACING, 0.0], ReferenceParticleFilter()),
+            ParticleNode([ANCHOR_SPACING/2, ANCHOR_SPACING], ReferenceParticleFilter())
         ]
 
         tags = [
-            ParticleNode((ANCHOR_SPACING*1, ANCHOR_SPACING*0.25), CParticleFilter(cache_distribution)),
-            ParticleNode((0, ANCHOR_SPACING*0.75), CParticleFilter(cache_distribution)),
+            ParticleNode([ANCHOR_SPACING*1, ANCHOR_SPACING*0.25], CParticleFilter(cache_distribution)),
+            ParticleNode([0, ANCHOR_SPACING*0.75], CParticleFilter(cache_distribution)),
         ]
 
         events = [
@@ -535,7 +536,7 @@ def benchmark_particles_statistics(repetetions, particles):
 
 # benchmark_particles()
 
-start_interactive_sim(particles = 500)
+start_interactive_sim(particles = 100)
 # ANCHOR_SPACING = 20.0
 # SIM_SPACE_LENGTH = 40.0
 
