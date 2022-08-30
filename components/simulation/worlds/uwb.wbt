@@ -3,15 +3,16 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "../protos/Anchor.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/CircleArena.proto"
 EXTERNPROTO "../protos/UWBCrazyflie.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation 0.38924692990329207 0.14390032062548566 -0.909823897952095 2.2465736143116475
-  position 6.830975203714331 12.048136015065044 12.990598874255529
-  follow "Crazyflie"
+  orientation 0.10749499062915525 -0.0975158682633388 -0.9894116850060367 4.731393142967247
+  position -0.618685505461215 -13.478131170559463 2.3412924492613465
+  follow "Crazyflie(1)"
   followType "Pan and Tilt Shot"
 }
 TexturedBackground {
@@ -19,23 +20,45 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 Anchor {
-  translation -0.31 -3.69 0.5
+  translation -0.310006 -9.53 0.499978
+  rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
   name "robot(1)"
 }
-Anchor {
-  translation -0.36 3.84 0.5
-  rotation 0 1 0 0
-}
-CircleArena {
-  radius 4
-  subdivision 4
-}
 UWBCrazyflie {
-  translation 2.7 1.18 0.585
-  signalStrengthNoise 0
-}
-UWBCrazyflie {
-  translation -3.39 -0.64 0.455
+  translation -0.55 6.65 0.455
   name "Crazyflie(1)"
+  controllerArgs [
+    "0.0"
+    "0.0"
+  ]
   signalStrengthNoise 0
+  range 4
+}
+RectangleArena {
+  floorSize 20 20
+  floorAppearance Parquetry {
+    type "light strip"
+    colorOverride 1 0.998276 0.965957
+    IBLStrength 3
+  }
+}
+UWBCrazyflie {
+  translation -0.51 -7.45 0.555
+  name "Crazyflie(2)"
+  controllerArgs [
+    "0.0"
+    "0.5"
+  ]
+  signalStrengthNoise 0
+  range 4
+}
+Anchor {
+  translation 3.50002 9.82 0.700057
+  rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
+  name "robot(3)"
+}
+Anchor {
+  translation -4.11998 9.87 0.600051
+  rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
+  name "robot(2)"
 }
