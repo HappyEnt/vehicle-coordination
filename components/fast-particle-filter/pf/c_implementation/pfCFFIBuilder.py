@@ -1,4 +1,6 @@
 from cffi import FFI
+import platform
+
 ffibuilder = FFI()
 
 # cdef() expects a single string declaring the C types, functions and
@@ -55,6 +57,13 @@ void iterate(struct particle_filter_instance *pf_inst);
 # produce, and some C source code as a string.  This C code needs
 # to make the declarated functions, types and globals available,
 # so it is often just the "#include".
+
+
+os = platform.system()
+print("OS in my system : ",os)
+
+loader_path_prefix = "@loader_path" if "Darwin" in os else "$ORIGIN"
+
 ffibuilder.set_source("_pf_cffi",
                       """
                       #include "particle-belief-propagation.h"   // the C header of the library
@@ -63,7 +72,7 @@ ffibuilder.set_source("_pf_cffi",
                       include_dirs=['./'],
                       library_dirs=['./build'],
                       libraries=['BeliefPropagation'],
-                      extra_link_args=['-Wl,-rpath,./c_implementation/build']
+                      extra_link_args=['-Wl,-rpath,' + loader_path_prefix + '/build']
                       # ORIGIN does not seem to work here. Maybe not supported on MacOS?
                       )   # library name, for the linker
 

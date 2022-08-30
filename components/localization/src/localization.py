@@ -7,7 +7,7 @@ import math
 import random
 from time import time, sleep
 from typing import Any, Dict, Iterable, List, NoReturn, Tuple, Union
-import os
+import os, sys
 
 import numpy as np
 import requests
@@ -16,6 +16,9 @@ from scipy.spatial import distance
 import matplotlib.pyplot as plt
 
 from data import ActiveMeasurement, PassiveMeasurement
+
+sys.path.append('../../fast-particle-filter/pf/')
+from c_implementation.ParticleFilter import CParticleFilter
 
 # GRPC imports (for communication with coordination)
 import grpc
@@ -743,3 +746,6 @@ class GridParticleNode(BaseParticleNode):
         plt.gca().invert_yaxis()
         # plt.pause(0.5)
         plt.show()
+
+if __name__ == '__main__':
+    print("maino main")
