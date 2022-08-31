@@ -19,6 +19,7 @@ from data import ActiveMeasurement, PassiveMeasurement
 
 sys.path.append('../../fast-particle-filter/pf/')
 from c_implementation.ParticleFilter import CParticleFilter
+from Measurements import TWR_Measurement
 
 # GRPC imports (for communication with coordination)
 import grpc
@@ -637,6 +638,118 @@ class ClassicAllAtOnce(BaseParticleNode):
             self.tick()
             # self.illustrate_nodes_and_particles((100,0))
             sleep(0.1)
+
+class FastParticleFilter(BaseParticleNode):
+    """
+    Class for dynamic nodes.
+    """
+
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        print("Initializing Fast Particle Filter (C Implementation)")
+        self.cparticle = CParticleFilter( False );
+        self.cparticle.set_particle_amount(20);
+
+
+    def reset_particles(self):
+        raise NotImplementedError
+
+    def handle_measurement(
+        self, d, recv_particles_arr, estimate_from_other_arr
+    ) -> None:
+        """
+        Handle incoming measurements by updating own particles.
+        """
+        for (dis,parti) in zip(d, recv_particles_arr):
+            particles = [ p + [1.0/len(parti)] for p in parti ]
+
+            error_model_distance = np.random.normal(dis, MEASUREMENT_STDEV)
+
+            self.cparticle.add_message(TWR_Measurement(particles, error_model_distance))
+
+
+        self.cparticle.iterate();
+
+        estimate = self.get_estimate()
+        self.send_estimate_to_server(estimate)
+        self.send_locations_to_coordination(estimate)
+        self.send_particles_to_server()
+        self.reset_particles()
+        # end = time.time() - start
+        # info("Time elapsed: " + str(end))
+
+    def illustrate_nodes_and_particles(
+        self, real_pos=(-100, -100), estimate=(0, (-100, -100))
+    ):
+        plt.clf()
+        # _, estimate_x, estimate_y, _, _ = self.get_estimate()
+        plt.scatter([real_pos[0]], [real_pos[1]], 100, marker="x", color="g")
+        plt.scatter([estimate[1][0]], [estimate[1][1]], 100, marker="x", color="b")
+        plt.scatter(0, 0, 100, marker="x", color="r")
+        plt.scatter(SIDE_LENGTH_X, 0, 100, marker="x", color="r")
+        plt.scatter(SIDE_LENGTH_X, SIDE_LENGTH_Y, 100, marker="x", color="r")
+        plt.scatter(0, SIDE_LENGTH_Y, 100, marker="x", color="r")
+        # we then scatter its particles
+        particles = self.get_particles()
+        plt.scatter(
+            np.array([p[0] for p in particles]),
+            np.array([p[1] for p in particles]),
+            25,
+            alpha=0.05,
+        )
+        plt.xlim([-0.2, SIDE_LENGTH_X + 0.2])
+        plt.ylim([-0.2, SIDE_LENGTH_Y + 0.2])
+        plt.gca().invert_yaxis()
+        # plt.pause(0.5)
+        plt.show()
+
+    def tick(self) -> bool:
+        if self.measurement_queue:
+            measurements = self.measurement_queue[:]
+            self.measurement_queue = []
+            measurement_dict: Dict[int, List[float]] = {}
+            for m in measurements:
+                # TODO: Think about ID structure
+                if m.a >> 8 == self.int_id:
+                    if m.b in measurement_dict:
+                        measurement_dict[m.b >> 8].append(m.distance)
+                    else:
+                        measurement_dict[m.b >> 8] = [m.distance]
+                if m.b >> 8 == self.int_id:
+                    if m.a in measurement_dict:
+                        measurement_dict[m.a >> 8].append(m.distance)
+                    else:
+                        measurement_dict[m.a >> 8] = [m.distance]
+
+            distances = []
+            recv_particle_arr = []
+            estimate_from_other_arr = []
+            for (other_id, dists) in measurement_dict.items():
+                distances.append(sum(dists) / len(dists))
+                particles_other = self.get_particles_from_server(other_id)
+                if particles_other == None:
+                    break
+                recv_particle_arr.append(particles_other)
+                estimate_from_other = self.get_estimate_from_server(other_id)
+                if estimate_from_other == None:
+                    break
+                estimate_from_other_arr.append(estimate_from_other)
+            if distances:
+                self.handle_measurement(
+                    distances, recv_particle_arr, estimate_from_other_arr
+                )
+            return True
+        else:
+            return False
+
+    def run(self) -> NoReturn:
+        while True:
+            self.tick()
+            # self.illustrate_nodes_and_particles((100,0))
+            sleep(0.1)
+
 
 
 ####################################################################################################

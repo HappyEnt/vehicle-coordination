@@ -6,7 +6,7 @@ from threading import Thread
 
 from serial import Serial
 
-from localization import GridParticleNode, ClassicParticleNode, ClassicAllAtOnce
+from localization import GridParticleNode, ClassicParticleNode, ClassicAllAtOnce, FastParticleFilter
 from ranging import DumpFileRangingNode, SerialRangingNode
 
 
@@ -65,6 +65,8 @@ def main():
         localization_node = ClassicParticleNode()
     elif args.localization == "GPF":
         localization_node = GridParticleNode()
+    elif args.localization == "FPF":
+        localization_node = FastParticleFilter()
     else:
         warning(
             f"Unrecognised argument for localization: {args.localization}."

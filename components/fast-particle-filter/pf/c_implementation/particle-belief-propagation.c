@@ -21,6 +21,26 @@
 #define USE_CACHE 0
 #define DIM 2
 
+// structure definitions
+struct message_stack {
+  struct message item;
+  struct message_stack *next;
+};
+
+struct particle_filter_instance {
+  // the minimum we have to store is the particle set
+  struct particle *local_particles;
+  size_t local_particles_length;
+  bool has_prior;
+
+  enum filter_type type;
+  struct message_stack *mstack;
+
+  struct normal_distribution *uwb_error_likelihood;
+  gsl_rng *r;
+
+};
+
 // protos
 void belief_to_message(struct particle_filter_instance *pf, struct message *m, double std_dev);
 void sample_kde(struct particle_filter_instance *pf, struct message m, struct particle *target_particles, size_t target_samples);
@@ -31,21 +51,6 @@ void low_variance_resample_local_particles_kde(
     size_t target_length);
 void __sample_from_unit_gaussian(struct particle_filter_instance *pf, struct particle *ps, size_t amount);
 void generate_messages_from_beliefs(struct particle_filter_instance *pf_inst, struct message_stack *mstack);
-
-// definitions
-struct particle_filter_instance {
-  // the minimum we have to store is the particle set
-  struct particle *local_particles;
-  size_t local_particles_length;
-  bool has_prior;
-
-  // Any other data that is usefull
-  struct normal_distribution *uwb_error_likelihood;
-
-  gsl_rng *r;
-
-  struct message_stack *mstack;
-};
 
 void push_message(struct message_stack **ms, struct message m) {
   if(*ms == NULL)  {
@@ -519,7 +524,7 @@ void move_metropolis(struct particle_filter_instance *pf, size_t burn_in_per_sam
       struct particle next_sample;
 
 
-      sample_particles_from_gaussian(current_sample, 2, &next_sample, 1);
+      sample_particles_from_gaussian(current_sample, 4, &next_sample, 1);
 
       double prob_cur = message_stack_prob(pf, pf->mstack, current_sample, 1.0);
       double prob_next = message_stack_prob(pf, pf->mstack, next_sample, 1.0);
@@ -572,10 +577,10 @@ void create_particle_filter_instance(struct particle_filter_instance **pf_inst) 
   ret_inst->mstack = NULL;
   ret_inst->has_prior = false;
 
-  printf("time: %ld", time(0));
-
   ret_inst->r = gsl_rng_alloc (gsl_rng_taus);
   gsl_rng_set(ret_inst->r, time(0));
+
+  ret_inst->type = POST_REGULARIZATION;
 
   *pf_inst = ret_inst;
 }
@@ -585,6 +590,10 @@ void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst) 
   /*   free(pf_inst->local_particles); */
 
   free(pf_inst);
+}
+
+void set_filter_type(struct particle_filter_instance *pf_inst, enum filter_type type) {
+  pf_inst->type = type;
 }
 
 void set_particle_array(struct particle_filter_instance *pf_inst, struct particle *particles, size_t length) {
@@ -734,9 +743,7 @@ double effective_sample_size_estimator(struct particle_filter_instance *pf_inst)
 void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   size_t M = pf_inst->local_particles_length;
 
-  redistribute_particles(pf_inst, pf_inst->mstack->item, 0.04); // redistribute
-
-  log_info("got messages %zu", message_stack_len(pf_inst->mstack));
+  /* redistribute_particles(pf_inst, pf_inst->mstack->item, 0.04); // redistribute */
 
   // First correct
   correct(pf_inst, 1.0);
@@ -746,9 +753,9 @@ void pre_regularisation_bp(struct particle_filter_instance *pf_inst) {
   log_info("ESS: %f", ess);
 
   // than perform resampling through density estimation
-  /* if(ess < (double) M / 2) { */
+  if(ess < (double) M / 2) {
     resample_local_particles(pf_inst, M);
-  /* } */
+  }
 
   clear_message_stack(&pf_inst->mstack);
 }
@@ -903,8 +910,6 @@ void belief_to_message(struct particle_filter_instance *pf, struct message *m, d
   m->h_opt = opt_unit_gaussian_bandwidth(components, DIM);
   m->variance = max_empirical_variance(particles, components);
   m->type = DENSITY_ESTIMATION;
-
-  log_info("h_opt %f", m->h_opt);
 }
 
 
@@ -969,22 +974,40 @@ void non_parametric_bp(struct particle_filter_instance *pf_inst) {
 }
 
 void resample_move_bp(struct particle_filter_instance *pf_inst) {
-  log_info("performing method: resample-move");
-
-  size_t M = pf_inst->local_particles_length;
-
-  /* redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute */
-
-  log_info("got messages %zu", message_stack_len(pf_inst->mstack));
-
   // First correct
   correct(pf_inst, 1.0);
 
   // resample using classical low variance sampling
-  resample_local_particles_with_replacement(pf_inst, M);
+  resample_local_particles_with_replacement(pf_inst, pf_inst->local_particles_length);
 
   // move each particle (metropolis hastings)
-  move_metropolis(pf_inst, 50);
+  move_metropolis(pf_inst, 100);
+
+  clear_message_stack(&pf_inst->mstack);
+}
+
+void sir_bp(struct particle_filter_instance *pf_inst, bool with_roughening) {
+  correct(pf_inst, 1.0);
+
+  double ess = effective_sample_size_estimator(pf_inst);
+
+  if(ess < (double) pf_inst->local_particles_length / 2) {
+    resample_local_particles_with_replacement(pf_inst, pf_inst->local_particles_length);
+  }
+
+
+  if(with_roughening) {
+    // TODO apply noise to particles
+    for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
+      struct particle *current_particle  = &pf_inst->local_particles[p];
+      struct particle new_pos = pf_inst->local_particles[p];
+
+      double h_opt = opt_unit_gaussian_bandwidth(pf_inst->local_particles_length, DIM);
+      double variance = max_empirical_variance(pf_inst->local_particles, pf_inst->local_particles_length);
+
+      sample_particles_from_gaussian(*current_particle, h_opt * sqrt(variance), current_particle, 1);
+    }
+  }
 
   clear_message_stack(&pf_inst->mstack);
 }
@@ -1012,12 +1035,43 @@ void iterate(struct particle_filter_instance *pf_inst) {
 
     log_info("processing %zu messages", message_stack_len(pf_inst->mstack));
 
-    post_regularisation_bp(pf_inst);
-    /* pre_regularisation_bp(pf_inst); */
-    /* progressive_post_regularisation_bp(pf_inst, 5.0, 5); */
-    /* progressive_pre_regularisation_bp(pf_inst, 5, 10); */
-    /* non_parametric_bp(pf_inst); */
-    /* resample_move_bp(pf_inst); */
+    switch (pf_inst->type) {
+    case POST_REGULARIZATION: {
+      post_regularisation_bp(pf_inst);
+      break;
+    }
+    case PRE_REGULARIZATION: {
+      pre_regularisation_bp(pf_inst);
+      break;
+    }
+    case PROGRESSIVE_POST_REGULARIZATION: {
+      progressive_post_regularisation_bp(pf_inst, 5.0, 5);
+      break;
+    }
+    case PROGRESSIVE_PRE_REGULARIZATION: {
+      progressive_pre_regularisation_bp(pf_inst, 5, 10);
+      break;
+    }
+    case NON_PARAMETRIC_BP: {
+      non_parametric_bp(pf_inst);
+      break;
+    }
+    case RESAMPLE_MOVE: {
+      resample_move_bp(pf_inst);
+      break;
+    }
+    case SIR: {
+      sir_bp(pf_inst, false);
+      break;
+    }
+    case SIR_ROUGHENING: {
+      sir_bp(pf_inst, true);
+      break;
+    }
+    default:
+      post_regularisation_bp(pf_inst);
+      break;
+    }
   }
 }
 

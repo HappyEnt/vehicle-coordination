@@ -28,11 +28,6 @@ struct message {
   double variance;
 };
 
-struct message_stack {
-  struct message item;
-  struct message_stack *next;
-};
-
 struct particle_filter_instance;
 
 // _____Public Interface_____

@@ -54,7 +54,7 @@
 #include "pid_controller.h"
 #include "vis.h"
 
-#define PARTICLES 300
+#define PARTICLES 5000
 
 
 void clean_init_filter(struct particle_filter_instance **pf_inst) {
@@ -71,6 +71,8 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
 
   /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
   set_particle_amount(*pf_inst, PARTICLES);
+
+  set_filter_type(*pf_inst, PRE_REGULARIZATION);
 }
 
 void deinit_filter(struct particle_filter_instance *pf_inst) {
