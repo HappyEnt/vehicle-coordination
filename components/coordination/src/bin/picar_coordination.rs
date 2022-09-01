@@ -8,7 +8,7 @@ use coordination::{
     orca_car::OrcaCar,
 };
 use log::{debug, error};
-use orca_rs::ndarray::arr1;
+use orca_rs::ndarray::{arr1, Array1};
 use orca_rs::participant::Participant;
 use std::{collections::HashMap, error::Error};
 use tokio::sync::Mutex;
@@ -17,6 +17,7 @@ use tonic::{transport::Server, Response, Status};
 struct CoordinationService {
     car: Mutex<OrcaCar>,
     participants: Mutex<HashMap<i32, Participant>>,
+    target: Mutex<Array1<f64>>,
 }
 
 #[tonic::async_trait]
@@ -28,7 +29,11 @@ impl Coordination for CoordinationService {
         debug!("Coordination::tick({:?})", request);
         let request = request.into_inner().clone();
         let mut car = self.car.lock().await;
-        car.update(request.clone().position.unwrap().to_pos(), None);
+        let target = self.target.lock().await;
+        car.update(
+            request.clone().position.unwrap().to_pos(),
+            arr1(&[target[0], target[1]]),
+        );
 
         let participants = self.get_participants(request.clone()).await;
         let new_velocity = car
@@ -40,7 +45,7 @@ impl Coordination for CoordinationService {
             .await;
 
         match new_velocity {
-            Ok(new_vel) => {
+            Ok((new_vel, finished)) => {
                 return Ok(Response::new(TickResponse {
                     new_velocity: new_vel.map(|new_vel| Vec2 {
                         x: new_vel[0] as f32,
@@ -92,11 +97,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     let addr = "0.0.0.0:50052".parse()?;
 
-    let car = OrcaCar::new(None, Some(arr1(&[0.2, 0.2]))).await?;
+    let car = OrcaCar::new(None, None).await?;
 
     let coordination_service = CoordinationService {
         car: Mutex::new(car),
         participants: Mutex::new(HashMap::new()),
+        target: Mutex::new(arr1(&[0.2, 0.2])),
     };
 
     debug!("Attempting to start server...");

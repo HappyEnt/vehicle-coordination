@@ -1,6 +1,6 @@
 //! Wrapper around Picar containing calibration and ORCA.
 
-use std::{error::Error, process, thread, time::Duration};
+use std::{error::Error, thread, time::Duration};
 
 use async_channel::{Receiver, Sender};
 use log::{debug, error, warn};
@@ -82,7 +82,7 @@ impl OrcaCar {
 
     /// Update the information about this car.
     /// Note: This should be called each time before calling OrcaCar::tick!
-    pub fn update(&mut self, position: Array1<f64>, target: Option<Array1<f64>>) {
+    pub fn update(&mut self, position: Array1<f64>, target: Array1<f64>) {
         debug!("OrcaCar::update({}, {:?})", position, target);
         if self._after_update {
             warn!("Calling OrcaCar::update() twice without calling OrcaCar::tick()!");
@@ -97,10 +97,8 @@ impl OrcaCar {
         debug!("self.velocity = {:?}", self.velocity);
         self.position = Some(position);
         debug!("self.position = {:?}", self.position);
-        if let Some(target) = target {
-            self.target = Some(target);
-            debug!("self.target = {:?}", self.target);
-        }
+        self.target = Some(target);
+        debug!("self.target = {:?}", self.target);
         self._after_update = true;
     }
 
@@ -116,7 +114,7 @@ impl OrcaCar {
         others: Vec<Participant>,
         radius: f64,
         confidence: f64,
-    ) -> Result<Option<Array1<f64>>, Box<dyn Error>> {
+    ) -> Result<(Option<Array1<f64>>, bool), Box<dyn Error>> {
         debug!("OrcaCar::tick({:?}, {}, {})", others, radius, confidence);
         if !self._after_update {
             warn!("Calling OrcaCar::tick() without calling OrcaCar::update() before!");
@@ -125,7 +123,8 @@ impl OrcaCar {
         if let CalibrationStage::Done = self.calibration_stage {
             self.orca_tick(others, radius, confidence).await
         } else {
-            self.calibration_tick().await
+            self.calibration_tick().await?;
+            Ok((None, false))
         }
     }
 
@@ -274,7 +273,7 @@ impl OrcaCar {
         mut others: Vec<Participant>,
         radius: f64,
         confidence: f64,
-    ) -> Result<Option<Array1<f64>>, Box<dyn Error>> {
+    ) -> Result<(Option<Array1<f64>>, bool), Box<dyn Error>> {
         debug!(
             "OrcaCar::orca_tick({:?}, {}, {})",
             others, radius, confidence
@@ -287,8 +286,7 @@ impl OrcaCar {
         ) < DISTANCE_THRESHOLD
         {
             self.picar.stop().await?;
-            process::exit(0);
-            // TODO: Find threshold for this value
+            return Ok((None, true));
         }
 
         let old_velocity = self.velocity.clone();
@@ -308,6 +306,6 @@ impl OrcaCar {
 
         debug!("Sending ({}, {})", old_velocity, new_vel);
         sender.send((old_velocity, new_vel.clone())).await?;
-        Ok(Some(new_vel))
+        Ok((Some(new_vel), false))
     }
 }
