@@ -1,3 +1,5 @@
+//! Functions to perform the needed math.
+
 use orca_rs::ndarray::{arr1, Array1};
 
 pub fn norm(vector: &Array1<f64>) -> f64 {

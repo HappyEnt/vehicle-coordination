@@ -1,4 +1,5 @@
-pub mod api;
+//! This crate contains all modules needed for the coordination of our picars.  
+
 pub mod interface;
 pub mod math;
 pub mod orca_car;

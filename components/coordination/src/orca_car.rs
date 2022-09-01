@@ -1,3 +1,5 @@
+//! Wrapper around Picar containing calibration and ORCA.
+
 use std::{error::Error, process, thread, time::Duration};
 
 use async_channel::{Receiver, Sender};
@@ -15,19 +17,28 @@ use crate::{
 
 type NewVelAdjustment = (Array1<f64>, Array1<f64>);
 
+/// Duration to measure the base turn speed.
 const TURN_DURATION: u64 = 1000;
 
+/// Duration to measure the base drive speed.
 const DRIVE_DURATION: u64 = 1000;
 
+/// Timeout after which the car stops driving.
 const TIMEOUT: u64 = 2000;
 const DISTANCE_THRESHOLD: f64 = 0.2;
 
+/// Different calibration stages for the car.
 #[derive(Clone)]
 enum CalibrationStage {
+    /// Calibration has not started yet.
     No = 0,
+    /// Car is during calibration of the maximum speed.
     DuringMaxSpeed = 1,
+    /// Car is during calibration of the maximum right turn "amount".
     DuringRightTurn = 2,
+    /// Car is during calibration of the maximum left turn "amount".
     DuringLeftTurn = 3,
+    /// Calibration is done.
     Done = 4,
 }
 
@@ -94,7 +105,11 @@ impl OrcaCar {
     }
 
     /// Perform an actual tick of this car.
-    /// This is either a calibration tick or an actual tick of the ORCA algorithm.
+    /// This is either a calibration tick or an actual tick of the ORCA algorithm depending on the
+    /// calibration stage of this car.
+    ///
+    /// Returns the new "desired" velocity, or None if still in calibration.
+    ///
     /// Note: You should call OrcaCar::update each time before calling this function!
     pub async fn tick(
         &mut self,
