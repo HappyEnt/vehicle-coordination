@@ -995,17 +995,19 @@ void sir_bp(struct particle_filter_instance *pf_inst, bool with_roughening) {
     resample_local_particles_with_replacement(pf_inst, pf_inst->local_particles_length);
   }
 
-
   if(with_roughening) {
     // TODO apply noise to particles
     for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
       struct particle *current_particle  = &pf_inst->local_particles[p];
-      struct particle new_pos = pf_inst->local_particles[p];
+      struct particle sample;
+      __sample_from_unit_gaussian(pf_inst, &sample, 1);
 
       double h_opt = opt_unit_gaussian_bandwidth(pf_inst->local_particles_length, DIM);
       double variance = max_empirical_variance(pf_inst->local_particles, pf_inst->local_particles_length);
 
-      sample_particles_from_gaussian(*current_particle, h_opt * sqrt(variance), current_particle, 1);
+      /* sample_particles_from_gaussian(*current_particle, h_opt * sqrt(variance), current_particle, 1); */
+      current_particle->x_pos += sample.x_pos * h_opt * sqrt(variance);
+      current_particle->y_pos += sample.y_pos * h_opt * sqrt(variance);
     }
   }
 

@@ -30,9 +30,9 @@ if (OPENMP_FOUND)
   message("Found OpenMP")
 endif()
 
-set(CMAKE_C_COMPILER "/opt/homebrew/opt/llvm/bin/clang")
-set(CMAKE_CXX_COMPILER "/opt/homebrew/opt/llvm/bin/clang++")
-set(CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm")
+# set(CMAKE_C_COMPILER "/opt/homebrew/opt/llvm/bin/clang")
+# set(CMAKE_CXX_COMPILER "/opt/homebrew/opt/llvm/bin/clang++")
+# set(CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm")
 
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 # CMAKE_OSX_ARCHITECTURES=
@@ -41,7 +41,7 @@ set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 
 add_library(BeliefPropagation SHARED particle-belief-propagation.h particle-belief-propagation.c util.h util.c)
-target_link_libraries(BeliefPropagation GSL::gsl m) #   -fsanitize=address
+target_link_libraries(BeliefPropagation GSL::gsl m) #  -fsanitize=address
 
 # add the executable
 add_executable(test-particle-filter test-particle-filter.c)

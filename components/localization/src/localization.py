@@ -650,7 +650,7 @@ class FastParticleFilter(BaseParticleNode):
 
         print("Initializing Fast Particle Filter (C Implementation)")
         self.cparticle = CParticleFilter( False );
-        self.cparticle.set_particle_amount(20);
+        self.cparticle.set_particle_amount(500);
 
 
     def reset_particles(self):
@@ -672,13 +672,19 @@ class FastParticleFilter(BaseParticleNode):
 
         self.cparticle.iterate();
 
+        # print(self.cparticle.get_particles())
+        self.particles = self.cparticle.get_particles()
+        self.particles = [ [p[0], p[1]] for p in self.particles]
+
         estimate = self.get_estimate()
+        info(estimate)
+
         self.send_estimate_to_server(estimate)
         self.send_locations_to_coordination(estimate)
         self.send_particles_to_server()
-        self.reset_particles()
-        # end = time.time() - start
-        # info("Time elapsed: " + str(end))
+        # self.reset_particles()
+        #end = time.time() - start
+        #info("Time elapsed: " + str(end))
 
     def illustrate_nodes_and_particles(
         self, real_pos=(-100, -100), estimate=(0, (-100, -100))

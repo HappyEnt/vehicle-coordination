@@ -43,7 +43,7 @@ class CParticleFilter(AbstractParticleFilter):
     # Setting a prior through set_particles is optional. Instead also a amount of internal particles can be set.
     # The prior is than deduced from the first message that is received by the node
     def set_particle_amount(self, amount):
-        lib.set_particle_amount(self.pf_inst, 250);
+        lib.set_particle_amount(self.pf_inst, amount);
 
     def add_message(self, message):
         if message.get_type() == "TWR":
@@ -54,11 +54,13 @@ class CParticleFilter(AbstractParticleFilter):
                 particle = ffi.new("struct particle*", foreign_particle_list[i])
                 particle_structures_dont_free.append(particle)
                 foreign_particle_arr[i] = particle[0]
+                print(particle[0])
 
             m = ffi.new("struct message*")
             m.measured_distance = message.get_measured_distance()
             m.particles = foreign_particle_arr
             m.particles_length = len(foreign_particle_arr)
+            m.type = lib.DUMB_PARTICLES
 
             lib.add_belief(self.pf_inst, m[0])
 
@@ -72,7 +74,7 @@ class CParticleFilter(AbstractParticleFilter):
 
     def iterate(self):
             lib.iterate(self.pf_inst)
-            self.message_list.clear()
+            # self.message_list.clear()
 
 
     def resample(self, weighted_particles):

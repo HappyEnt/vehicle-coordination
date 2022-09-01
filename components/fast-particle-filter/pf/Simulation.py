@@ -133,6 +133,9 @@ class ParticleNode(Node):
     def set_particles(self, particles):
         self.particle_filter_instance.set_particles(particles)
 
+    def set_target_particles(self, amount):
+        self.particle_filter_instance.set_particle_amount(amount)
+
     def get_particles(self):
         return self.particle_filter_instance.get_particles()
 
@@ -178,7 +181,7 @@ class Simulation():
         plt.ion()
         self.fig, self.ax = plt.subplots()
 
-        self.draw_plot()
+        # self.draw_plot()
         plt.draw()
 
     def draw_plot(self):
@@ -291,7 +294,7 @@ class LowLevelSimulation():
 
         # plt.connect('button_press_event', self.next)
 
-        self.draw_plot()
+        # self.draw_plot()
         plt.draw()
 
         plt.show()
@@ -306,8 +309,8 @@ class LowLevelSimulation():
             print(particles)
             self.ax.scatter(np.array([p[0] for p in particles]), np.array([p[1] for p in particles]), 25, c=colors[j], alpha=0.25, edgecolor='none')
 
-            est_pos = node.get_estimated_pos()
-            self.ax.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
+            # est_pos = node.get_estimated_pos()
+            # self.ax.scatter([est_pos[0]], [est_pos[1]], 100, marker="+", c=colors[j])
 
     def execute_all_events_capture_time(self):
         start_time = time()
@@ -361,41 +364,16 @@ def start_interactive_sim(particles = 50):
     events = [
         TWR(sender = anchors[0], recipient = tags[0]),
         TWR(sender = anchors[1], recipient = tags[0]),
-        TWR(sender = tags[1], recipient = tags[0]),
         TWR(sender = anchors[0], recipient = tags[1]),
         TWR(sender = anchors[2], recipient = tags[1]),
-        TWR(sender = tags[0], recipient = tags[1]),
         Iterate(recipient = tags[0]),
         Iterate(recipient = tags[1]),
-
-        TWR(sender = anchors[0], recipient = tags[0]),
-        TWR(sender = anchors[1], recipient = tags[0]),
-        TWR(sender = tags[1], recipient = tags[0]),
-        TWR(sender = anchors[0], recipient = tags[1]),
-        TWR(sender = anchors[2], recipient = tags[1]),
-        TWR(sender = tags[0], recipient = tags[1]),
-        Iterate(recipient = tags[0]),
-        Iterate(recipient = tags[1]),
-
-        Move(recipient = tags[0], displacement = (-4, 0)),
-        Iterate(recipient = tags[0]),
-
-        Move(recipient = tags[1], displacement = (-4, 0)),
-        Iterate(recipient = tags[1]),
-
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
-
-        Move(recipient = tags[0], displacement = (-4, 0)),
-        Iterate(recipient = tags[0]),
-
-        TWR(sender = tags[1], recipient = tags[0]),
-        Iterate(recipient = tags[0]),
     ]
 
 
     for tag in tags:
-        particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
+        # particle_node_set_uniform_prior(tag, SIM_SPACE_LENGTH, particles)
+        tag.set_target_particles(particles)
 
     for anchor in anchors:
         particle_node_set_dirac_delta_dist(anchor)
@@ -536,7 +514,7 @@ def benchmark_particles_statistics(repetetions, particles):
 
 # benchmark_particles()
 
-start_interactive_sim(particles = 100)
+start_interactive_sim(particles = 2500)
 # ANCHOR_SPACING = 20.0
 # SIM_SPACE_LENGTH = 40.0
 
