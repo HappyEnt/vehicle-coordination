@@ -30,10 +30,7 @@ impl Coordination for CoordinationService {
         let request = request.into_inner().clone();
         let mut car = self.car.lock().await;
         let target = self.target.lock().await;
-        car.update(
-            request.clone().position.unwrap().to_pos(),
-            arr1(&[target[0], target[1]]),
-        );
+        car.update(request.clone().position.unwrap().to_pos(), target.clone());
 
         let participants = self.get_participants(request.clone()).await;
         let new_velocity = car
