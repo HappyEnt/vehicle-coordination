@@ -8,7 +8,7 @@ use coordination::{
     orca_car::OrcaCar,
 };
 use log::{debug, error};
-use orca_rs::ndarray::{arr1, Array1};
+use orca_rs::ndarray::arr1;
 use orca_rs::participant::Participant;
 use std::{collections::HashMap, error::Error};
 use tokio::sync::Mutex;
@@ -17,7 +17,47 @@ use tonic::{transport::Server, Response, Status};
 struct CoordinationService {
     car: Mutex<OrcaCar>,
     participants: Mutex<HashMap<i32, Participant>>,
-    target: Mutex<Array1<f64>>,
+    target: Mutex<TargetWrapper>,
+}
+
+const TARGETS: [[f64; 2]; 4] = [[0.2, 0.2], [1.4, 0.2], [1.4, 1.4], [0.2, 1.4]];
+
+#[derive(Clone, Copy)]
+enum Target {
+    First,
+    Second,
+    Third,
+    Fourth,
+}
+
+struct TargetWrapper {
+    target: Target,
+}
+
+impl TargetWrapper {
+    pub fn new() -> Self {
+        TargetWrapper {
+            target: Target::First,
+        }
+    }
+
+    pub fn next(&mut self) {
+        self.target = match self.target {
+            Target::First => Target::Second,
+            Target::Second => Target::Third,
+            Target::Third => Target::Fourth,
+            Target::Fourth => Target::First,
+        }
+    }
+
+    pub fn usize(&self) -> usize {
+        match self.target {
+            Target::First => 0,
+            Target::Second => 1,
+            Target::Third => 2,
+            Target::Fourth => 3,
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -29,7 +69,10 @@ impl Coordination for CoordinationService {
         debug!("Coordination::tick({:?})", request);
         let request = request.into_inner().clone();
         let mut car = self.car.lock().await;
-        let target = self.target.lock().await;
+        let mut target_wrapper = self.target.lock().await;
+        let target: [f64; 2] = TARGETS[target_wrapper.usize()];
+        let target = arr1(&target);
+
         car.update(request.clone().position.unwrap().to_pos(), target.clone());
 
         let participants = self.get_participants(request.clone()).await;
@@ -43,6 +86,9 @@ impl Coordination for CoordinationService {
 
         match new_velocity {
             Ok((new_vel, finished)) => {
+                if finished {
+                    target_wrapper.next();
+                }
                 return Ok(Response::new(TickResponse {
                     new_velocity: new_vel.map(|new_vel| Vec2 {
                         x: new_vel[0] as f32,
@@ -99,7 +145,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let coordination_service = CoordinationService {
         car: Mutex::new(car),
         participants: Mutex::new(HashMap::new()),
-        target: Mutex::new(arr1(&[0.2, 0.2])),
+        target: Mutex::new(TargetWrapper::new()),
     };
 
     debug!("Attempting to start server...");

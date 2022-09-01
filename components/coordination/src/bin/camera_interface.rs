@@ -112,7 +112,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "pi")]
     let address = "http://0.0.0.0:50052";
 
-    let camera = CameraInterface::new("http://192.168.87.78:8081/positions", 6);
+    // TODO: Make ID CMD arg
+    let id = 6;
+    let camera = CameraInterface::new("http://192.168.87.78:8081/positions", id);
     let mut client = CoordinationClient::connect(address.to_owned()).await?;
 
     loop {
