@@ -28,6 +28,17 @@ struct message {
   double variance;
 };
 
+enum filter_type {
+  POST_REGULARIZATION,
+  PRE_REGULARIZATION,
+  PROGRESSIVE_POST_REGULARIZATION,
+  PROGRESSIVE_PRE_REGULARIZATION,
+  NON_PARAMETRIC_BP,
+  RESAMPLE_MOVE,
+  SIR,
+  SIR_ROUGHENING,
+};
+
 struct particle_filter_instance;
 
 // _____Public Interface_____
@@ -39,6 +50,7 @@ void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst);
 void set_particle_array(struct particle_filter_instance *pf_inst, struct particle *particles, size_t length);
 void set_particle_amount(struct particle_filter_instance *pf_inst, size_t amount);
 int get_particle_array(struct particle_filter_instance *pf_inst, struct particle **particles);
+void reset_prior(struct particle_filter_instance *pf_inst);
 
 void add_belief(struct particle_filter_instance *pf_inst, struct message m);
 

@@ -16,7 +16,9 @@
 #include <float.h>
 #include <gsl/gsl_randist.h>
 
-/* #include <omp.h> */
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #define USE_CACHE 0
 #define DIM 2
@@ -39,6 +41,8 @@ struct particle_filter_instance {
   struct normal_distribution *uwb_error_likelihood;
   gsl_rng *r;
 
+  // statistics
+  double last_iteration_wall_duration;
 };
 
 // protos
@@ -216,21 +220,21 @@ void resample_local_particles_with_replacement (struct particle_filter_instance 
 
 // calculates new particle set for belief
 void correct(struct particle_filter_instance *pf, double lambda) {
-  double total_weight = 0.0; // implicitly shared by being definde outside the following parallel block
-
-  struct particle *particles = pf->local_particles;
   size_t samples = pf->local_particles_length;
+  struct particle *particles = pf->local_particles;
 
-  for (size_t i = 0; i < samples; ++i) {
-    particles[i].weight *= message_stack_prob(pf, pf->mstack, particles[i], lambda);
+  // schedule(static, 1000)
+#pragma omp parallel for shared(particles, pf, samples)
+  {
+    for (size_t i = 0; i < samples; ++i) {
+      particles[i].weight *= message_stack_prob(pf, pf->mstack, particles[i], lambda);
+    }
   }
 
   normalize_weights(particles, samples);
 }
 
-double max_empirical_variance(struct particle *particles, size_t components) {
-  // todo has to be calculated from message
-  double variance_x = 0, variance_y = 0;
+struct particle empirical_mean(struct particle *particles, size_t components) {
   struct particle mean;
 
   mean.x_pos = 0;
@@ -240,6 +244,16 @@ double max_empirical_variance(struct particle *particles, size_t components) {
     mean.x_pos += particles[i].weight * particles[i].x_pos;
     mean.y_pos += particles[i].weight * particles[i].y_pos;
   }
+
+  return mean;
+}
+
+double max_empirical_variance(struct particle *particles, size_t components) {
+  // todo has to be calculated from message
+  double variance_x = 0, variance_y = 0;
+  struct particle mean;
+
+  mean = empirical_mean(particles, components);
 
   for(size_t i = 0; i < components; i++) {
     variance_x += particles[i].weight * (particles[i].x_pos - mean.x_pos)*(particles[i].x_pos - mean.x_pos);
@@ -254,7 +268,6 @@ double max_empirical_variance(struct particle *particles, size_t components) {
 
 double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
   return pow(components, - 1.0 / (dimensions + 4)) * pow((4.0/(dimensions + 2)), 1.0 / (dimensions + 4)) * 0.5;
-    /* return pow (components, -1.0/3.0) * 0.2; */
 }
 
 // we want to use the random number generator stored inside our particle filter instance.
@@ -289,33 +302,30 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
   double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
 
   log_info("standard dev: %f", sqrt(variance));
-/* #pragma omp parallel shared(new_particles) */
-/*   { */
-/* #pragma omp for */
-    {
-      for(size_t c = 0; c < components; c++) {
-        while(true) {
-          size_t I =  gsl_rng_uniform(pf->r) * (components);
-          double U = gsl_rng_uniform(pf->r);
-          struct particle sample;
-          __sample_from_unit_gaussian(pf, &sample, 1);
 
+#pragma omp parallel for shared(new_particles)
+  {
+    for(size_t c = 0; c < components; c++) {
+      while(true) {
+        size_t I =  gsl_rng_uniform(pf->r) * (components);
+        double U = gsl_rng_uniform(pf->r);
+        struct particle sample;
+        __sample_from_unit_gaussian(pf, &sample, 1);
 
-          struct particle next_sample;
-          next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
-          next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
-          next_sample.weight = 1.0 / components;
+        struct particle next_sample;
+        next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
+        next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
+        next_sample.weight = 1.0 / components;
 
-          double accept = message_stack_prob(pf, pf->mstack, next_sample, lambda);
+        double accept = message_stack_prob(pf, pf->mstack, next_sample, lambda);
 
-          if(accept > U * supremum) {
-            new_particles[c] = next_sample;
-            break;
-          }
+        if(accept > U * supremum) {
+          new_particles[c] = next_sample;
+          break;
         }
       }
     }
-  /* } */
+  }
 
   pf->local_particles = new_particles;
   pf->local_particles_length = components;
@@ -433,15 +443,18 @@ void sample_kde(struct particle_filter_instance *pf, struct message m, struct pa
     log_err("can only sample from message with kernel density estimation");
   }
 
-  for(size_t s = 0; s < target_samples; s++) {
-    size_t c = gsl_rng_uniform(pf->r) * m.particles_length;
+  #pragma omp parallel for shared(target_particles)
+  {
+    for(size_t s = 0; s < target_samples; s++) {
+      size_t c = gsl_rng_uniform(pf->r) * m.particles_length;
 
-    struct particle sample;
-    __sample_from_unit_gaussian(pf, &sample, 1);
+      struct particle sample;
+      __sample_from_unit_gaussian(pf, &sample, 1);
 
-    target_particles[s].x_pos = m.particles[c].x_pos + sample.x_pos * m.h_opt * sqrt(m.variance);
-    target_particles[s].y_pos = m.particles[c].y_pos + sample.y_pos * m.h_opt * sqrt(m.variance);
-    target_particles[s].weight = 1.0/target_samples;
+      target_particles[s].x_pos = m.particles[c].x_pos + sample.x_pos * m.h_opt * sqrt(m.variance);
+      target_particles[s].y_pos = m.particles[c].y_pos + sample.y_pos * m.h_opt * sqrt(m.variance);
+      target_particles[s].weight = 1.0/target_samples;
+    }
   }
 }
 
@@ -580,9 +593,20 @@ void create_particle_filter_instance(struct particle_filter_instance **pf_inst) 
   ret_inst->r = gsl_rng_alloc (gsl_rng_taus);
   gsl_rng_set(ret_inst->r, time(0));
 
-  ret_inst->type = POST_REGULARIZATION;
+  ret_inst->type = SIR_ROUGHENING;
+
+  ret_inst->last_iteration_wall_duration = -1.0;
 
   *pf_inst = ret_inst;
+}
+
+void set_receiver_std_dev(struct particle_filter_instance *pf_inst, double std_dev) {
+  if(pf_inst->uwb_error_likelihood != NULL) {
+    free(pf_inst->uwb_error_likelihood);
+    pf_inst->uwb_error_likelihood = NULL;
+  }
+
+  pf_inst->uwb_error_likelihood = generate_normal_distribution(0, std_dev, USE_CACHE);
 }
 
 void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst) {
@@ -608,6 +632,15 @@ void set_particle_array(struct particle_filter_instance *pf_inst, struct particl
 
 void set_particle_amount(struct particle_filter_instance *pf_inst, size_t amount) {
   pf_inst->local_particles_length = amount;
+}
+
+void reset_prior(struct particle_filter_instance *pf_inst) {
+  if(pf_inst->local_particles != NULL) {
+    free(pf_inst->local_particles);
+    pf_inst->local_particles = NULL;
+  }
+
+  pf_inst->has_prior = false;
 }
 
 
@@ -650,8 +683,6 @@ void deep_copy_message(struct message *dest_message, struct message source_messa
 void redistribute_particles(struct particle_filter_instance *pf_inst, struct message proposal_distribution, double fraction) {
   size_t start_index, amount;
   struct message m_cp = proposal_distribution;
-  struct particle *current_particles = malloc(sizeof(struct particle) * pf_inst->local_particles_length);
-  memcpy(current_particles, pf_inst->local_particles, sizeof(struct particle) * pf_inst->local_particles_length);
 
   if (proposal_distribution.type != DENSITY_ESTIMATION) {
     struct particle *p_cp = malloc(sizeof(struct particle) * m_cp.particles_length);
@@ -688,18 +719,6 @@ void redistribute_particles(struct particle_filter_instance *pf_inst, struct mes
   }
 
   generate_messages_from_beliefs(pf_inst, stack_cpy);
-
-  // if a current belief already exists, take it into consideration
-  if(pf_inst->has_prior && false) {
-    struct message own_belief_m;
-    own_belief_m.particles = current_particles;
-    own_belief_m.particles_length = pf_inst->local_particles_length;
-    own_belief_m.h_opt = opt_unit_gaussian_bandwidth(own_belief_m.particles_length, DIM);
-    own_belief_m.variance = max_empirical_variance(own_belief_m.particles, own_belief_m.particles_length);
-    own_belief_m.type = DENSITY_ESTIMATION;
-
-    push_message(&stack_cpy, own_belief_m);
-  }
 
   /* for(size_t p = 0; p < amount; p++) { */
   /*   pf_inst->local_particles[start_index + p].weight = message_stack_prob(pf_inst, pf_inst->mstack, pf_inst->local_particles[start_index + p], 1.0); */
@@ -1014,6 +1033,9 @@ void sir_bp(struct particle_filter_instance *pf_inst, bool with_roughening) {
   clear_message_stack(&pf_inst->mstack);
 }
 
+struct particle estimate_position(struct particle_filter_instance *pf_inst) {
+  return empirical_mean(pf_inst->local_particles , pf_inst->local_particles_length);
+}
 
 void iterate(struct particle_filter_instance *pf_inst) {
   /* pre_regularisation_bp(pf_inst); */
@@ -1036,6 +1058,8 @@ void iterate(struct particle_filter_instance *pf_inst) {
 
 
     log_info("processing %zu messages", message_stack_len(pf_inst->mstack));
+
+    double start_time = omp_get_wtime();
 
     switch (pf_inst->type) {
     case POST_REGULARIZATION: {
@@ -1074,11 +1098,20 @@ void iterate(struct particle_filter_instance *pf_inst) {
       post_regularisation_bp(pf_inst);
       break;
     }
+
+    double time_diff = omp_get_wtime() - start_time;
+    pf_inst->last_iteration_wall_duration = time_diff;
+
+    log_info("processing took %f seconds", time_diff);
   }
 }
 
+double get_last_iteration_execution_time(struct particle_filter_instance *pf) {
+  return pf->last_iteration_wall_duration;
+}
+
 void predict_dist_2D(struct particle_filter_instance *pf_inst, double moved_x, double moved_y) {
-  if(pf_inst->local_particles == NULL) {
+  if(!pf_inst->has_prior ||  pf_inst->local_particles == NULL) {
     log_info("No prior has been set yet. doing nothing");
   } else {
     for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
@@ -1093,16 +1126,37 @@ void predict_dist_2D(struct particle_filter_instance *pf_inst, double moved_x, d
 }
 
 void predict_dist(struct particle_filter_instance *pf_inst, double moved_distance) {
-  for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
-    double dir = gsl_rng_uniform(pf_inst->r)* 2* M_PI;
+  if(!pf_inst->has_prior ||  pf_inst->local_particles == NULL) {
+    log_info("No prior has been set yet. doing nothing");
+  } else {
+    for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
+      double dir = gsl_rng_uniform(pf_inst->r)* 2* M_PI;
 
-    struct particle *current_particle  = &pf_inst->local_particles[p];
+      struct particle *current_particle  = &pf_inst->local_particles[p];
 
-    // TODO add noise
-    struct particle new_pos = pf_inst->local_particles[p];
-    new_pos.x_pos = current_particle->x_pos + moved_distance * sin(dir);
-    new_pos.y_pos = current_particle->y_pos + moved_distance * cos(dir);
+      // TODO add noise
+      struct particle new_pos = pf_inst->local_particles[p];
+      new_pos.x_pos = current_particle->x_pos + moved_distance * sin(dir);
+      new_pos.y_pos = current_particle->y_pos + moved_distance * cos(dir);
 
-    sample_particles_from_gaussian(new_pos, 1, current_particle, 1);
+      sample_particles_from_gaussian(new_pos, 0.2, current_particle, 1);
+    }
   }
 }
+
+// if openmp is defined
+#if defined(_OPENMP)
+void pf_parallel_set_target_threads(unsigned int thread_count) {
+  omp_set_num_threads(thread_count);
+}
+#endif
+
+// Can be used if we have no real way to determine the amount we moved (i.e., we are lacking odometry data, or the measurement data is way to noisy).
+// In this case we just assume that is it equally likely that we moved with any speed in the interval [0, max_speed]. Hereby max_speed is the maximum
+// possible speed with which our robot can move.
+// This means for our predicted state we sample from a uniform circle with radius delta_t*max_speed;
+void predict_max_movement_uniform(struct particle_filter_instance *pf_inst, double delta_t, double max_speed) {
+  double dist = gsl_rng_uniform(pf_inst->r) * delta_t * max_speed;
+
+  predict_dist(pf_inst, dist);
+};

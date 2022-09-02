@@ -72,6 +72,12 @@ class CParticleFilter(AbstractParticleFilter):
     def predict(self, moved_distance):
         lib.predict_dist(self.pf_inst, moved_distance)
 
+    def reset(self):
+        lib.reset_prior(self.pf_inst)
+
+    def set_filter_type(self, f_type):
+        lib.set_filter_type(self.pf_inst, f_type)
+
     def iterate(self):
             lib.iterate(self.pf_inst)
             # self.message_list.clear()

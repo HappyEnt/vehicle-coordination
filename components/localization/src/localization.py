@@ -650,11 +650,12 @@ class FastParticleFilter(BaseParticleNode):
 
         print("Initializing Fast Particle Filter (C Implementation)")
         self.cparticle = CParticleFilter( False );
-        self.cparticle.set_particle_amount(500);
+        self.cparticle.set_particle_amount(1000);
 
 
     def reset_particles(self):
-        raise NotImplementedError
+        info("resetting particles")
+        self.cparticle.reset()
 
     def handle_measurement(
         self, d, recv_particles_arr, estimate_from_other_arr
@@ -674,42 +675,17 @@ class FastParticleFilter(BaseParticleNode):
 
         # print(self.cparticle.get_particles())
         self.particles = self.cparticle.get_particles()
-        self.particles = [ [p[0], p[1]] for p in self.particles]
+        self.particles = [ [p[0], p[1]] for p in self.particles ]
 
         estimate = self.get_estimate()
         info(estimate)
 
         self.send_estimate_to_server(estimate)
-        self.send_locations_to_coordination(estimate)
-        self.send_particles_to_server()
-        # self.reset_particles()
+        # self.send_locations_to_coordination(estimate)
+        # self.send_particles_to_server()
+        self.reset_particles()
         #end = time.time() - start
         #info("Time elapsed: " + str(end))
-
-    def illustrate_nodes_and_particles(
-        self, real_pos=(-100, -100), estimate=(0, (-100, -100))
-    ):
-        plt.clf()
-        # _, estimate_x, estimate_y, _, _ = self.get_estimate()
-        plt.scatter([real_pos[0]], [real_pos[1]], 100, marker="x", color="g")
-        plt.scatter([estimate[1][0]], [estimate[1][1]], 100, marker="x", color="b")
-        plt.scatter(0, 0, 100, marker="x", color="r")
-        plt.scatter(SIDE_LENGTH_X, 0, 100, marker="x", color="r")
-        plt.scatter(SIDE_LENGTH_X, SIDE_LENGTH_Y, 100, marker="x", color="r")
-        plt.scatter(0, SIDE_LENGTH_Y, 100, marker="x", color="r")
-        # we then scatter its particles
-        particles = self.get_particles()
-        plt.scatter(
-            np.array([p[0] for p in particles]),
-            np.array([p[1] for p in particles]),
-            25,
-            alpha=0.05,
-        )
-        plt.xlim([-0.2, SIDE_LENGTH_X + 0.2])
-        plt.ylim([-0.2, SIDE_LENGTH_Y + 0.2])
-        plt.gca().invert_yaxis()
-        # plt.pause(0.5)
-        plt.show()
 
     def tick(self) -> bool:
         if self.measurement_queue:
@@ -732,16 +708,18 @@ class FastParticleFilter(BaseParticleNode):
             distances = []
             recv_particle_arr = []
             estimate_from_other_arr = []
+
             for (other_id, dists) in measurement_dict.items():
-                distances.append(sum(dists) / len(dists))
                 particles_other = self.get_particles_from_server(other_id)
-                if particles_other == None:
-                    break
-                recv_particle_arr.append(particles_other)
                 estimate_from_other = self.get_estimate_from_server(other_id)
-                if estimate_from_other == None:
-                    break
+
+                if not bool(particles_other) or not bool(estimate_from_other):
+                    continue
+
                 estimate_from_other_arr.append(estimate_from_other)
+                distances.append(sum(dists) / len(dists))
+                recv_particle_arr.append(particles_other)
+
             if distances:
                 self.handle_measurement(
                     distances, recv_particle_arr, estimate_from_other_arr
@@ -754,7 +732,7 @@ class FastParticleFilter(BaseParticleNode):
         while True:
             self.tick()
             # self.illustrate_nodes_and_particles((100,0))
-            sleep(0.1)
+            sleep(0.01)
 
 
 

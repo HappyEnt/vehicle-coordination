@@ -43,6 +43,4 @@ void sample_from_2d_uniform(struct particle *target_particles, size_t amount, do
 
 double value_from_independent_2D_distribution_(struct particle x, struct particle mean, double std_dev);
 
-struct particle calculate_empirical_mean(struct particle *particles, size_t amount);
-
 #endif /* UTIL_H */

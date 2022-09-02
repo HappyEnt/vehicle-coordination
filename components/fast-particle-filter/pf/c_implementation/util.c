@@ -131,22 +131,6 @@ void sample_from_2d_uniform(struct particle *target_particles, size_t amount, do
   }
 }
 
-struct particle calculate_empirical_mean(struct particle *particles, size_t amount) {
-  struct particle mean;
-  mean.x_pos = 0;
-  mean.y_pos = 0;
-
-  for(size_t i = 0; i < amount; i++) {
-    mean.x_pos += particles[i].x_pos;
-    mean.y_pos += particles[i].y_pos;
-  }
-
-  mean.x_pos /= amount;
-  mean.y_pos /= amount;
-
-  return mean;
-}
-
 double distance1(double x, double y) {
   if (x > y) {
     return x - y;

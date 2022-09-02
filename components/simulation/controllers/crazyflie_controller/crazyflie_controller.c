@@ -54,7 +54,7 @@
 #include "pid_controller.h"
 #include "vis.h"
 
-#define PARTICLES 5000
+#define PARTICLES 200
 
 
 void clean_init_filter(struct particle_filter_instance **pf_inst) {
@@ -72,7 +72,11 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
   /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
   set_particle_amount(*pf_inst, PARTICLES);
 
-  set_filter_type(*pf_inst, PRE_REGULARIZATION);
+  set_filter_type(*pf_inst, POST_REGULARIZATION);
+
+  pf_parallel_set_target_threads(8);
+
+  set_receiver_std_dev(*pf_inst, 0.5);
 }
 
 void deinit_filter(struct particle_filter_instance *pf_inst) {
@@ -87,6 +91,7 @@ int main(int argc, char **argv) {
 
   struct particle_filter_instance *pf_inst = NULL;
   struct vis_instance vis;
+  struct vis_instance vis_error;
 
   printf(" Initiliazing drone! \n");
 
@@ -140,7 +145,11 @@ int main(int argc, char **argv) {
   // initialize particle filter
   clean_init_filter(&pf_inst);
 
-  create_vis(&vis, wb_robot_get_name());
+  create_vis(&vis, wb_robot_get_name(), SCATTER_PLOT);
+
+  char error_plot_name[80];
+  sprintf(error_plot_name, "error-plot-%s",wb_robot_get_name());
+  create_vis(&vis_error, error_plot_name, LINE_PLOT);
 
   // Initialize variables
   actual_state_t actual_state = {0};
@@ -207,7 +216,7 @@ int main(int argc, char **argv) {
     // receiver measurements
     int queue_length = wb_receiver_get_queue_length(receiver);
 
-    if (dt_last_iteration > 0.2 && wb_robot_get_time() > 5) {
+    if (dt_last_iteration > 0.1 && wb_robot_get_time() > 5) {
       while(queue_length > 0) {
         const char *data = wb_receiver_get_data(receiver);
         int data_len = wb_receiver_get_data_size(receiver);
@@ -258,25 +267,27 @@ int main(int argc, char **argv) {
           /* printf("acc velocity. %f\n", vx); */
           /* printf("gps velocity. %f\n", gps_vx); */
 
-          if(fabs(dist) > 1e-6) {
-            printf("predict node %s", wb_robot_get_name());
-            predict_dist(pf_inst, dist);
+          /* if(fabs(dist) > 1e-6) { */
+          /*   printf("predict node %s", wb_robot_get_name()); */
+          /*   predict_dist(pf_inst, dist); */
+          /*   // instead of predicting next distance reset; */
 
-            /* dx_since_last = 0; */
-            /* dy_since_last = 0; */
-          }
+
+          /*   /\* dx_since_last = 0; *\/ */
+          /*   /\* dy_since_last = 0; *\/ */
+          /* } */
+
+          predict_max_movement_uniform(pf_inst, dt, 0.2); // assuming we have no real good way to measure the distance we moved, we should
 
           iterate(pf_inst);
 
-          struct particle *particles;
-          size_t particle_length = get_particle_array(pf_inst, &particles);
-
-          struct particle mean = calculate_empirical_mean(particles, particle_length);
-          printf("measurement error: (%f, %f)\n", mean.x_pos - gps_last_x, mean.y_pos - gps_last_y);
+          struct particle mean = estimate_position(pf_inst);
 
           past_pf_iteration = wb_robot_get_time();
 
-          visualize(&vis, pf_inst);
+          double error = sqrt((mean.x_pos - gps_last_x)*(mean.x_pos - gps_last_x) + (mean.y_pos - gps_last_y)*(mean.y_pos - gps_last_y));
+          visualize_error(&vis_error, error);
+          visualize_samples(&vis, pf_inst);
         }
       }
     }
@@ -294,7 +305,6 @@ int main(int argc, char **argv) {
         wb_emitter_send(emitter, data, bytes);
         past_send_belief = wb_robot_get_time();
       }
-
     }
 
 
