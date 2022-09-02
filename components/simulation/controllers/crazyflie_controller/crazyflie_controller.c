@@ -223,6 +223,14 @@ int main(int argc, char **argv) {
         int particles = data_len / sizeof(struct particle);
         double rssi = wb_receiver_get_signal_strength(receiver);
 
+        // This can really happen ..... might be a bug in webots
+        if(rssi <= 1e-9) {
+          wb_receiver_next_packet(receiver);
+          queue_length--;
+
+          continue;
+        }
+
         struct particle *foreign_particles = malloc(sizeof(struct particle) * particles);
         double measurement = sqrt((double)1.0 / rssi);
 

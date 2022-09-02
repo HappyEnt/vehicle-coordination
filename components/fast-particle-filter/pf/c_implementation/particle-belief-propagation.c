@@ -165,20 +165,25 @@ double message_prob(struct particle_filter_instance *pf, struct particle sample,
   struct particle *particles_other = m.particles;
 
   for (size_t j = 0; j < samples_other; ++j) {
-    double likelihood = value_from_normal_distribution(
-                                                       pf->uwb_error_likelihood,
-                                                       distance1(
-                                                                 measurement,
+    /* double likelihood = value_from_normal_distribution( */
+    /*                                                    pf->uwb_error_likelihood, */
+    /*                                                    distance1( */
+    /*                                                              measurement, */
+    /*                                                              distance2( */
+    /*                                                                        sample, */
+    /*                                                                        particles_other[j]))); */
+
+    double likelihood = gsl_ran_gaussian_pdf(distance1(measurement,
                                                                  distance2(
                                                                            sample,
-                                                                           particles_other[j])));
+                                                                           particles_other[j])), pf->uwb_error_likelihood->std_dev);
     if(likelihood != likelihood) {
       /* log_info("%f,%f,%f,%f", sample.x_pos, sample.y_pos, particles_other[j].x_pos, particles_other[j].y_pos); */
     }
 
     assert(likelihood == likelihood);
 
-    weight_factor += likelihood / particles_other->weight;
+    weight_factor += likelihood / particles_other[j].weight;
 
     //add each threads partial sum to the total sum
   }
@@ -307,7 +312,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
   {
     for(size_t c = 0; c < components; c++) {
       while(true) {
-        size_t I =  gsl_rng_uniform(pf->r) * (components);
+        size_t I =  gsl_rng_uniform(pf->r) * components;
         double U = gsl_rng_uniform(pf->r);
         struct particle sample;
         __sample_from_unit_gaussian(pf, &sample, 1);
@@ -315,12 +320,13 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
         struct particle next_sample;
         next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
         next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
-        next_sample.weight = 1.0 / components;
+        next_sample.weight = 1.0;
 
         double accept = message_stack_prob(pf, pf->mstack, next_sample, lambda);
 
         if(accept > U * supremum) {
           new_particles[c] = next_sample;
+          new_particles[c].weight = 1.0 / components;
           break;
         }
       }

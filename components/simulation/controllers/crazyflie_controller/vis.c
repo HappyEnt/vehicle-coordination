@@ -75,6 +75,9 @@ void create_vis(struct vis_instance *vis, const char *name, enum plot_type type)
   strcpy(vis->name, name);
 
   sprintf(path, "data-%s.data", vis->name);
+
+  vis->type = type;
+
   switch (vis->type) {
   case SCATTER_PLOT: {
     sprintf(plot_cmd, "plot '%s' with points pt 3", path);
@@ -88,7 +91,6 @@ default:
     break;
   }
 
-  vis->type = type;
 
   strcpy(vis->path, path);
 
