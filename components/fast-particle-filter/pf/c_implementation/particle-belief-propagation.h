@@ -24,10 +24,10 @@ struct message {
 };
 
 enum filter_type {
-  POST_REGULARIZATION,
   PRE_REGULARIZATION,
-  PROGRESSIVE_POST_REGULARIZATION,
+  POST_REGULARIZATION,
   PROGRESSIVE_PRE_REGULARIZATION,
+  PROGRESSIVE_POST_REGULARIZATION,
   NON_PARAMETRIC_BP,
   RESAMPLE_MOVE,
   SIR,
@@ -49,12 +49,12 @@ void set_particle_array(struct particle_filter_instance *pf_inst, struct particl
 void set_particle_amount(struct particle_filter_instance *pf_inst, size_t amount);
 struct particle estimate_position(struct particle_filter_instance *pf_inst);
 int get_particle_array(struct particle_filter_instance *pf_inst, struct particle **particles);
+
 void reset_prior(struct particle_filter_instance *pf_inst);
 double get_last_iteration_execution_time(struct particle_filter_instance *pf);
 
 void add_belief(struct particle_filter_instance *pf_inst, struct message m);
 
-// TODO find out what kind of actions will exist
 void predict_dist(struct particle_filter_instance *pf_inst, double moved_distance);
 void predict_dist_2D(struct particle_filter_instance *pf_inst, double moved_x, double moved_y);
 void predict_max_movement_uniform(struct particle_filter_instance *pf_inst, double delta_t, double max_speed);

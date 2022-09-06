@@ -10,16 +10,11 @@
 
 #include <particle-belief-propagation.h>
 
-#define GNUPLOT "gnuplot -persist"
-/* #define GNUPLOT "cat"	// to test output */
-
-/* void vis(struct particle_filter_instance *pf_inst) */
-void visualize_samples(struct vis_instance *vis, struct particle_filter_instance *pf_inst)
-{
+void write_particles(struct vis_instance *vis, struct particle_filter_instance *pf_inst) {
   struct particle *particles;
   size_t amount = get_particle_array(pf_inst, &particles);
 
-  FILE *data = fopen(vis->path, "w");
+  FILE *data = fopen(vis->particles_path, "w");
 
   for (unsigned int i = 0; i < amount; ++i) {
     double x = particles[i].x_pos;
@@ -29,86 +24,41 @@ void visualize_samples(struct vis_instance *vis, struct particle_filter_instance
 
   fflush(data);
 
-  char * commandsForGnuplot[] = {"replot"};
-  int commands = sizeof(commandsForGnuplot) / sizeof(char*);
-
-  for (size_t i=0; i < commands; i++)
-    {
-      fprintf(vis->gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
-    }
-
-  fflush(vis->gnuplotPipe);
+  fclose(data);
 }
 
-void visualize_error(struct vis_instance *vis, double error) {
-  struct particle *particles;
-
-  FILE *data = fopen(vis->path, "a");
+void write_error(struct vis_instance *vis, double error) {
+  FILE *data = fopen(vis->error_path, "a");
 
   vis->iteration++;
   fprintf(data, "%d %f \n", vis->iteration, error); //Write the data to a temporary file
 
   fflush(data);
 
-  char * commandsForGnuplot[] = {"replot"};
-  int commands = sizeof(commandsForGnuplot) / sizeof(char*);
-
-  for (size_t i=0; i < commands; i++)
-    {
-      fprintf(vis->gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
-    }
-
-  fflush(vis->gnuplotPipe);
+  fclose(data);
 }
 
-void create_vis(struct vis_instance *vis, const char *name, enum plot_type type) {
-  char * commandsForGnuplot[] = {"set title \"TITLEEEEE\"", "set xrange [-5:5]", "set yrange [-5:5]", "set term qt noraise"};
-  int commands = sizeof(commandsForGnuplot) / sizeof(char*);
-
+void create_vis(struct vis_instance *vis, const char *name) {
   vis->iteration = 0;
 
-  char path[80];
-  char plot_cmd[80];
+  strcpy(vis->node_name, name);
+  sprintf(vis->error_path, "%s-error.data", vis->node_name);
+  sprintf(vis->particles_path, "%s-particles.data", vis->node_name);
 
-  FILE *data;
+  char gnuplot_cmd[200];
+  sprintf(gnuplot_cmd, "gnuplot -noraise -persist -e \"nodename='%s'\" node-plot.plg", vis->node_name);
 
-  strcpy(vis->name, name);
+  vis->gnuplotPipe = popen (gnuplot_cmd, "w");
 
-  sprintf(path, "data-%s.data", vis->name);
+  FILE *error_data = fopen(vis->error_path,"w");
+  FILE *particles_data = fopen(vis->particles_path,"w");
 
-  vis->type = type;
+  fprintf(error_data, "%d %f \n", 0, 0.0); //Write the data to a temporary file
+  fprintf(particles_data, "%f %f \n", 0.0, 0.0); //Write the data to a temporary file
+  /* fflush(data); */
 
-  switch (vis->type) {
-  case SCATTER_PLOT: {
-    sprintf(plot_cmd, "plot '%s' with points pt 3", path);
-    break;
-  }
-  case LINE_PLOT: {
-    sprintf(plot_cmd, "plot '%s' with lines", path);
-    break;
-  }
-default:
-    break;
-  }
-
-
-  strcpy(vis->path, path);
-
-  vis->gnuplotPipe = popen ("gnuplot -persistent", "w");
-
-  data = fopen(path,"w");
-
-  fprintf(data, "%f %f \n", 0.0, 0.0); //Write the data to a temporary file
-  fflush(data);
-
-  printf("sending %d commands \n", commands);
-
-  for (size_t i=0; i < commands; i++)
-    {
-      fprintf(vis->gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
-    }
-
-  fprintf(vis->gnuplotPipe, "%s \n", plot_cmd); //Send commands to gnuplot one by one.
+  fclose(error_data);
+  fclose(particles_data);
 
   fflush(vis->gnuplotPipe);
 }

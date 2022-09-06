@@ -649,8 +649,12 @@ class FastParticleFilter(BaseParticleNode):
         super().__init__()
 
         print("Initializing Fast Particle Filter (C Implementation)")
-        self.cparticle = CParticleFilter( False );
-        self.cparticle.set_particle_amount(1000);
+        self.cparticle = CParticleFilter( False )
+        self.cparticle.set_particle_amount(3000)
+        self.cparticle.set_filter_type(1)
+        self.cparticle.set_receiver_std_dev(0.8)
+
+        self.f = open("debug.txt", "a")
 
 
     def reset_particles(self):
@@ -663,27 +667,36 @@ class FastParticleFilter(BaseParticleNode):
         """
         Handle incoming measurements by updating own particles.
         """
+
+        self.cparticle.predict_max_movement_uniform(0.1, 5)
+
         for (dis,parti) in zip(d, recv_particles_arr):
             particles = [ p + [1.0/len(parti)] for p in parti ]
 
-            error_model_distance = np.random.normal(dis, MEASUREMENT_STDEV)
+            # error_model_distance = np.random.normal(dis, MEASUREMENT_STDEV)
 
-            self.cparticle.add_message(TWR_Measurement(particles, error_model_distance))
+            self.cparticle.add_message(TWR_Measurement(particles, dis))
 
 
         self.cparticle.iterate();
+
+        # self.send_locations_to_coordination(estimate)
+        # self.send_particles_to_server()
 
         # print(self.cparticle.get_particles())
         self.particles = self.cparticle.get_particles()
         self.particles = [ [p[0], p[1]] for p in self.particles ]
 
-        estimate = self.get_estimate()
-        info(estimate)
+        self.f.write("----Distances----\n")
+        self.f.write(str(dis) + "\n")
+        self.f.write("-----------------\n")
+
+        estimate = self.cparticle.estimate()
+        self.f.write(str(estimate) + "\n")
 
         self.send_estimate_to_server(estimate)
-        # self.send_locations_to_coordination(estimate)
-        # self.send_particles_to_server()
-        self.reset_particles()
+        print(estimate)
+
         #end = time.time() - start
         #info("Time elapsed: " + str(end))
 
@@ -713,12 +726,16 @@ class FastParticleFilter(BaseParticleNode):
                 particles_other = self.get_particles_from_server(other_id)
                 estimate_from_other = self.get_estimate_from_server(other_id)
 
-                if not bool(particles_other) or not bool(estimate_from_other):
+                if not bool(particles_other):
                     continue
 
-                estimate_from_other_arr.append(estimate_from_other)
-                distances.append(sum(dists) / len(dists))
-                recv_particle_arr.append(particles_other)
+                if not bool(estimate_from_other):
+                    estimate_from_other_arr.append(None)
+                else:
+                    estimate_from_other_arr.append(estimate_from_other)
+
+                distances.extend(dists)
+                recv_particle_arr.extend([particles_other for _ in range(len(dists))])
 
             if distances:
                 self.handle_measurement(

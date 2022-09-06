@@ -54,8 +54,9 @@
 #include "pid_controller.h"
 #include "vis.h"
 
-#define PARTICLES 200
+#define PARTICLES 300
 
+#define _max(x,y) (((x) >= (y)) ? (x) : (y))
 
 void clean_init_filter(struct particle_filter_instance **pf_inst) {
 
@@ -76,7 +77,7 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
 
   pf_parallel_set_target_threads(8);
 
-  set_receiver_std_dev(*pf_inst, 0.5);
+  set_receiver_std_dev(*pf_inst, 0.6);
 }
 
 void deinit_filter(struct particle_filter_instance *pf_inst) {
@@ -91,7 +92,6 @@ int main(int argc, char **argv) {
 
   struct particle_filter_instance *pf_inst = NULL;
   struct vis_instance vis;
-  struct vis_instance vis_error;
 
   printf(" Initiliazing drone! \n");
 
@@ -145,11 +145,7 @@ int main(int argc, char **argv) {
   // initialize particle filter
   clean_init_filter(&pf_inst);
 
-  create_vis(&vis, wb_robot_get_name(), SCATTER_PLOT);
-
-  char error_plot_name[80];
-  sprintf(error_plot_name, "error-plot-%s",wb_robot_get_name());
-  create_vis(&vis_error, error_plot_name, LINE_PLOT);
+  create_vis(&vis, wb_robot_get_name());
 
   // Initialize variables
   actual_state_t actual_state = {0};
@@ -164,12 +160,12 @@ int main(int argc, char **argv) {
   double dy_since_last = 0;
   double vx = 0; // velocity in x. updated by acceloremeter measurements
   double vy = 0; // velocity in y.
-  double constant_velocity_x = 0;
-  double constant_velocity_y = 0;
+  double constant_vx = 0;
+  double constant_vy = 0;
 
   if(argc > 2) {
-      constant_velocity_x = atof(argv[1]);
-      constant_velocity_y = atof(argv[2]);
+      constant_vx = atof(argv[1]);
+      constant_vy = atof(argv[2]);
   }
 
   int has_fix = 0;
@@ -275,17 +271,19 @@ int main(int argc, char **argv) {
           /* printf("acc velocity. %f\n", vx); */
           /* printf("gps velocity. %f\n", gps_vx); */
 
-          /* if(fabs(dist) > 1e-6) { */
-          /*   printf("predict node %s", wb_robot_get_name()); */
-          /*   predict_dist(pf_inst, dist); */
-          /*   // instead of predicting next distance reset; */
+          if(fabs(dist) > 1e-6) {
+            printf("prediction with %f\n", dist);
+            predict_dist(pf_inst, dist);
+            /* instead of predicting next distance reset; */
 
 
-          /*   /\* dx_since_last = 0; *\/ */
-          /*   /\* dy_since_last = 0; *\/ */
-          /* } */
+            /* dx_since_last = 0; */
+            /* dy_since_last = 0; */
+          }
 
-          predict_max_movement_uniform(pf_inst, dt, 0.2); // assuming we have no real good way to measure the distance we moved, we should
+
+          /* double speed = (0.2 + sqrt(constant_vx*constant_vx+constant_vy*constant_vy)); */
+          /* predict_max_movement_uniform(pf_inst, dt_last_iteration, speed); // assuming we have no real good way to measure the distance we moved, we should */
 
           iterate(pf_inst);
 
@@ -294,17 +292,17 @@ int main(int argc, char **argv) {
           past_pf_iteration = wb_robot_get_time();
 
           double error = sqrt((mean.x_pos - gps_last_x)*(mean.x_pos - gps_last_x) + (mean.y_pos - gps_last_y)*(mean.y_pos - gps_last_y));
-          visualize_error(&vis_error, error);
-          visualize_samples(&vis, pf_inst);
+          write_error(&vis, error);
+          write_particles(&vis, pf_inst);
         }
       }
     }
 
     if(dt_last_send_belief > 0.5 && wb_robot_get_time() > 5) {
       struct particle *particles;
-      size_t particle_length = get_particle_array(pf_inst, &particles);
+      int particle_length = get_particle_array(pf_inst, &particles);
 
-      if(particles != NULL) {
+      if(particle_length > 0 && particles != NULL) {
         unsigned int bytes = sizeof(struct particle) * particle_length;
         char data[bytes];
 
@@ -385,8 +383,8 @@ int main(int argc, char **argv) {
     desired_state.yaw_rate = yaw_desired;
 
     // PID velocity controller with fixed height
-    desired_state.vy = sideways_desired + constant_velocity_y;
-    desired_state.vx = forward_desired + constant_velocity_x;
+    desired_state.vy = sideways_desired + constant_vy;
+    desired_state.vx = forward_desired + constant_vx;
     pid_velocity_fixed_height_controller(actual_state, &desired_state, gains_pid, dt, &motor_power);
 
     // Setting motorspeed
