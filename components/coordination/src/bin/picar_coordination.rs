@@ -20,7 +20,12 @@ struct CoordinationService {
     target: Mutex<TargetWrapper>,
 }
 
-const TARGETS: [[f64; 2]; 4] = [[0.2, 0.2], [1.4, 0.2], [1.4, 1.4], [0.2, 1.4]];
+const TARGETS: [[f64; 2]; 2] = [
+    [0.2, 0.2],
+    // [0.2, 1.4],
+    [1.4, 1.4],
+    // [1.4, 0.2]
+];
 
 #[derive(Clone, Copy)]
 enum Target {
@@ -44,7 +49,7 @@ impl TargetWrapper {
     pub fn next(&mut self) {
         self.target = match self.target {
             Target::First => Target::Second,
-            Target::Second => Target::Third,
+            Target::Second => Target::First,
             Target::Third => Target::Fourth,
             Target::Fourth => Target::First,
         }
@@ -73,6 +78,7 @@ impl Coordination for CoordinationService {
         let target: [f64; 2] = TARGETS[target_wrapper.usize()];
         let target = arr1(&target);
 
+        // FIXME: This panic, if position is None
         car.update(request.clone().position.unwrap().to_pos(), target.clone());
 
         let participants = self.get_participants(request.clone()).await;

@@ -6,7 +6,7 @@ use api::{ApiPayload, ParticipantInformation};
 use coordination::interface::{coordination_client::CoordinationClient, TickRequest, Vec2};
 use orca_rs::ndarray::arr1;
 
-const SLEEP_TIMER: u64 = 1000;
+const SLEEP_TIMER: u64 = 100;
 
 /// All API types comming from the camera server.
 mod api {
@@ -120,15 +120,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         let payload = camera.fetch().await?;
 
-        let tick_request = TickRequest {
-            id: 6,
-            position: payload.position.map(|pos| Vec2::from_pos(&pos)),
-            confidence: 0.0,
-            radius: 7.0,
-            others: vec![],
-        };
+        if let Some(position) = payload.position {
+            let tick_request = TickRequest {
+                id: 6,
+                position: Some(Vec2::from_pos(&position)),
+                confidence: 0.0,
+                radius: 7.0,
+                others: vec![],
+            };
 
-        client.tick(tick_request).await?;
+            client.tick(tick_request).await?;
+        }
 
         thread::sleep(Duration::from_millis(SLEEP_TIMER));
     }
