@@ -288,12 +288,12 @@ class BaseParticleNode(LocalizationNode):
             for m in measurements:
                 # TODO: Think about ID structure
                 if m.a >> 8 == self.int_id:
-                    if m.b in measurement_dict:
+                    if m.b >> 8 in measurement_dict:
                         measurement_dict[m.b >> 8].append(m.distance)
                     else:
                         measurement_dict[m.b >> 8] = [m.distance]
                 if m.b >> 8 == self.int_id:
-                    if m.a in measurement_dict:
+                    if m.a >> 8 in measurement_dict:
                         measurement_dict[m.a >> 8].append(m.distance)
                     else:
                         measurement_dict[m.a >> 8] = [m.distance]
@@ -602,12 +602,12 @@ class ClassicAllAtOnce(BaseParticleNode):
             for m in measurements:
                 # TODO: Think about ID structure
                 if m.a >> 8 == self.int_id:
-                    if m.b in measurement_dict:
+                    if m.b >> 8 in measurement_dict:
                         measurement_dict[m.b >> 8].append(m.distance)
                     else:
                         measurement_dict[m.b >> 8] = [m.distance]
                 if m.b >> 8 == self.int_id:
-                    if m.a in measurement_dict:
+                    if m.a >> 8 in measurement_dict:
                         measurement_dict[m.a >> 8].append(m.distance)
                     else:
                         measurement_dict[m.a >> 8] = [m.distance]
@@ -677,10 +677,9 @@ class FastParticleFilter(BaseParticleNode):
 
             self.cparticle.add_message(TWR_Measurement(particles, dis))
 
-
         self.cparticle.iterate();
 
-        # self.send_locations_to_coordination(estimate)
+
         # self.send_particles_to_server()
 
         # print(self.cparticle.get_particles())
@@ -694,6 +693,7 @@ class FastParticleFilter(BaseParticleNode):
         estimate = self.cparticle.estimate()
         self.f.write(str(estimate) + "\n")
 
+        self.send_locations_to_coordination([self.int_id, estimate, 0.1, 0.1])
         self.send_estimate_to_server(estimate)
         print(estimate)
 
@@ -708,12 +708,12 @@ class FastParticleFilter(BaseParticleNode):
             for m in measurements:
                 # TODO: Think about ID structure
                 if m.a >> 8 == self.int_id:
-                    if m.b in measurement_dict:
+                    if m.b >> 8 in measurement_dict:
                         measurement_dict[m.b >> 8].append(m.distance)
                     else:
                         measurement_dict[m.b >> 8] = [m.distance]
                 if m.b >> 8 == self.int_id:
-                    if m.a in measurement_dict:
+                    if m.a >> 8 in measurement_dict:
                         measurement_dict[m.a >> 8].append(m.distance)
                     else:
                         measurement_dict[m.a >> 8] = [m.distance]

@@ -54,7 +54,6 @@ class CParticleFilter(AbstractParticleFilter):
                 particle = ffi.new("struct particle*", foreign_particle_list[i])
                 particle_structures_dont_free.append(particle)
                 foreign_particle_arr[i] = particle[0]
-                print(particle[0])
 
             m = ffi.new("struct message*")
             m.measured_distance = message.get_measured_distance()
@@ -72,11 +71,21 @@ class CParticleFilter(AbstractParticleFilter):
     def predict(self, moved_distance):
         lib.predict_dist(self.pf_inst, moved_distance)
 
+    def estimate(self):
+        mean = lib.estimate_position(self.pf_inst)
+        return [mean.x_pos, mean.y_pos]
+
+    def predict_max_movement_uniform(self, delta_t, max_speed):
+        lib.predict_max_movement_uniform(self.pf_inst, delta_t, max_speed)
+
     def reset(self):
         lib.reset_prior(self.pf_inst)
 
     def set_filter_type(self, f_type):
         lib.set_filter_type(self.pf_inst, f_type)
+
+    def set_receiver_std_dev(self, std_dev):
+        lib.set_receiver_std_dev(self.pf_inst, std_dev)
 
     def iterate(self):
             lib.iterate(self.pf_inst)

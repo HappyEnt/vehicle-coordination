@@ -1217,7 +1217,7 @@ void predict_dist(struct particle_filter_instance *pf_inst, double moved_distanc
       new_pos.y_pos = current_particle->y_pos + moved_distance * cos(dir);
 
       // error should obviously depend on the distance we moved.
-      sample_particles_from_gaussian(new_pos, moved_distance, current_particle, 1);
+      sample_particles_from_gaussian(new_pos, 0.2, current_particle, 1);
     }
   }
 }
