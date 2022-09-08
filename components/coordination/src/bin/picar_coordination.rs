@@ -21,9 +21,9 @@ struct CoordinationService {
 }
 
 const TARGETS: [[f64; 2]; 2] = [
+    [1.4, 1.4],
     [0.2, 0.2],
     // [0.2, 1.4],
-    [1.4, 1.4],
     // [1.4, 0.2]
 ];
 

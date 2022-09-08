@@ -3,7 +3,9 @@ extern crate coordination;
 use std::{collections::HashMap, error::Error, thread, time::Duration};
 
 use api::{ApiPayload, ParticipantInformation};
-use coordination::interface::{coordination_client::CoordinationClient, TickRequest, Vec2};
+use coordination::interface::{
+    coordination_client::CoordinationClient, tick_request::Participant, TickRequest, Vec2,
+};
 use orca_rs::ndarray::arr1;
 
 const SLEEP_TIMER: u64 = 100;
@@ -107,13 +109,14 @@ impl CameraInterface {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
     #[cfg(not(feature = "pi"))]
     let address = "http://192.168.1.101:50052";
     #[cfg(feature = "pi")]
     let address = "http://0.0.0.0:50052";
 
     // TODO: Make ID CMD arg
-    let id = 6;
+    let id = 4;
     let camera = CameraInterface::new("http://192.168.87.78:8081/positions", id);
     let mut client = CoordinationClient::connect(address.to_owned()).await?;
 
@@ -125,8 +128,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 id: 6,
                 position: Some(Vec2::from_pos(&position)),
                 confidence: 0.0,
-                radius: 7.0,
-                others: vec![],
+                radius: 0.2,
+                others: payload
+                    .others
+                    .iter()
+                    .map(|p| Participant {
+                        id: p.id as i32,
+                        position: Some(Vec2::from_pos(&p.position)),
+                        confidence: 0.0,
+                        radius: 0.2,
+                    })
+                    .collect(),
             };
 
             client.tick(tick_request).await?;
