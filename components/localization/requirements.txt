@@ -1,6 +1,7 @@
 argparse
 matplotlib
 numpy
+protobuf
 pyserial
 requests
 types-requests
