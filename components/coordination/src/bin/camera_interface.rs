@@ -1,14 +1,19 @@
 extern crate coordination;
 
-use std::{collections::HashMap, error::Error, thread, time::Duration};
+use std::{collections::HashMap, env, error::Error, thread, time::Duration};
 
 use api::{ApiPayload, ParticipantInformation};
-use coordination::interface::{
-    coordination_client::CoordinationClient, tick_request::Participant, TickRequest, Vec2,
+use coordination::{
+    interface::{
+        coordination_client::CoordinationClient, tick_request::Participant, TickRequest, Vec2,
+    },
+    util::parse_cmd_arg,
 };
 use orca_rs::ndarray::arr1;
 
 const SLEEP_TIMER: u64 = 100;
+
+const CAR_RADIUS: f64 = 0.15;
 
 /// All API types comming from the camera server.
 mod api {
@@ -92,7 +97,7 @@ impl CameraInterface {
             others.push(ParticipantInformation {
                 id: key.parse::<u8>()?,
                 position: arr1(&[*x, *y]),
-                radius: 0.0,
+                radius: CAR_RADIUS,
                 inaccuracy: 0.0,
             })
         }
@@ -100,7 +105,7 @@ impl CameraInterface {
         Ok(ApiPayload {
             id: self.id,
             position: own_position,
-            radius: 0.0,
+            radius: CAR_RADIUS,
             inaccuracy: 0.0,
             others,
         })
@@ -115,8 +120,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "pi")]
     let address = "http://0.0.0.0:50052";
 
-    // TODO: Make ID CMD arg
-    let id = 4;
+    let args: Vec<String> = env::args().collect();
+    let id = parse_cmd_arg(args.get(1).expect("No ID given!"));
+
     let camera = CameraInterface::new("http://192.168.87.78:8081/positions", id);
     let mut client = CoordinationClient::connect(address.to_owned()).await?;
 
@@ -136,7 +142,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         id: p.id as i32,
                         position: Some(Vec2::from_pos(&p.position)),
                         confidence: 0.0,
-                        radius: 0.2,
+                        radius: p.radius as f32,
                     })
                     .collect(),
             };
