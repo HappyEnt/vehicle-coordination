@@ -20,15 +20,17 @@ public:
   virtual ~PFLocalization();
 
   void tick();
-  coordination::TickResponse Tick();
+  double Tick();
 
 private:
   WbDeviceTag transmitter;
   WbDeviceTag receiver;
-  std::shared_ptr<grpc::Channel> channel;
-  std::unique_ptr<coordination::Coordination::Stub> stub_;
+  std::unique_ptr<coordination::Coordination::Stub> server_stub_;
 
+  // grpc server stub channel
+  std::shared_ptr<grpc::Channel> channel_;
+
+  double past_time;
   // for development purposes
   WbDeviceTag gps;
 };
-

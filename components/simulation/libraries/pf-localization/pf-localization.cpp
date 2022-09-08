@@ -1,6 +1,10 @@
 #include "pf-localization.hpp"
+#include "interface.grpc.pb.h"
 #include "interface.pb.h"
 
+#include <grpc/grpc.h>
+#include <iomanip>
+#include <memory>
 #include <webots/gps.h>
 
 #include <boost/log/trivial.hpp>
@@ -10,22 +14,48 @@ extern "C" {
 #include <util.h>
 }
 
-PFLocalization::PFLocalization(const WbDeviceTag gps) : gps(gps) {}
+PFLocalization::PFLocalization(const WbDeviceTag gps) : gps(gps) {
+  past_time = wb_robot_get_time();
 
-void PFLocalization::tick() {
+  std::string target_str = "0.0.0.0:50052";
 
+  // try to create grpc channel
+  grpc::ChannelArguments channel_args;
+  channel_args.SetMaxReceiveMessageSize(-1);
+
+  // try to create grpc channel and catch errors
+  channel_ = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
+  server_stub_ = coordination::Coordination::NewStub(channel_);
 }
 
-coordination::TickResponse PFLocalization::Tick() {
+PFLocalization::~PFLocalization() {}
+
+
+void PFLocalization::tick() {
+  const double dt = wb_robot_get_time() - past_time;
+
+  if (dt > 0.1) {
+    if(channel_->GetState(true) == GRPC_CHANNEL_READY) {
+      Tick();
+    }
+    past_time = wb_robot_get_time();
+  }
+}
+
+double PFLocalization::Tick() {
   coordination::Vec2 position;
 
   position.set_x(wb_gps_get_values(gps)[0]);
-  position.set_y(wb_gps_get_values(gps)[0]);
+  position.set_y(wb_gps_get_values(gps)[1]);
 
-  // Data we are sending to the server.
-  coordination::TickRequest request;
-  request.set_id(0);
-  request.set_allocated_position(&position);
+  BOOST_LOG_TRIVIAL(info) << "Sending position: " << position.x() << ", " << position.y();
+
+  // See https://github.com/protocolbuffers/protobuf/issues/435 ????
+  coordination::TickRequest *request = new(coordination::TickRequest);
+  request->set_id(0);
+  request->set_allocated_position(&position);
+  request->set_radius(0.1);
+  request->set_confidence(1);
 
   // Container for the data we expect from the server.
   coordination::TickResponse reply;
@@ -35,11 +65,12 @@ coordination::TickResponse PFLocalization::Tick() {
   grpc::ClientContext context;
 
   // The actual RPC.
-  grpc::Status status = stub_->Tick(&context, request, &reply);
+  grpc::Status status = server_stub_->Tick(&context, *request, &reply);
 
   // Act upon its status.
   if (status.ok()) {
-    return reply;
+    free(request);
+    return 1.0;
   } else {
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;

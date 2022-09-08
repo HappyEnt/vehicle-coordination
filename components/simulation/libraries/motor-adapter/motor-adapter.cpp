@@ -6,9 +6,7 @@
 
 #include <boost/log/trivial.hpp>
 
-MotorAdapter::MotorAdapter(const WbDeviceTag left_motor, WbDeviceTag right_motor) : left_motor(left_motor), right_motor(right_motor) {
-  server_address = std::string("0.0.0.0:50051");
-}
+#define MAX_WHEEL_SPEED 20
 
 MotorAdapter::~MotorAdapter() {
 }
@@ -24,11 +22,11 @@ void MotorAdapter::run() {
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(this);
 
+  // start grpc server
+  server = builder.BuildAndStart();
+
   // Start
   BOOST_LOG_TRIVIAL(info) << "Starting motor adapter server on " << server_address;
-
-  // start grpc server
-  builder.BuildAndStart();
 }
 
 grpc::Status MotorAdapter::SetSpeed(grpc::ServerContext *context, const SetSpeedRequest *request, SetSpeedResponse *reply) {
@@ -36,8 +34,12 @@ grpc::Status MotorAdapter::SetSpeed(grpc::ServerContext *context, const SetSpeed
   double left_speed = request->left();
   double right_speed = request->right();
 
-  wb_motor_set_velocity(left_motor, left_speed);
-  wb_motor_set_velocity(right_motor, right_speed);
+  BOOST_LOG_TRIVIAL(info) << "Setting motor speed to " << left_speed << " and " << right_speed;
+
+  wb_robot_mutex_lock(robot_mutex);
+  wb_motor_set_velocity(left_motor, left_speed * MAX_WHEEL_SPEED);
+  wb_motor_set_velocity(right_motor, right_speed * MAX_WHEEL_SPEED);
+  wb_robot_mutex_unlock(robot_mutex);
 
   // create return message
   reply->set_success(true);
