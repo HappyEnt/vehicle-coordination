@@ -21,6 +21,7 @@
 #include <webots/motor.h>
 #include <webots/robot.h>
 #include <motor-adapter/motor-adapter.hpp>
+#include <pf-localization/pf-localization.hpp>
 // #include <libraw/
 
 #define SPEED_FACTOR 10.0
@@ -119,7 +120,8 @@ int main(int argc, char **argv) {
   /* main loop */
   while (wb_robot_step(timestep) != -1) {
     // step_forward();
-    // wb_robot_step(960);
+    wb_robot_step(960);
+    printf("stepping\n");
     // step_backward();
     // wb_robot_step(960);
     // step_left();

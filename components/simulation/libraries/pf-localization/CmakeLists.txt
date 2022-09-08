@@ -5,8 +5,7 @@ cmake_minimum_required(VERSION 3.0)
 get_filename_component(CURRENT_LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
 # set path where protobuf searches for interface files
-# set(Protobuf_IMPORT_DIRS "../../../components/picar-wheels/proto")
-set(PROTO_FILES "${CMAKE_SOURCE_DIR}/../picar-wheels/proto/picar.proto")
+set(PROTO_FILES "${CMAKE_SOURCE_DIR}/../localization-coordination/interface.proto")
 # copy protofile to current directory
 file(COPY ${PROTO_FILES} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
 
