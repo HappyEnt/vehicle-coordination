@@ -17,4 +17,4 @@ native:
 	cargo $(MODE) --bins $(RELEASE)
 
 pi: 
-	cargo $(MODE) --target armv7-unknown-linux-gnueabihf --bins $(RELEASE) --features "pi"
+	cargo $(MODE) --target armv7-unknown-linux-gnueabihf --bins $(RELEASE)

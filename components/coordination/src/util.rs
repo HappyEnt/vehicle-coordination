@@ -1,3 +1,5 @@
+//! Some (maybe needed) utility functions.
+
 use log::error;
 use std::{fmt::Debug, str::FromStr};
 

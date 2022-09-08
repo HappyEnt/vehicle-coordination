@@ -181,6 +181,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "coordination"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "env_logger",
+ "futures",
+ "log",
+ "orca-rs",
+ "prost",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "either"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -681,10 +699,11 @@ checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
 
 [[package]]
 name = "orca-rs"
-version = "0.1.2"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "407ef3463336ebe3e7d87a8a6495d9680139c82dbe7c712e58816b649a24d0d5"
+checksum = "3a17f7d45d3738b1729b72e747de6154c3875ef1d3114cf0e9138e3e652d62fe"
 dependencies = [
+ "log",
  "ndarray",
 ]
 
@@ -725,25 +744,6 @@ checksum = "e6d5014253a1331579ce62aa67443b4a658c5e7dd03d4bc6d302b94474888143"
 dependencies = [
  "fixedbitset",
  "indexmap",
-]
-
-[[package]]
-name = "picar-coordination"
-version = "0.1.0"
-dependencies = [
- "async-channel",
- "env_logger",
- "futures",
- "log",
- "ndarray",
- "orca-rs",
- "prost",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "tonic",
- "tonic-build",
 ]
 
 [[package]]
