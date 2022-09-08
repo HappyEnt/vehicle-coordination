@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.0)
+
+get_filename_component(LIBRARIES_PATH ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
+# Get C or C++ sources in the current directory (only).
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# check whether WEBOTS_HOME environment variable is set
+
+if(NOT DEFINED ENV{WEBOTS_HOME})
+  # Check whether /Applications/Webots.app exists
+  if(EXISTS "/Applications/Webots.app")
+    set(ENV{WEBOTS_HOME} "/Applications/Webots.app/Contents")
+  else()
+    message(FATAL_ERROR "WEBOTS_HOME environment variable is not set and /Applications/Webots.app does not exist.")
+  endif()
+endif()
+
+link_directories("../../fast-particle-filter/pf/c_implementation/build")
+include_directories("../../fast-particle-filter/pf/c_implementation")
+
+# find_package(GSL REQUIRED)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+
+find_package(Boost COMPONENTS log log_setup thread system REQUIRED)
+
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_subdirectory(visualization)
+add_subdirectory(motor-adapter)
+

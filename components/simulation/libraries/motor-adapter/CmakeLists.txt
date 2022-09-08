@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.0)
+
+# Setup the project.
+# Its name is defined to be the controller directory name.
+get_filename_component(CURRENT_LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
+# Get C or C++ sources in the current directory (only).
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Brew refuses to link openssl. Point OPENSSL_ROOT_DIR to correct location if on macos
+if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+  # set OPENSSL_ROOT_DIR to correct path
+  set(OPENSSL_ROOT_DIR "/opt/homebrew/opt/openssl")
+  # set protobuf command
+endif()
+
+# Generate interface from protobuf definition
+find_package(GRPC CONFIG REQUIRED)
+find_package(Protobuf REQUIRED)
+
+# set path where protobuf searches for interface files
+# set(Protobuf_IMPORT_DIRS "../../../components/picar-wheels/proto")
+set(PROTO_FILES "picar.proto")
+
+# generate library
+add_library( ${CURRENT_LIBRARY_DIR} ${CURRENT_LIBRARY_DIR}.cpp ${PROTO_FILES} )
+target_link_libraries(${CURRENT_LIBRARY_DIR}
+    PUBLIC
+        protobuf::libprotobuf
+        gRPC::grpc
+        gRPC::grpc++
+        gRPC::grpc++_reflection
+        ${Boost_LIBRARIES}
+      )
+
+target_include_directories(${CURRENT_LIBRARY_DIR} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+
+get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
+protobuf_generate(TARGET ${CURRENT_LIBRARY_DIR} LANGUAGE cpp)
+protobuf_generate(TARGET ${CURRENT_LIBRARY_DIR} LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}")
+

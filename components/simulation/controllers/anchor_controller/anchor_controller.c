@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
       struct particle p = {
         .x_pos = x_global,
         .y_pos = y_global,
+        /* .orientation = 0.0, */
         .weight = 1.0
       };
 

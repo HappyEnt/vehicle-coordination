@@ -20,7 +20,7 @@ public:
   MeasurementGenerator();
 
   void send_single();
-  void start_send_loop();  
+  void start_send_loop();
 
   virtual ~MeasurementGenerator();
 };

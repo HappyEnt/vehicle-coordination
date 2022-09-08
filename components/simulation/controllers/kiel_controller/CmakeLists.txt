@@ -20,15 +20,11 @@ set (LIBRARIES ${CMAKE_SHARED_LIBRARY_PREFIX}Controller${CMAKE_SHARED_LIBRARY_SU
 include_directories("../../../fast-particle-filter/pf/c_implementation")
 
 # Setup the target executable.
-add_executable(${CURRENT_CONTROLLER_DIR} crazyflie_controller.cpp pid_controller.c)
-target_link_libraries(${CURRENT_CONTROLLER_DIR} ${LIBRARIES} BeliefPropagation GSL::gsl Boost::boost logger)
-target_include_directories(${CURRENT_CONTROLLER_DIR} PUBLIC ${CMAKE_SOURCE_DIR}/libraries)
+add_executable(${CURRENT_CONTROLLER_DIR} kiel_controller.cpp)
+target_link_libraries(${CURRENT_CONTROLLER_DIR} ${LIBRARIES} BeliefPropagation GSL::gsl Boost::boost motor-adapter)
+
+
 # Copy the target executable at the right location.
-
-message("from ${CMAKE_BINARY_DIR}/${CONTROLLERS_PATH}/${CURRENT_CONTROLLER_DIR}")
-message("to ${CMAKE_CURRENT_SOURCE_DIR}")
-
-
 set(COPY_SOURCE_PATH ${CMAKE_BINARY_DIR}/${CONTROLLERS_PATH}/${CURRENT_CONTROLLER_DIR}/${CURRENT_CONTROLLER_DIR})
 add_custom_command(TARGET ${CURRENT_CONTROLLER_DIR} POST_BUILD COMMAND ${CMAKE_COMMAND} -E
   copy ${COPY_SOURCE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}

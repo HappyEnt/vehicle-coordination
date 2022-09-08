@@ -22,17 +22,17 @@ class ReferenceParticleFilter(AbstractParticleFilter):
         self.messages.append(message)
 
     def iterate(self):
-        num_particles = len(self.particles)        
-        weights = [1.0 / num_particles] * num_particles        
+        num_particles = len(self.particles)
+        weights = [1.0 / num_particles] * num_particles
         for m in self.messages:
 
             def estimate_prob(p1, p2):
                 expected_d = distance.euclidean(p1, p2)
-                
+
                 norm_val = (m.get_measured_distance()-expected_d) / self.MEASUREMENT_STD
                 prob = norm.pdf(norm_val) / self.MEASUREMENT_STD # use correct way to calculate prob in order to aid comparison between implementations
 
-                return prob            
+                return prob
 
             for (i, p) in enumerate(self.particles):
                 weight_factor = 0.0
@@ -53,9 +53,9 @@ class ReferenceParticleFilter(AbstractParticleFilter):
             weights=normalized_weights,
             k=len(self.particles)
         )
-            
+
     def calculate_likelihood(self, measurement, particles):
         raise NotImplementedError
-    
+
     def value_from_normal_distribution(self, mean, std_dev, x):
         raise NotImplementedError

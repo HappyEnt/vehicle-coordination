@@ -41,7 +41,7 @@ set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 
 add_library(BeliefPropagation SHARED particle-belief-propagation.h particle-belief-propagation.c util.h util.c)
-target_link_libraries(BeliefPropagation OpenMP::OpenMP_CXX GSL::gsl m) #  -fsanitize=address
+target_link_libraries(BeliefPropagation OpenMP::OpenMP_CXX GSL::gsl m) #  -fsanitize=address # -fsanitize=address,undefined,bounds-strict
 
 # add the executable
 add_executable(test-particle-filter test-particle-filter.c)

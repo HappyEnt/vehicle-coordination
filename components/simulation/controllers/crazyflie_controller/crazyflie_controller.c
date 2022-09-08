@@ -73,7 +73,7 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
   /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
   set_particle_amount(*pf_inst, PARTICLES);
 
-  set_filter_type(*pf_inst, POST_REGULARIZATION);
+  set_filter_type(*pf_inst, SIR);
 
   pf_parallel_set_target_threads(8);
 
@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
 
           iterate(pf_inst);
 
-          struct particle mean = estimate_position(pf_inst);
+          struct particle mean = empirical_mean(pf_inst);
 
           past_pf_iteration = wb_robot_get_time();
 

@@ -27,7 +27,7 @@
  * Author:      Kimberly McGuire (Bitcraze AB)
  */
 
-#include "data_logger.hpp"
+#include <visualization/data_logger.hpp>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,10 +56,9 @@ extern "C" {
 }
 
 
-
 // Add external controller
 
-#define PARTICLES 500
+#define PARTICLES 2000
 
 void clean_init_filter(struct particle_filter_instance **pf_inst) {
 
@@ -76,11 +75,11 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
   /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
   set_particle_amount(*pf_inst, PARTICLES);
 
-  set_filter_type(*pf_inst, PRE_REGULARIZATION);
+  set_filter_type(*pf_inst, POST_REGULARIZATION);
 
   pf_parallel_set_target_threads(8);
 
-  set_receiver_std_dev(*pf_inst, 0.4);
+  set_receiver_std_dev(*pf_inst, 1);
 }
 
 void deinit_filter(struct particle_filter_instance *pf_inst) {
@@ -276,7 +275,7 @@ int main(int argc, char **argv) {
           /* printf("acc velocity. %f\n", vx); */
           /* printf("gps velocity. %f\n", gps_vx); */
 
-          if(fabs(dist) > 1e-6) {
+          if(fabs(dist) > 1e-7) {
             printf("prediction with %f\n", dist);
             predict_dist(pf_inst, dist);
             /* instead of predicting next distance reset; */

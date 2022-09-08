@@ -1,0 +1,34 @@
+#VRML_SIM R2022b utf8
+# Describe the functionality of your PROTO here.
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/robots/nvidia/jetbot/protos/JetBot.proto"
+
+PROTO JetsonWithUWB [
+  field SFVec3f translation 0 0 0 # Is `Transform.translation`.
+  field SFRotation rotation 0 0 1 0 # Is `Transform.rotation`.
+  field SFString name "JetBot" # Is `Solid.name`.
+  field SFString controller "<generic>"
+  field MFString   controllerArgs  ""    # Is `Robot.controllerArgs`.
+  field SFString customData "" # Is `Robot.customData`.
+  field SFFloat  signalStrengthNoise     0.1
+  field SFFloat range 1
+]
+{
+  JetBot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    controllerArgs IS controllerArgs
+    customData IS customData
+    extensionSlot [
+      Emitter {
+        range IS range
+        # baudRate 115200
+      }
+      Receiver {
+        signalStrengthNoise IS signalStrengthNoise
+      }
+    ]
+  }
+}

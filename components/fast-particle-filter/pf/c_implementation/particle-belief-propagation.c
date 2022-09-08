@@ -21,6 +21,7 @@
 #endif
 
 #define USE_CACHE 0
+#define ESTIMATE_ORIENTATION 1
 #define DIM 2
 
 // structure definitions
@@ -53,7 +54,7 @@ void low_variance_resample_local_particles_kde(
     struct particle_filter_instance *pf, struct particle *input_particles,
     struct particle *resampled_particles, size_t input_length,
     size_t target_length);
-void __sample_from_unit_gaussian(struct particle_filter_instance *pf, struct particle *ps, size_t amount);
+void sample_from_unit_gaussian(struct particle_filter_instance *pf, struct particle *ps, size_t amount);
 void generate_messages_from_beliefs(struct particle_filter_instance *pf_inst, struct message_stack *mstack);
 double evaluate_message_at(struct message m, struct particle pos);
 
@@ -256,6 +257,22 @@ struct particle empirical_mean(struct particle *particles, size_t components) {
   return mean;
 }
 
+struct particle most_probable_particle(struct particle *particles, size_t components) {
+  struct particle most_probable_p;
+
+  double max_weight = particles[0].weight;
+  size_t max_index = 0;
+  for(size_t i = 0; i < components; i++) {
+    if (particles[i].weight > max_weight) {
+      most_probable_p = particles[i];
+      max_weight = particles[i].weight;
+    }
+  }
+
+  return most_probable_p;
+}
+
+
 double max_empirical_variance(struct particle *particles, size_t components) {
   // todo has to be calculated from message
   double variance_x = 0, variance_y = 0;
@@ -278,23 +295,38 @@ double opt_unit_gaussian_bandwidth(size_t components, size_t dimensions) {
   return pow(components, - 1.0 / (dimensions + 4)) * pow((4.0/(dimensions + 2)), 1.0 / (dimensions + 4)) * 0.5;
 }
 
-// we want to use the random number generator stored inside our particle filter instance.
-void __sample_from_unit_gaussian(struct particle_filter_instance *pf, struct particle *ps, size_t amount) {
-  gsl_vector *mean = gsl_vector_calloc(2); // calloc already initializes the elements with 0
+void sample_from_2D_gaussian_(struct particle_filter_instance *pf, struct particle mean, gsl_matrix *COV_MATRIX, struct particle *ps, size_t amount) {
+  gsl_vector *mean_v = gsl_vector_calloc(2); // calloc already initializes the elements with 0
   gsl_vector *result = gsl_vector_calloc(2);
-  gsl_matrix *L = gsl_matrix_calloc(2, 2);
 
-  gsl_matrix_set(L, 0, 0, 1);
-  gsl_matrix_set(L, 1, 1, 1);
+  gsl_vector_set(mean_v, 0, mean.x_pos);
+  gsl_vector_set(mean_v, 1, mean.y_pos);
 
-  gsl_ran_multivariate_gaussian(pf->r, mean, L, result);
+  gsl_ran_multivariate_gaussian(pf->r, mean_v, COV_MATRIX, result);
 
   ps->x_pos = gsl_vector_get(result, 0);
   ps->y_pos = gsl_vector_get(result, 1);
 
-  gsl_vector_free(mean);
+  gsl_vector_free(mean_v);
   gsl_vector_free(result);
-  gsl_matrix_free(L);
+}
+
+
+void sample_from_2D_gaussian(struct particle_filter_instance *pf, struct particle mean, double std_dev, struct particle *ps, size_t amount) {
+  // create coariance gsl matrix
+  gsl_matrix *COV_MATRIX = gsl_matrix_calloc(2, 2);
+  // set entries
+  gsl_matrix_set(COV_MATRIX, 0, 0, std_dev);
+  gsl_matrix_set(COV_MATRIX, 1, 1, std_dev);
+  sample_from_2D_gaussian_(pf, mean, COV_MATRIX, ps, amount);
+  gsl_matrix_free(COV_MATRIX);
+}
+
+
+// we want to use the random number generator stored inside our particle filter instance.
+void sample_from_unit_gaussian(struct particle_filter_instance *pf, struct particle *ps, size_t amount) {
+  struct particle mean = { 0, 0};
+  sample_from_2D_gaussian(pf, mean, 1.0, ps, amount);
 }
 
 // for now we generate exactly the same amoutn of new samples as we had in our previous belief estimate
@@ -319,7 +351,7 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
         size_t I =  gsl_rng_uniform(pf->r) * components;
         double U = gsl_rng_uniform(pf->r);
         struct particle sample;
-        __sample_from_unit_gaussian(pf, &sample, 1);
+        sample_from_unit_gaussian(pf, &sample, 1);
 
         struct particle next_sample;
         next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
@@ -372,7 +404,7 @@ void regularized_reject_correct_alternative(struct particle_filter_instance *pf,
         size_t I =  gsl_rng_uniform(pf->r) * components;
         double U = gsl_rng_uniform(pf->r);
         struct particle sample;
-        __sample_from_unit_gaussian(pf, &sample, 1);
+        sample_from_unit_gaussian(pf, &sample, 1);
 
         struct particle next_sample;
         next_sample.x_pos = old_particles[I].x_pos + sample.x_pos * h_opt * sqrt(variance);
@@ -434,7 +466,7 @@ void resample_local_particles_kde(struct particle_filter_instance *pf, size_t ta
     for (size_t s = 0; s < component_freq[c]; s++) {
       struct particle sample;
 
-      __sample_from_unit_gaussian(pf, &sample, 1);
+      sample_from_unit_gaussian(pf, &sample, 1);
 
       new_particles[sample_cnt].x_pos = particles[c].x_pos + sample.x_pos*h_opt*sqrt(variance);
       new_particles[sample_cnt].y_pos = particles[c].y_pos + sample.y_pos*h_opt*sqrt(variance);
@@ -489,11 +521,15 @@ void low_variance_resample_local_particles_kde(
 
     struct particle sample;
 
-    __sample_from_unit_gaussian(pf, &sample, 1);
+    sample_from_unit_gaussian(pf, &sample, 1);
 
     resampled_particles[m].x_pos = particles[i].x_pos + sample.x_pos*h_opt*sqrt(variance);
     resampled_particles[m].y_pos = particles[i].y_pos + sample.y_pos*h_opt*sqrt(variance);
     resampled_particles[m].weight = 1.0/target_length;
+
+    #ifdef ESTIMATE_ORIENTATION
+    resampled_particles[m].orientation = particles[i].orientation;
+    #endif
   }
 
   pf->local_particles = resampled_particles;
@@ -514,11 +550,15 @@ void sample_kde(struct particle_filter_instance *pf, struct message m, struct pa
       size_t c = gsl_rng_uniform(pf->r) * m.particles_length;
 
       struct particle sample;
-      __sample_from_unit_gaussian(pf, &sample, 1);
+      sample_from_unit_gaussian(pf, &sample, 1);
 
       target_particles[s].x_pos = m.particles[c].x_pos + sample.x_pos * m.h_opt * sqrt(m.variance);
       target_particles[s].y_pos = m.particles[c].y_pos + sample.y_pos * m.h_opt * sqrt(m.variance);
       target_particles[s].weight = 1.0/target_samples;
+
+      #ifdef ESTIMATE_ORIENTATION
+      target_particles[s].orientation = gsl_rng_uniform(pf->r) * 2 * M_PI;
+      #endif
     }
   }
 }
@@ -565,7 +605,7 @@ void sample_metropolis(struct particle_filter_instance *pf, size_t samples, size
   for(size_t i = 0; i < samples + burn_in; i++) {
     struct particle next_sample;
 
-    sample_particles_from_gaussian(current_sample, 0.5, &next_sample, 1);
+    sample_from_2D_gaussian(pf, current_sample, 0.5, &next_sample, 1);
 
     double prob_cur = message_stack_prob(pf, pf->mstack, current_sample, 1.0);
     double prob_next = message_stack_prob(pf, pf->mstack, next_sample, 1.0);
@@ -602,7 +642,7 @@ void move_metropolis(struct particle_filter_instance *pf, size_t burn_in_per_sam
       struct particle next_sample;
 
 
-      sample_particles_from_gaussian(current_sample, 4, &next_sample, 1);
+      sample_from_2D_gaussian(pf, current_sample, 4, &next_sample, 1);
 
       double prob_cur = message_stack_prob(pf, pf->mstack, current_sample, 1.0);
       double prob_next = message_stack_prob(pf, pf->mstack, next_sample, 1.0);
@@ -987,7 +1027,7 @@ void belief_to_message(struct particle_filter_instance *pf, struct message *m, d
 
     tmp_p.x_pos += m->measured_distance * cos(angle);
     tmp_p.y_pos += m->measured_distance * sin(angle);
-    sample_particles_from_gaussian(tmp_p, std_dev, particles + c, 1);
+    sample_from_2D_gaussian(pf, tmp_p, std_dev, particles + c, 1);
   }
 
   m->h_opt = opt_unit_gaussian_bandwidth(components, DIM);
@@ -1012,7 +1052,7 @@ void roughen_particles(struct particle_filter_instance *pf_inst, double std_dev)
     for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
       struct particle *current_particle  = &pf_inst->local_particles[p];
       struct particle sample;
-      __sample_from_unit_gaussian(pf_inst, &sample, 1);
+      sample_from_unit_gaussian(pf_inst, &sample, 1);
 
       current_particle->x_pos += sample.x_pos * std_dev;
       current_particle->y_pos += sample.y_pos * std_dev;
@@ -1110,6 +1150,7 @@ void sir_bp(struct particle_filter_instance *pf_inst, bool with_roughening) {
 }
 
 struct particle estimate_position(struct particle_filter_instance *pf_inst) {
+  /* return most_probable_particle(pf_inst->local_particles , pf_inst->local_particles_length) */
   return empirical_mean(pf_inst->local_particles , pf_inst->local_particles_length);
 }
 
@@ -1196,8 +1237,11 @@ void predict_dist_2D(struct particle_filter_instance *pf_inst, double moved_x, d
 
       // TODO add noise
 
-      current_particle->x_pos = current_particle->x_pos + moved_x;
-      current_particle->y_pos = current_particle->y_pos + moved_y;
+      struct particle new_pos = pf_inst->local_particles[p];
+      new_pos.x_pos = current_particle->x_pos + moved_x;
+      new_pos.y_pos = current_particle->y_pos + moved_y;
+
+      sample_from_2D_gaussian(pf_inst, new_pos, 0.2, current_particle, 1);
     }
   }
 }
@@ -1207,7 +1251,12 @@ void predict_dist(struct particle_filter_instance *pf_inst, double moved_distanc
     log_info("No prior has been set yet. doing nothing");
   } else {
     for (size_t p = 0; p < pf_inst->local_particles_length; p++) {
+#ifdef ESTIMATE_ORIENTATION
+      double angle_pertubation = gsl_ran_gaussian(pf_inst->r, 0.1);
+      double dir = pf_inst->local_particles[p].orientation + angle_pertubation;
+#else
       double dir = gsl_rng_uniform(pf_inst->r)* 2* M_PI;
+#endif
 
       struct particle *current_particle  = &pf_inst->local_particles[p];
 
@@ -1217,7 +1266,7 @@ void predict_dist(struct particle_filter_instance *pf_inst, double moved_distanc
       new_pos.y_pos = current_particle->y_pos + moved_distance * cos(dir);
 
       // error should obviously depend on the distance we moved.
-      sample_particles_from_gaussian(new_pos, 0.2, current_particle, 1);
+      sample_from_2D_gaussian(pf_inst, new_pos, moved_distance*0.10, current_particle, 1);
     }
   }
 }

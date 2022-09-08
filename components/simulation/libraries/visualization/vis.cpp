@@ -14,7 +14,7 @@ extern "C" {
 
 #define MQ_MAX_STRING_SIZE 300
 #define MAX_PARTICLES 5000
-#define PARTICLES 500
+#define PARTICLES 2000
 
 
 void ParticleScatterPlot::register_queues() {
@@ -36,8 +36,6 @@ void ParticleScatterPlot::register_new_node(std::string NodeName) {
           new boost::interprocess::message_queue(
               boost::interprocess::open_only,
               std::string("particle_queue-").append(NodeName).c_str()))));
-
-  BOOST_LOG_TRIVIAL(info) << "add plot for node " << NodeName;
 
   // initialize new table
   // vtkNew<vtkTable> table; //
@@ -61,9 +59,17 @@ void ParticleScatterPlot::register_new_node(std::string NodeName) {
 
   vtkPlot* points = this->chart->AddPlot(vtkChart::POINTS);
   points->SetInputData(table, 0, 1);
-  points->SetColor(0, 0, 0, 255);
+
+  //initialize rand
+  srand(time(NULL));
+
+  points->SetColor(
+      static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 255,
+      static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 255,
+      static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 255, 32);
   points->SetWidth(1.0);
-  dynamic_cast<vtkPlotPoints*>(points)->SetMarkerStyle(vtkPlotPoints::CROSS);
+  dynamic_cast<vtkPlotPoints*>(points)->SetMarkerStyle(vtkPlotPoints::DIAMOND);
+  // set x-range of plot points
 
   // create pair of NodeName and table
   this->particle_tables.push_back(std::make_pair(NodeName, table));
@@ -91,6 +97,7 @@ void ParticleScatterPlot::init() {
   chart = vtkSmartPointer<vtkChartXY>::New();
   view->GetScene()->AddItem(chart);
   chart->SetShowLegend(true);
+  // set default x-y range for chart to -10, ..., 10
 }
 
 void ParticleScatterPlot::Execute(vtkObject *caller, unsigned long eventId, void* vtkNotUsed(callData)) {
@@ -110,12 +117,13 @@ void ParticleScatterPlot::start_render() {
   view->GetInteractor()->AddObserver(vtkCommand::TimerEvent, this);
 
   // create timer
-  timerId = view->GetInteractor()->CreateRepeatingTimer(100);
+  timerId = view->GetInteractor()->CreateRepeatingTimer(20);
 
   view->GetInteractor()->Start();
 }
 
 void ParticleScatterPlot::update_plot_data() {
+  static bool first_data = false;
   // remove all plots
   size_t recvd_size;
   unsigned int priority;
@@ -138,12 +146,12 @@ void ParticleScatterPlot::update_plot_data() {
       continue;
     }
 
+
     size_t amount = recvd_size / sizeof(struct particle);
 
     // create data for vtk
     for(auto ta : this->particle_tables) {
       if( !ta.first.compare(it.first) ) {
-        BOOST_LOG_TRIVIAL(info) << "add " << amount << " particles to table for node " << it.first;
         for(size_t p = 0; p < amount; p++) {
           ta.second->SetValue(p, 0, particle_data[p].x_pos);
           ta.second->SetValue(p, 1, particle_data[p].y_pos);
@@ -151,9 +159,15 @@ void ParticleScatterPlot::update_plot_data() {
         // set table modified
         ta.second->Modified();
       }
+    }
 
+    if(!first_data) {
+      first_data = true;
+
+      this->chart->RecalculateBounds();
     }
   }
+
 
   this->view->GetRenderWindow()->Render();
 }

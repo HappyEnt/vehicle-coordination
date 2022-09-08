@@ -1,0 +1,5 @@
+get_filename_component(CONTROLLERS_PATH ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
+add_subdirectory(anchor_controller)
+add_subdirectory(crazyflie_controller)
+add_subdirectory(kiel_controller)

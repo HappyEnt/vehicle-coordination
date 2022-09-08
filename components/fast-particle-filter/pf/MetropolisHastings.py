@@ -16,7 +16,7 @@ class MetropolisHastings():
 
 class Distribution():
     dim: int
-    
+
     def illustrate(self):
         if self.dim > 2:
             raise NotImplementedError
@@ -36,8 +36,8 @@ class Distribution():
             z = np.array([self.evaluate(sample) for sample in samples])
 
             x, y = zip(*list(map(lambda samp: (samp.x[0], samp.x[1]), samples)))
-            
-            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})            
+
+            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
             ax.plot_trisurf(np.array(x), np.array(y), z, cmap=plt.cm.Spectral)
 
     def sample(self, num = 1):
@@ -60,33 +60,33 @@ class Gaussian(Distribution):
 
     def sample(self, num = 1):
         samples = multivariate_normal.rvs(size = num, mean=self.mean, cov=self.covariance)
-        
+
         if num == 1:
             return Sample(samples, 1)
-        
-        weight = 1.0 / num        
+
+        weight = 1.0 / num
         return list(map(lambda sample: Sample(sample, weight), samples))
-        
+
 
 class Uniform(Distribution):
     lower:  list[float]
     higher: list[float]
 
     def __init__(self, lower, higher):
-        self.dim = len(lower) 
+        self.dim = len(lower)
         if len(lower) != self.dim or len(higher) != self.dim:
             raise ValueError
 
         for d in range(self.dim):
             if lower[d] > higher[d]:
                 raise ValueError
-        
+
         self.lower = lower
         self.higher = higher
-    
+
     def sample(self, num = 1):
         samples = []
-        weight = 1.0 / num        
+        weight = 1.0 / num
         for n in range(num):
             x = []
             for d in range(self.dim):
@@ -97,7 +97,7 @@ class Uniform(Distribution):
             return Sample(samples[0], 1)
 
         return list(map(lambda sample: Sample(sample, weight), samples))
-    
+
     def evaluate(self, x):
         agg = 1
         for d in range(self.dim):
@@ -142,7 +142,7 @@ class PBFMessage(Distribution):
 
 class Belief(Distribution):
     ingoing_messages: list[PBFMessage]
-    
+
     def __init__(self, node_potential, ingoing_messages):
         self.dim = 2
         self.ingoing_messages = ingoing_messages
@@ -158,7 +158,7 @@ class Belief(Distribution):
     def sample(self, num = 1):
         samples = []
         uniform = Uniform([0], [1])
-        
+
         current_sample = Uniform([-1, -1], [1, 1]).sample(num = 1)
         for i in range(num):
             p1 = Gaussian(covariance = np.matrix("2, 0; 0, 2"), mean = np.array(current_sample.x))
@@ -169,7 +169,7 @@ class Belief(Distribution):
             alpha = uniform.sample(num = 1)
             if alpha.x < accept:
                 current_sample = next_sample
-                    
+
             samples.append(current_sample)
         return samples
 
@@ -186,13 +186,13 @@ def test_distributions():
     node1 = Node(pos = np.array([-1,0]), prior = Gaussian(covariance = np.matrix("0.01, 0; 0, 0.01"), mean = np.array([-1, 0])))
     node2 = Node(pos = np.array([1,0]), prior = Gaussian(covariance = np.matrix("0.01, 0; 0, 0.01"), mean = np.array([1, 0])))
     node3 = Node(pos = np.array([-0.5,-0.2]), prior = Uniform([-1, -1], [1, 1]))
-    
+
     noise = Gaussian(covariance = [0.02], mean=[0]).sample(num = 1)
-    
+
     z23 = np.abs(np.linalg.norm(node2.pos - node3.pos)) + noise.x
     z13 = np.abs(np.linalg.norm(node1.pos - node3.pos)) + noise.x
-    
-    
+
+
     # first iteration particle filter as described in nbp
     # eigentlich auch eine distribution aber das wird mir jetzt zu aktig zu definieren
     noise = Gaussian(covariance = [0.02], mean=[0])
@@ -200,32 +200,32 @@ def test_distributions():
         # likelihood = noise.evaluate(Sample(np.abs(np.sqrt(x.x[0]*x.x[0]  + x.x[1]*x.x[1])) - z23, 1.0))
         likelihood = noise.evaluate(Sample(np.abs(np.linalg.norm(x.x - y.x)) - z23, 1.0))
         return likelihood
-    
+
     def likelihood_probabilty13(x, y):
         # likelihood = noise.evaluate(Sample(np.abs(np.sqrt(x.x[0]*x.x[0]  + x.x[1]*x.x[1])) - z13, 1.0))
         likelihood = noise.evaluate(Sample(np.abs(np.linalg.norm(x.x - y.x)) - z13, 1.0))
         return likelihood
-    
+
     # initialBelief = Belief(distance, likelihood)
-    
+
     # node1.belief.illustrate()
     # node2.prior.illustrate()
     # samples = node.belief.sample(num = 10000)
-    
+
     outgoing_message_node_2 = PBFMessage(node2.prior.sample(num = 100), likelihood_probabilty23, node2.prior.evaluate, ingoing_messages = [])
     outgoing_message_node_1 = PBFMessage(node1.prior.sample(num = 100), likelihood_probabilty13, node1.prior.evaluate, ingoing_messages = [])
-    
+
     # outgoing_message_node_2.illustrate()
     # outgoing_message_node_1.illustrate()
-    
-    
+
+
     node3_marginalized = Belief(node_potential = node3.prior, ingoing_messages=[outgoing_message_node_2, outgoing_message_node_1])
-    
+
     node3_marginalized.illustrate()
-    
+
     # x, y = zip(*samples)
     # plt.scatter(x, y)
-    
+
     plt.show()
 
 test_distributions()

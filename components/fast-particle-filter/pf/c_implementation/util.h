@@ -10,6 +10,7 @@
 struct particle {
   double x_pos; // [x_pos] = m
   double y_pos; // [y_pos] = m
+  double orientation;
   double weight;
 };
 
@@ -26,6 +27,7 @@ struct normal_distribution {
 double distance1(double x, double y);
 double distance2(struct particle p1, struct particle p2);
 
+// should not be used anymore. Use gsl procedures instead
 void sample_particles_from_gaussian(struct particle mean , double std_dev, struct particle *ps, size_t amount);
 void sample_particles_from_unit_gaussian(struct particle *ps, size_t amount);
 
