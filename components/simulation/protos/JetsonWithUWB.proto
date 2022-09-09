@@ -7,7 +7,7 @@ PROTO JetsonWithUWB [
   field SFVec3f translation 0 0 0 # Is `Transform.translation`.
   field SFRotation rotation 0 0 1 0 # Is `Transform.rotation`.
   field SFString name "JetBot" # Is `Solid.name`.
-  field SFString controller "<generic>"
+  field SFString controller "kiel_controller"
   field MFString   controllerArgs  ""    # Is `Robot.controllerArgs`.
   field SFString customData "" # Is `Robot.customData`.
   field SFFloat  signalStrengthNoise     0.1
@@ -28,6 +28,8 @@ PROTO JetsonWithUWB [
       }
       Receiver {
         signalStrengthNoise IS signalStrengthNoise
+      }
+      GPS {
       }
     ]
   }

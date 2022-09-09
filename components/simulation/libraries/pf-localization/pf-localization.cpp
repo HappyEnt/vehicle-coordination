@@ -52,10 +52,10 @@ double PFLocalization::Tick() {
 
   // See https://github.com/protocolbuffers/protobuf/issues/435 ????
   coordination::TickRequest *request = new(coordination::TickRequest);
-  request->set_id(0);
+  request->set_id(6);
   request->set_allocated_position(&position);
-  request->set_radius(0.1);
-  request->set_confidence(1);
+  request->set_radius(0.2);
+  request->set_confidence(0.0);
 
   // Container for the data we expect from the server.
   coordination::TickResponse reply;

@@ -37,7 +37,7 @@ grpc::Status MotorAdapter::SetSpeed(grpc::ServerContext *context, const SetSpeed
   BOOST_LOG_TRIVIAL(info) << "Setting motor speed to " << left_speed << " and " << right_speed;
 
   wb_robot_mutex_lock(robot_mutex);
-  wb_motor_set_velocity(left_motor, left_speed * MAX_WHEEL_SPEED);
+  wb_motor_set_velocity(left_motor, left_speed * MAX_WHEEL_SPEED * -1.0);
   wb_motor_set_velocity(right_motor, right_speed * MAX_WHEEL_SPEED);
   wb_robot_mutex_unlock(robot_mutex);
 
