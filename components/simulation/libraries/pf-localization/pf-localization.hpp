@@ -10,6 +10,9 @@
 #include <webots/receiver.h>
 #include <webots/robot.h>
 
+
+#include <visualization/data_logger.hpp>
+
 // using namespace interface;
 
 class PFLocalization final
@@ -20,9 +23,11 @@ public:
   virtual ~PFLocalization();
 
   void tick();
-  double Tick();
+  double Tick(coordination::Vec2 position_estimate);
 
 private:
+  struct particle_filter_instance *pf_inst;
+
   WbDeviceTag transmitter;
   WbDeviceTag receiver;
   std::unique_ptr<coordination::Coordination::Stub> server_stub_;
@@ -31,6 +36,11 @@ private:
   std::shared_ptr<grpc::Channel> channel_;
 
   double past_time;
+
+  void tick_particle_filter();
+
   // for development purposes
   WbDeviceTag gps;
+  // unique pointer to DataLogger
+  std::unique_ptr<DataLogger> logger;
 };

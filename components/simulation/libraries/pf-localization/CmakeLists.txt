@@ -25,6 +25,7 @@ target_link_libraries(${CURRENT_LIBRARY_DIR}
         gRPC::grpc++
         gRPC::grpc++_reflection
         ${Boost_LIBRARIES}
+        logger
       )
 
 target_include_directories(${CURRENT_LIBRARY_DIR} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
@@ -32,4 +33,3 @@ target_include_directories(${CURRENT_LIBRARY_DIR} PUBLIC ${CMAKE_CURRENT_BINARY_
 get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
 protobuf_generate(TARGET ${CURRENT_LIBRARY_DIR} LANGUAGE cpp)
 protobuf_generate(TARGET ${CURRENT_LIBRARY_DIR} LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}")
-

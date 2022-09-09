@@ -19,6 +19,7 @@
  */
 
 #include "webots/gps.h"
+#include <cstdio>
 #include <webots/motor.h>
 #include <webots/robot.h>
 #include <motor-adapter/motor-adapter.hpp>
@@ -41,8 +42,8 @@ int main(int argc, char **argv) {
   wb_motor_set_position(left_motor, INFINITY);
   wb_motor_set_position(right_motor, INFINITY);
 
-  wb_motor_set_velocity(left_motor, 0.0);
-  wb_motor_set_velocity(right_motor, 0.0);
+  wb_motor_set_velocity(left_motor, 0.2);
+  wb_motor_set_velocity(right_motor, 0.2);
 
   int timestep = wb_robot_get_basic_time_step();
 
@@ -50,25 +51,28 @@ int main(int argc, char **argv) {
   WbDeviceTag gps = wb_robot_get_device("gps");
   wb_gps_enable(gps, timestep);
 
+  WbDeviceTag emitter = wb_robot_get_device("emitter");
+  wb_emitter_set_channel(emitter, 1);
+
+  WbDeviceTag receiver = wb_robot_get_device("receiver");
+  wb_receiver_enable(receiver, timestep);
+  wb_receiver_set_channel(receiver, 1);
+
   MotorAdapter motor_adapter(left_motor, right_motor, robot_mutex);
   motor_adapter.run();
 
-  PFLocalization loc(gps);
+  // PFLocalization loc(gps);
+  PFLocalization loc(receiver, emitter);
+
+  // Create new process for /opt/coordination with popen
+  FILE *coordination = popen("/Users/christian/Projects/vehicle-coordination/components/coordination/target/debug/picar-coordination", "r");
 
   /* main loop */
   while (wb_robot_step(timestep) != -1) {
-    // step_forward();
-    // wb_robot_step(960);
-    // printf("stepping\n");
     loc.tick();
-    // motor_adapter.tick();
-    // step_backward();
-    // wb_robot_step(960);
-    // step_left();
-    // wb_robot_step(960);
-    // step_right();
-    // wb_robot_step(960);
   };
+
+  pclose(coordination);
 
   /* This is necessary to cleanup webots resources */
   wb_robot_cleanup();

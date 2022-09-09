@@ -63,10 +63,15 @@ void ParticleScatterPlot::register_new_node(std::string NodeName) {
   //initialize rand
   srand(time(NULL));
 
+  // generate random color which is not too bright
   points->SetColor(
-      static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 255,
-      static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 255,
-      static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 255, 32);
+      static_cast<double>(127 + rand()) / static_cast<double>(RAND_MAX) * 128,
+      static_cast<double>(127 + rand()) / static_cast<double>(RAND_MAX) * 128,
+      static_cast<double>(127 + rand()) / static_cast<double>(RAND_MAX) * 128, 32);
+
+
+
+
   points->SetWidth(1.0);
   dynamic_cast<vtkPlotPoints*>(points)->SetMarkerStyle(vtkPlotPoints::DIAMOND);
   // set x-range of plot points
