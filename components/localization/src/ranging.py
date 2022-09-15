@@ -106,7 +106,8 @@ class SerialRangingNode(RangingNode):
 
     def run(self):
         while True:
-            if line := self.serial_connection.readline():
+            line = self.serial_connection.readline()
+            if line:
                 message = parse_json_message(str(line)[2:-3])
                 if message:
                     self.handle_message(message)

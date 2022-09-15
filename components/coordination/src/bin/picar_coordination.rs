@@ -6,11 +6,12 @@ use coordination::{
         TickRequest, TickResponse, Vec2,
     },
     orca_car::OrcaCar,
+    util::parse_cmd_arg,
 };
-use log::{debug, error};
+use log::{debug, error, warn};
 use orca_rs::ndarray::arr1;
 use orca_rs::participant::Participant;
-use std::{collections::HashMap, error::Error};
+use std::{collections::HashMap, env, error::Error};
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Response, Status};
 
@@ -20,12 +21,11 @@ struct CoordinationService {
     target: Mutex<TargetWrapper>,
 }
 
-const TARGETS: [[f64; 2]; 2] = [
-    [1.4, 1.4],
-    [0.2, 0.2],
-    // [0.2, 1.4],
-    // [1.4, 0.2]
-];
+type Coord = [f64; 2];
+
+static DEFAULT_PORT: &str = "50052";
+
+const TARGETS: [Coord; 4] = [[1.4, 1.4], [0.2, 0.2], [0.2, 1.4], [1.4, 0.2]];
 
 #[derive(Clone, Copy)]
 enum Target {
@@ -39,6 +39,7 @@ struct TargetWrapper {
     target: Target,
 }
 
+/// Wrapper around dynamic target selection
 impl TargetWrapper {
     pub fn new() -> Self {
         TargetWrapper {
@@ -49,7 +50,7 @@ impl TargetWrapper {
     pub fn next(&mut self) {
         self.target = match self.target {
             Target::First => Target::Second,
-            Target::Second => Target::First,
+            Target::Second => Target::Third,
             Target::Third => Target::Fourth,
             Target::Fourth => Target::First,
         }
@@ -144,7 +145,16 @@ impl CoordinationService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
-    let addr = "0.0.0.0:50052".parse()?;
+    let args: Vec<String> = env::args().collect();
+    let port: u16 = parse_cmd_arg(&match args.get(1) {
+        Some(port) => port.to_owned(),
+        None => {
+            warn!("No port provided! Falling back to :{}", DEFAULT_PORT);
+            DEFAULT_PORT.to_owned()
+        }
+    });
+
+    let addr = format!("0.0.0.0:{}", port).parse()?;
 
     let car = OrcaCar::new(None, None).await?;
 

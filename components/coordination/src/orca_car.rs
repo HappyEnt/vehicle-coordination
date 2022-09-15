@@ -12,11 +12,11 @@ use tokio::time::timeout;
 
 use crate::{
     math::{dist, signed_angle_between},
-    picar::Picar,
     wheels::Wheels,
 };
 
-type NewVelAdjustment = (Array1<f64>, Array1<f64>);
+type NewVelAdjustment = (Option<Array1<f64>>, Option<Array1<f64>>);
+
 /// The speed for the wheels to drive.
 const DRIVE_SPEED: f64 = 0.2;
 
@@ -31,10 +31,9 @@ const DISTANCE_THRESHOLD: f64 = 0.2;
 pub struct OrcaCar {
     position: Option<Array1<f64>>,
     target: Option<Array1<f64>>,
-    old_velocity: Array1<f64>,
-    velocity: Array1<f64>,
+    old_velocity: Option<Array1<f64>>,
+    velocity: Option<Array1<f64>>,
     channel: (Sender<NewVelAdjustment>, Receiver<NewVelAdjustment>),
-    picar: Picar,
     _after_update: bool,
 }
 
@@ -49,10 +48,9 @@ impl OrcaCar {
         let instance = Self {
             position,
             target,
-            old_velocity: arr1(&[0.0, 0.0]),
-            velocity: arr1(&[0.0, 0.0]),
+            old_velocity: None,
+            velocity: None,
             channel: async_channel::unbounded::<NewVelAdjustment>(),
-            picar: Picar::new().await,
             _after_update: false,
         };
 
@@ -71,7 +69,17 @@ impl OrcaCar {
                     Ok(res) => {
                         debug!("Received {:?}", res);
                         match res {
-                            Ok((old_vel, new_vel)) => {
+                            Ok((None, _)) => {
+                                if let Err(e) = wheels.set_speed(DRIVE_SPEED, DRIVE_SPEED).await {
+                                    error!("Error setting speed of wheels: {}", e);
+                                }
+                            }
+                            Ok((_, None)) => {
+                                if let Err(e) = wheels.set_speed(0.0, 0.0).await {
+                                    error!("Error setting speed of wheels: {}", e);
+                                }
+                            }
+                            Ok((Some(old_vel), Some(new_vel))) => {
                                 // check, if we have to turn right or left
                                 let angle = signed_angle_between(&old_vel, &new_vel);
                                 let diff = angle.abs() as f64 / PI;
@@ -123,11 +131,13 @@ impl OrcaCar {
         }
         self.old_velocity = self.velocity.clone();
         debug!("self.old_velocity = {:?}", self.old_velocity);
-        self.velocity = &position
-            - match self.position.clone() {
-                None => arr1(&[0.0, 0.0]),
-                Some(pos) => pos,
-            };
+        self.velocity = Some(
+            &position
+                - match self.position.clone() {
+                    None => arr1(&[0.0, 0.0]),
+                    Some(pos) => pos,
+                },
+        );
         debug!("self.velocity = {:?}", self.velocity);
         self.position = Some(position);
         debug!("self.position = {:?}", self.position);
@@ -167,34 +177,31 @@ impl OrcaCar {
             "OrcaCar::orca_tick({:?}, {}, {})",
             others, radius, confidence
         );
+        let (sender, _) = self.channel.clone();
 
+        let old_velocity = self.velocity.clone();
         // TODO: Do we actually have them all the time?
+        // stop car if we are near enough to our target
         if dist(
             &self.position.clone().unwrap(),
             &self.target.clone().unwrap(),
         ) < DISTANCE_THRESHOLD
         {
-            self.picar.stop().await?;
+            sender.send((old_velocity, None)).await?;
             return Ok((None, true));
         }
 
-        let old_velocity = self.velocity.clone();
         let mut new_vel = arr1(&[0.0, 0.0]);
 
-        if let Some(position) = self.position.clone() {
-            if let Some(target) = self.target.clone() {
-                let mut we =
-                    Participant::new(position.clone(), self.velocity.clone(), radius, confidence)
-                        .with_inner_state(0.2, target);
-                we.update_position(&position);
-                new_vel = we.orca(&mut others, &[], 10.0);
-            }
+        if let (Some(position), Some(target)) = (self.position.clone(), self.target.clone()) {
+            let mut we = Participant::new(position.clone(), arr1(&[0.0, 0.0]), radius, confidence)
+                .with_inner_state(0.2, target);
+            we.update_position(&position);
+            new_vel = we.orca(&mut others, &[], 10.0);
         }
 
-        let (sender, _) = self.channel.clone();
-
-        debug!("Sending ({}, {})", old_velocity, new_vel);
-        sender.send((old_velocity, new_vel.clone())).await?;
+        debug!("Sending ({:?}, {})", old_velocity, new_vel);
+        sender.send((old_velocity, Some(new_vel.clone()))).await?;
         Ok((Some(new_vel), false))
     }
 }
