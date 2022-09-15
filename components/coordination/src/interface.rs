@@ -1,3 +1,4 @@
+//! Generated gRPC structs and types to communicate with the localization.
 use orca_rs::ndarray::{arr1, Array1};
 
 tonic::include_proto!("coordination");

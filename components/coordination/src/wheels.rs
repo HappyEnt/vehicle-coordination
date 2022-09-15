@@ -1,3 +1,5 @@
+//! An abstraction around the connection to the wheel daemon.
+
 use log::{debug, error};
 use std::error::Error;
 use tonic::transport::Channel;
