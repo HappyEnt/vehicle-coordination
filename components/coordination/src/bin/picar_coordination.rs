@@ -142,6 +142,9 @@ impl CoordinationService {
     }
 }
 
+#[cfg(all(feature = "pi", feature = "simulation"))]
+compile_error!("feature \"pi\" and feature \"simulation\" cannot be enabled at the same time");
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
@@ -156,7 +159,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let addr = format!("0.0.0.0:{}", port).parse()?;
 
-    let car = OrcaCar::new(None, None).await?;
+    let car = OrcaCar::new(None, None, port - 1).await?;
 
     let coordination_service = CoordinationService {
         car: Mutex::new(car),

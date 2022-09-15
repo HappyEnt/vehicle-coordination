@@ -37,6 +37,7 @@ tonic-build = "0.7"
 default = []
 pi = []
 native = []
+simulation = []
 
 [profile.release]
 strip = true    # Automatically strip symbols from the binary.
