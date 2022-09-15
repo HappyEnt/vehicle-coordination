@@ -42,6 +42,7 @@ impl OrcaCar {
     pub async fn new(
         position: Option<Array1<f64>>,
         target: Option<Array1<f64>>,
+        port: u16,
     ) -> Result<Self, Box<dyn Error>> {
         debug!("OrcaCar::new({:?}, {:?})", position, target);
         debug!("Successfully created OrcaCar!");
@@ -56,12 +57,13 @@ impl OrcaCar {
 
         let (_, receiver) = instance.channel.clone();
         tokio::spawn(async move {
-            #[cfg(not(feature = "pi"))]
-            let mut wheels = Wheels::from_address("http://192.168.1.101:50051")
-                .await
-                .unwrap();
-            #[cfg(feature = "pi")]
-            let mut wheels = Wheels::new().await.unwrap();
+            #[cfg(not(any(feature = "pi", feature = "simulation")))]
+            let mut wheels =
+                Wheels::from_address(format!("http://192.168.1.101:{}", port).as_str())
+                    .await
+                    .unwrap();
+            #[cfg(any(feature = "pi", feature = "simulation"))]
+            let mut wheels = Wheels::new(port).await.unwrap();
             loop {
                 // try to fetch new direction
                 debug!("Trying to receive from sender...");

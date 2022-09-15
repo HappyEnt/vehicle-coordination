@@ -19,9 +19,9 @@ pub struct Wheels {
 
 impl Wheels {
     /// Create a new instance and connect to localhost daemon
-    pub async fn new() -> Result<Self, Box<dyn Error>> {
-        debug!("Wheels::new()");
-        Self::from_address("http://0.0.0.0:50051").await
+    pub async fn new(port: u16) -> Result<Self, Box<dyn Error>> {
+        debug!("Wheels::new({})", port);
+        Self::from_address(format!("http://0.0.0.0:{}", port).as_str()).await
     }
 
     /// Create a new instance and connecto to daemon at given address.
