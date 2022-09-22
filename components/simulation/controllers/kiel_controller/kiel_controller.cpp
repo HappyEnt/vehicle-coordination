@@ -58,21 +58,39 @@ int main(int argc, char **argv) {
   wb_receiver_enable(receiver, timestep);
   wb_receiver_set_channel(receiver, 1);
 
-  MotorAdapter motor_adapter(left_motor, right_motor, robot_mutex);
+  // read integer from argv[1]
+  unsigned int port = atoi(argv[1]);
+
+  printf("Starting motor adapter on port %d\n", port-1);
+
+  MotorAdapter motor_adapter(left_motor, right_motor, robot_mutex, port-1);
   motor_adapter.run();
 
   // PFLocalization loc(gps);
-  PFLocalization loc(receiver, emitter);
+  PFLocalization loc(gps, receiver, emitter, port);
 
-  // Create new process for /opt/coordination with popen
-  FILE *coordination = popen("/Users/christian/Projects/vehicle-coordination/components/coordination/target/debug/picar-coordination", "r");
+  printf("Starting localization on port %d\n", port);
+
+  // create string
+  std::string command = std::string("/Users/christian/Projects/vehicle-coordination/components/coordination/target/debug/picar-coordination ") + std::to_string(port);
+
+  // set environment variable RUST_LOG to DEBUG
+  setenv("RUST_LOG", "ERROR", 1);
+  FILE *coordination = popen(command.c_str(), "r");
+
+  printf("Starting coordination process\n");
 
   /* main loop */
   while (wb_robot_step(timestep) != -1) {
     loc.tick();
   };
 
+  // kill process picar-coordination that we started before
   pclose(coordination);
+
+  // just to be safe ...
+  system("killall picar-coordination");
+
 
   /* This is necessary to cleanup webots resources */
   wb_robot_cleanup();

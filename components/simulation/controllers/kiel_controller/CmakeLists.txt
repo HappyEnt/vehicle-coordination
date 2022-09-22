@@ -21,7 +21,7 @@ include_directories("../../../fast-particle-filter/pf/c_implementation")
 
 # Setup the target executable.
 add_executable(${CURRENT_CONTROLLER_DIR} kiel_controller.cpp)
-target_link_libraries(${CURRENT_CONTROLLER_DIR} ${LIBRARIES} BeliefPropagation GSL::gsl Boost::boost motor-adapter pf-localization)
+target_link_libraries(${CURRENT_CONTROLLER_DIR} ${LIBRARIES} BeliefPropagation GSL::gsl Boost::boost motor-adapter pf-localization -lprofiler)
 
 
 # Copy the target executable at the right location.

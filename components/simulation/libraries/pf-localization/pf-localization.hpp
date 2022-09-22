@@ -18,12 +18,12 @@
 class PFLocalization final
 {
 public:
-  PFLocalization(const WbDeviceTag receiver, const WbDeviceTag transmitter);
-  PFLocalization(const WbDeviceTag gps);
+  PFLocalization(const WbDeviceTag gps, const WbDeviceTag receiver, const WbDeviceTag transmitter, unsigned int port);
+  PFLocalization(const WbDeviceTag gps, unsigned int port);
   virtual ~PFLocalization();
 
   void tick();
-  double Tick(coordination::Vec2 position_estimate);
+  double Tick(coordination::Vec2 position_estimate, std::unordered_map<std::string, coordination::Vec2*>);
 
 private:
   struct particle_filter_instance *pf_inst;

@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
       while(queue_length > 0) {
         const char *data = (char *) wb_receiver_get_data(receiver);
         int data_len = wb_receiver_get_data_size(receiver);
-        int particles = data_len / sizeof(struct particle);
+        size_t particles = data_len - 200 / sizeof(struct particle);
         double rssi = wb_receiver_get_signal_strength(receiver);
 
         // This can really happen ..... might be a bug in webots
@@ -234,7 +234,7 @@ int main(int argc, char **argv) {
         struct particle *foreign_particles = (struct particle *) malloc(sizeof(struct particle) * particles);
         double measurement = sqrt((double)1.0 / rssi);
 
-        memcpy(foreign_particles, data, sizeof(struct particle) * particles);
+        memcpy(foreign_particles, data + 200, sizeof(struct particle) * particles);
 
         struct message m = {
           .measured_distance = measurement,
@@ -279,7 +279,6 @@ int main(int argc, char **argv) {
             printf("prediction with %f\n", dist);
             predict_dist(pf_inst, dist);
             /* instead of predicting next distance reset; */
-
 
             /* dx_since_last = 0; */
             /* dy_since_last = 0; */

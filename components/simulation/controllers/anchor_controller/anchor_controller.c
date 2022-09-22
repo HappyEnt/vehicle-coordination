@@ -63,7 +63,10 @@ int main(int argc, char **argv) {
 
     // send position every 100 milliseconds
     if(dt > 0.025 && wb_robot_get_time() > 5) {
-      char data[sizeof(struct particle)];
+      size_t data_size = 200 + sizeof(struct particle);
+      char data[data_size];
+
+      strcpy(data, wb_robot_get_name());
 
       double x_global = wb_gps_get_values(gps)[0];
       double y_global = wb_gps_get_values(gps)[1];
@@ -75,9 +78,9 @@ int main(int argc, char **argv) {
         .weight = 1.0
       };
 
-      memcpy(data, &p, sizeof(struct particle));
+      memcpy(data+200, &p, sizeof(struct particle));
 
-      wb_emitter_send(emitter, data, sizeof(struct particle));
+      wb_emitter_send(emitter, data, data_size);
       past_time = wb_robot_get_time();
     }
   };

@@ -14,7 +14,7 @@ extern "C" {
 
 #define MQ_MAX_STRING_SIZE 300
 #define MAX_PARTICLES 5000
-#define PARTICLES 2000
+#define PARTICLES 500
 
 
 void ParticleScatterPlot::register_queues() {

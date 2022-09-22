@@ -48,6 +48,7 @@ void set_receiver_std_dev(struct particle_filter_instance *pf_inst, double std_d
 void set_particle_array(struct particle_filter_instance *pf_inst, struct particle *particles, size_t length);
 void set_particle_amount(struct particle_filter_instance *pf_inst, size_t amount);
 struct particle estimate_position(struct particle_filter_instance *pf_inst);
+struct particle empirical_mean(struct particle *particles, size_t components);
 
 int get_particle_array(struct particle_filter_instance *pf_inst, struct particle **particles);
 
