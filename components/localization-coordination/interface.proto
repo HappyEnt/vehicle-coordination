@@ -4,7 +4,10 @@ package coordination;
 
 service Coordination {
   rpc Tick (TickRequest) returns (TickResponse);
+  rpc SetTarget (Vec2) returns (Empty);
 }
+
+message Empty {}
 
 message Vec2 {
   float x = 1;
@@ -20,11 +23,18 @@ message TickRequest {
     float confidence = 4;
   }
 
+  message Obstacle {
+    Vec2 start = 1;
+    Vec2 end = 2;
+    float radius = 3;
+  }
+
   int32 id = 1;
   Vec2 position = 2;
   float radius = 3;
   float confidence = 4;
   repeated Participant others = 5;
+  repeated Obstacle obstacles = 6;
 }
 
 message TickResponse {

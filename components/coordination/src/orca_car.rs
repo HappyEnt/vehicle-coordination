@@ -6,12 +6,13 @@ use async_channel::{Receiver, Sender};
 use log::{debug, error, warn};
 use orca_rs::{
     ndarray::{arr1, Array1},
+    obstacle::Obstacle,
     participant::Participant,
 };
 use tokio::time::timeout;
 
 use crate::{
-    math::{dist, signed_angle_between},
+    math::{dist, norm, signed_angle_between},
     wheels::Wheels,
 };
 
@@ -19,6 +20,8 @@ type NewVelAdjustment = (Option<Array1<f64>>, Option<Array1<f64>>);
 
 /// The speed for the wheels to drive.
 const DRIVE_SPEED: f64 = 0.2;
+
+const MAX_SPEED: f64 = 0.2;
 
 /// Timeout after which the car stops driving.
 const TIMEOUT: u64 = 2000;
@@ -82,13 +85,16 @@ impl OrcaCar {
                                 }
                             }
                             Ok((Some(old_vel), Some(new_vel))) => {
+                                // let velocity_scalar = norm(&new_vel) / MAX_SPEED;
+                                let velocity_scalar = 1.0;
                                 // check, if we have to turn right or left
                                 let angle = signed_angle_between(&old_vel, &new_vel);
                                 let diff = angle.abs() as f64 / PI;
+                                // TODO: Maybe to sth like x^2 or x^3
                                 let factor = 2.0 * diff + 1.0;
 
-                                let mut right_factor = DRIVE_SPEED;
-                                let mut left_factor = DRIVE_SPEED;
+                                let mut right_factor = DRIVE_SPEED * velocity_scalar;
+                                let mut left_factor = DRIVE_SPEED * velocity_scalar;
 
                                 if diff.is_normal() {
                                     if angle.is_sign_positive() {
@@ -148,6 +154,10 @@ impl OrcaCar {
         self._after_update = true;
     }
 
+    pub fn set_target(&mut self, target: Array1<f64>) {
+        self.target = Some(target);
+    }
+
     /// Perform an actual tick of this car.
     /// This is either a calibration tick or an actual tick of the ORCA algorithm depending on the
     /// calibration stage of this car.
@@ -158,6 +168,7 @@ impl OrcaCar {
     pub async fn tick(
         &mut self,
         others: Vec<Participant>,
+        obstacles: Vec<Obstacle>,
         radius: f64,
         confidence: f64,
     ) -> Result<(Option<Array1<f64>>, bool), Box<dyn Error>> {
@@ -166,12 +177,13 @@ impl OrcaCar {
             warn!("Calling OrcaCar::tick() without calling OrcaCar::update() before!");
         }
         self._after_update = false;
-        self.orca_tick(others, radius, confidence).await
+        self.orca_tick(others, obstacles, radius, confidence).await
     }
 
     async fn orca_tick(
         &mut self,
         mut others: Vec<Participant>,
+        obstacles: Vec<Obstacle>,
         radius: f64,
         confidence: f64,
     ) -> Result<(Option<Array1<f64>>, bool), Box<dyn Error>> {
@@ -197,9 +209,9 @@ impl OrcaCar {
 
         if let (Some(position), Some(target)) = (self.position.clone(), self.target.clone()) {
             let mut we = Participant::new(position.clone(), arr1(&[0.0, 0.0]), radius, confidence)
-                .with_inner_state(0.2, target);
+                .with_inner_state(MAX_SPEED, target);
             we.update_position(&position);
-            new_vel = we.orca(&mut others, &[], 10.0);
+            new_vel = we.orca(&mut others, &obstacles, 20.0);
         }
 
         debug!("Sending ({:?}, {})", old_velocity, new_vel);

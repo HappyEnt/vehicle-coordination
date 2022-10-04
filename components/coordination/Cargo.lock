@@ -699,9 +699,9 @@ checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
 
 [[package]]
 name = "orca-rs"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a17f7d45d3738b1729b72e747de6154c3875ef1d3114cf0e9138e3e652d62fe"
+checksum = "308d4f7a664695235a401bef88ca9c18144847354e33665d5f63dd28827376d0"
 dependencies = [
  "log",
  "ndarray",

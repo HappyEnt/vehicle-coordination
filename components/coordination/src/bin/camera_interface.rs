@@ -145,6 +145,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         radius: p.radius as f32,
                     })
                     .collect(),
+                obstacles: vec![],
             };
 
             client.tick(tick_request).await?;
