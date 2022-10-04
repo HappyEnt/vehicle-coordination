@@ -57,9 +57,9 @@ PFLocalization::PFLocalization(const WbDeviceTag gps, const WbDeviceTag receiver
 
   pf_parallel_set_target_threads(8);
 
-  set_receiver_std_dev(pf_inst, 0.4);
+  set_receiver_std_dev(pf_inst, 0.3);
 
-  logger = std::make_unique<DataLogger>(DataLogger(wb_robot_get_name(), PARTICLES));
+  logger = std::unique_ptr<DataLogger>(new DataLogger(wb_robot_get_name(), PARTICLES));
   logger->register_node_with_vis();
 }
 
@@ -128,18 +128,36 @@ void PFLocalization::tick_particle_filter() {
         coordination::Vec2 position_estimate;
         position_estimate.set_x(mean.x_pos);
         position_estimate.set_y(mean.y_pos);
+
+        // write error statistics
+        struct particle p;
+        p.x_pos = wb_gps_get_values(gps)[0];
+        p.y_pos = wb_gps_get_values(gps)[1];
+
+        logger->write_error_to_csv(mean, p);
+
         Tick(position_estimate, foreign_estimate);
       }
 
+#ifdef USE_GROUND_TRUTH
+      struct particle p;
+      p.x_pos = wb_gps_get_values(gps)[0];
+      p.y_pos = wb_gps_get_values(gps)[1];
+      p.weight = 1.0;
+      char data[sizeof(struct particle)+200];
+      strcpy(data, wb_robot_get_name());
+      memcpy(data+200, &p, sizeof(struct particle));
+      wb_emitter_send(transmitter, (char*) data, sizeof(data));
+#else
       struct particle *particles;
       int amount = get_particle_array(pf_inst, &particles);
       char data[sizeof(particle)*amount+200];
       strcpy(data, wb_robot_get_name());
       memcpy(data+200, particles, sizeof(particle)*amount);
-
       wb_emitter_send(transmitter, (char*) data, sizeof(data));
+#endif
 
-      // logger->write_particles(particles, amount);
+      logger->write_particles(particles, amount);
     }
   }
 }
@@ -153,22 +171,22 @@ void PFLocalization::tick() {
 }
 
 double PFLocalization::Tick(coordination::Vec2 position_estimate, std::unordered_map<std::string, coordination::Vec2*> other_positions) {
-  coordination::Vec2 ground_truth_position;
-
-  ground_truth_position.set_x(wb_gps_get_values(gps)[0]);
-  ground_truth_position.set_y(wb_gps_get_values(gps)[1]);
-
   // See https://github.com/protocolbuffers/protobuf/issues/435 ????
   coordination::TickRequest *request = new(coordination::TickRequest);
   request->set_id(6);
 
 #ifdef USE_GROUND_TRUTH
+  coordination::Vec2 ground_truth_position;
+
+  ground_truth_position.set_x(wb_gps_get_values(gps)[0]);
+  ground_truth_position.set_y(wb_gps_get_values(gps)[1]);
+
   request->set_allocated_position(&ground_truth_position);
 #else
   request->set_allocated_position(&position_estimate);
 #endif
 
-  request->set_radius(0.2);
+  request->set_radius(0.25);
   request->set_confidence(0.0);
 
   // for every key,value pair in forein_positions do
@@ -183,7 +201,7 @@ double PFLocalization::Tick(coordination::Vec2 position_estimate, std::unordered
     // create std::unique_ptr from other_position
     coordination::TickRequest::Participant *participant = request->add_others();
     participant->set_id(id_counter++);
-    participant->set_radius(0.2);
+    participant->set_radius(0.25);
     participant->set_confidence(0.0);
     participant->set_allocated_position(val);
   }

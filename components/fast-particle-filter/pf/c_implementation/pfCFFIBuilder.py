@@ -44,6 +44,8 @@ struct particle_filter_instance;
 // _____Public Interface_____
 
 // Use create and destroy to create instance, do not free memory yourself.
+
+// Use create and destroy to create instance, do not free memory yourself.
 void create_particle_filter_instance(struct particle_filter_instance **pf_inst);
 void destroy_particle_filter_instance(struct particle_filter_instance *pf_inst);
 

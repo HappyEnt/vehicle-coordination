@@ -18,7 +18,7 @@ def particleFilter(request):
 @pytest.mark.parametrize("particle_list", [[(0,0), (1,1), (4,2)]])
 def test_set_get_particles(particle_list):
     pf = CParticleFilter(False)
-    
+
     pf.set_particles(particle_list)
 
     print(pf.get_particles())
@@ -30,7 +30,7 @@ def test_correction_step():
     # fp = ffi.new(struct particle[], foreign_particles)
     # m = ffi.new(struct measurement*, [0.1, fp])
     distance = 10
-    
+
 @pytest.mark.parametrize("mean", np.arange(-5, 5, 0.2))
 @pytest.mark.parametrize("std_dev", np.arange(0.1, 5, 0.1))
 @pytest.mark.parametrize("value", np.arange(-5, 5, 0.2))

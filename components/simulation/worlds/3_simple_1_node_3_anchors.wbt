@@ -1,0 +1,153 @@
+#VRML_SIM R2022b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "../protos/Anchor.proto"
+EXTERNPROTO "../protos/JetsonWithUWB.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
+
+WorldInfo {
+  basicTimeStep 8
+  contactProperties [
+    ContactProperties {
+      material1 "jetbot rear wheel"
+      coulombFriction [
+        0
+      ]
+    }
+  ]
+}
+Viewpoint {
+  orientation 0.27184000664144603 0.6706651182420946 -0.6901531061746341 1.2884369078909432
+  position -8.108628132630262 12.889077653670455 18.649756386370804
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  translation 0.69 0.64 -0.01
+  floorSize 8 8
+  floorAppearance Parquetry {
+  }
+}
+JetsonWithUWB {
+  translation 2.15 2.91 0.38
+  name "JetBot(3)"
+  controllerArgs [
+    "15025"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation -0.78 2.91 0.48
+  name "JetBot(5)"
+  controllerArgs [
+    "15030"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation -1.21 -0.95 0.28
+  name "JetBot(1)"
+  controllerArgs [
+    "15020"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 2.45 -0.95 0.18
+  name "JetBot(4)"
+  controllerArgs [
+    "15010"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation -1.39 1.49 0.07
+  name "JetBot(2)"
+  controllerArgs [
+    "1506"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 0.06 1.49 0.27
+  name "JetBot(7)"
+  controllerArgs [
+    "1408"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 1.27 1.49 0.47
+  name "JetBot(9)"
+  controllerArgs [
+    "1402"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 0.59 1.49 0.57
+  name "JetBot(6)"
+  controllerArgs [
+    "1300"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 0.69 0.86 0.67
+  name "JetBot(12)"
+  controllerArgs [
+    "1200"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation -0.41 0.86 0.77
+  name "JetBot(13)"
+  controllerArgs [
+    "1204"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 0.69 0.32 0.41
+  name "JetBot(8)"
+  controllerArgs [
+    "1304"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 0.79 2.08 0.51
+  name "JetBot(11)"
+  controllerArgs [
+    "1306"
+  ]
+  range 2
+}
+JetsonWithUWB {
+  translation 2.01 1.49 0.57
+  name "JetBot(10)"
+  controllerArgs [
+    "1400"
+  ]
+  range 2
+}
+Anchor {
+  translation -3.08 4.43 0.0600159
+  rotation 1 0 0 1.5708
+  name "robot(1)"
+}
+Anchor {
+  translation -3.12 -3.21 0.0499904
+  rotation 1 0 0 1.5708
+  name "robot(3)"
+}
+Anchor {
+  translation 4.53 4.44 0.0500153
+  rotation 1 0 0 1.5708
+  name "robot(2)"
+}

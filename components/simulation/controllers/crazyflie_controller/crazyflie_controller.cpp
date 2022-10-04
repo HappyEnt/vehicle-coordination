@@ -72,7 +72,6 @@ void clean_init_filter(struct particle_filter_instance **pf_inst) {
   struct particle *own_particles = (struct particle *) malloc(sizeof(struct particle) * PARTICLES);
   sample_from_2d_uniform(own_particles, PARTICLES, -40, 40, -40, 40);
 
-  /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
   set_particle_amount(*pf_inst, PARTICLES);
 
   set_filter_type(*pf_inst, POST_REGULARIZATION);

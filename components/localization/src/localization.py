@@ -652,7 +652,7 @@ class FastParticleFilter(BaseParticleNode):
         self.cparticle = CParticleFilter( False )
         self.cparticle.set_particle_amount(3000)
         self.cparticle.set_filter_type(1)
-        self.cparticle.set_receiver_std_dev(0.8)
+        self.cparticle.set_receiver_std_dev(0.4)
 
         self.f = open("debug.txt", "a")
 
@@ -674,7 +674,6 @@ class FastParticleFilter(BaseParticleNode):
             particles = [ p + [1.0/len(parti)] for p in parti ]
 
             # error_model_distance = np.random.normal(dis, MEASUREMENT_STDEV)
-
             self.cparticle.add_message(TWR_Measurement(particles, dis))
 
         self.cparticle.iterate();

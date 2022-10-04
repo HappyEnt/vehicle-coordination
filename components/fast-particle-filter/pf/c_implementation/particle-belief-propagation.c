@@ -21,7 +21,7 @@
 #endif
 
 #define USE_CACHE 0
-#define ESTIMATE_ORIENTATION 1
+/* #define ESTIMATE_ORIENTATION 1 */
 #define DIM 2
 
 // structure definitions
@@ -225,7 +225,6 @@ void resample_local_particles_with_replacement (struct particle_filter_instance 
   pf->local_particles_length = target_length;
 }
 
-
 // calculates new particle set for belief
 void correct(struct particle_filter_instance *pf, double lambda) {
   size_t samples = pf->local_particles_length;
@@ -341,8 +340,6 @@ void regularized_reject_correct(struct particle_filter_instance *pf, double lamb
   double variance = max_empirical_variance(old_particles, components);
   double h_opt = opt_unit_gaussian_bandwidth(components, DIM);
 
-  log_info("standard dev: %f", sqrt(variance));
-
 #pragma omp parallel shared(new_particles)
   {
 #pragma omp for
@@ -393,8 +390,6 @@ void regularized_reject_correct_alternative(struct particle_filter_instance *pf,
   own_belief_m.h_opt = h_opt;
   own_belief_m.variance = variance;
   own_belief_m.type = DENSITY_ESTIMATION;
-
-  log_info("standard dev: %f", sqrt(variance));
 
 #pragma omp parallel shared(new_particles)
   {
@@ -1174,8 +1169,7 @@ void iterate(struct particle_filter_instance *pf_inst) {
       pf_inst->has_prior = true;
     }
 
-
-    log_info("processing %zu messages", message_stack_len(pf_inst->mstack));
+    size_t messages_to_be_processed = message_stack_len(pf_inst->mstack);
 
     double start_time = omp_get_wtime();
 
@@ -1219,8 +1213,7 @@ void iterate(struct particle_filter_instance *pf_inst) {
 
     double time_diff = omp_get_wtime() - start_time;
     pf_inst->last_iteration_wall_duration = time_diff;
-
-    log_info("processing took %f seconds", time_diff);
+    log_info("processing of %zu messages took %f seconds", messages_to_be_processed, time_diff);
   }
 }
 

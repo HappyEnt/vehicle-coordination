@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   std::string command = std::string("/Users/christian/Projects/vehicle-coordination/components/coordination/target/debug/picar-coordination ") + std::to_string(port);
 
   // set environment variable RUST_LOG to DEBUG
-  setenv("RUST_LOG", "ERROR", 1);
+  // setenv("RUST_LOG", "DEBUG", 1);
   FILE *coordination = popen(command.c_str(), "r");
 
   printf("Starting coordination process\n");

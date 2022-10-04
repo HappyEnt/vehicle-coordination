@@ -1,0 +1,64 @@
+#VRML_SIM R2022b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "../protos/Anchor.proto"
+EXTERNPROTO "../protos/UWBCrazyflie.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation 0.05350257704462492 -0.9725130007597556 0.2266184846892233 5.542660697388705
+  position -46.36798639338281 17.22251070378858 34.13569886741231
+  follow "Crazyflie(1)"
+  followType "Pan and Tilt Shot"
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Anchor {
+  translation -0.310006 -9.53 0.499978
+  rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
+  name "robot(1)"
+}
+UWBCrazyflie {
+  translation -0.55 3.72 0.455
+  rotation 0 1 0 0
+  name "Crazyflie(1)"
+  controllerArgs [
+    "0.0"
+    "0.0"
+  ]
+  range 4
+}
+RectangleArena {
+  translation 0 0 0.02
+  floorSize 20 20
+  floorAppearance Parquetry {
+    type "light strip"
+    colorOverride 1 0.998276 0.965957
+    IBLStrength 3
+  }
+}
+UWBCrazyflie {
+  translation -0.3 -8.67 0.555
+  name "Crazyflie(2)"
+  controllerArgs [
+    "0.0"
+    "0.5"
+  ]
+  range 4
+}
+Anchor {
+  translation 3.50002 9.82 0.700057
+  rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
+  name "robot(3)"
+}
+Anchor {
+  translation -4.11998 9.87 0.600051
+  rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
+  name "robot(2)"
+}
