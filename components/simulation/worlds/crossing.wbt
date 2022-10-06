@@ -1,0 +1,148 @@
+#VRML_SIM R2022b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/Floor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/apartment_structure/protos/Wall.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Roughcast.proto"
+EXTERNPROTO "../protos/Anchor.proto"
+EXTERNPROTO "../protos/orcar.proto"
+
+WorldInfo {
+  basicTimeStep 8
+  contactProperties [
+    ContactProperties {
+      material1 "orcar rear wheel"
+      coulombFriction [
+        0
+      ]
+    }
+    ContactProperties {
+      material1 "jetbot rear wheel"
+      coulombFriction [
+        0
+      ]
+    }
+  ]
+}
+Viewpoint {
+  orientation 0.0953573908149026 -0.9294141561159921 0.3565056723646518 5.575714521655556
+  position -11.363144984215038 3.6029630676105224 9.076597437675725
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Floor {
+  size 8 8
+  appearance Parquetry {
+    type "light strip"
+  }
+}
+orcar {
+  translation 0 -0.2 0.13
+  rotation 1 0 0 -5.307179586466759e-06
+  name "robot(3)"
+  controller "kiel_controller"
+  controllerArgs [
+    "1300"
+  ]
+  chassis_color 0.472419 0.452094 0.470802
+}
+Anchor {
+  translation 3.78 -3.81 0.04
+  rotation 0 1 0 0
+  name "robot(1)"
+}
+Anchor {
+  translation -3.86 -3.81 0.02
+  rotation 0 1 0 0
+  name "robot(2)"
+}
+Anchor {
+  translation -3.84 3.87 0.03
+}
+Wall {
+  translation 0.83 2.51 0
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation 0.83 -2.51 0
+  name "wall(3)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation 2.38 -1.06 0
+  rotation 0 0 1 1.5708
+  name "wall(4)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation -2.44 -1.06 0
+  rotation 0 0 1 1.5708
+  name "wall(5)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation -2.44 1.06 0
+  rotation 0 0 1 1.5708
+  name "wall(6)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation 2.37 1.06 0
+  rotation 0 0 1 1.5708
+  name "wall(7)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation -0.91 2.51 0
+  name "wall(1)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
+Wall {
+  translation -0.91 -2.5 0
+  name "wall(2)"
+  size 0.1 3 0.1
+  appearance Roughcast {
+    textureTransform TextureTransform {
+      scale 2.8 1
+    }
+  }
+}
