@@ -396,7 +396,7 @@ void regularized_reject_correct_alternative(struct particle_filter_instance *pf,
 #pragma omp for
     for(size_t c = 0; c < components; c++) {
       while(true) {
-        size_t I =  gsl_rng_uniform(pf->r) * components;
+        size_t I = gsl_rng_uniform(pf->r) * components;
         double U = gsl_rng_uniform(pf->r);
         struct particle sample;
         sample_from_unit_gaussian(pf, &sample, 1);
@@ -406,10 +406,10 @@ void regularized_reject_correct_alternative(struct particle_filter_instance *pf,
         next_sample.y_pos = old_particles[I].y_pos + sample.y_pos * h_opt * sqrt(variance);
         next_sample.weight = 1.0 / components;
 
-        double proposal_prop = evaluate_message_at(own_belief_m, next_sample);
-        double accept = message_stack_prob(pf, pf->mstack, next_sample, lambda);
+        double g = evaluate_message_at(own_belief_m, next_sample);
+        double f = message_stack_prob(pf, pf->mstack, next_sample, lambda);
 
-        if(U < accept / (M * next_sample.weight)) {
+        if(U <= f / (M * g)) {
           new_particles[c] = next_sample;
           break;
         }
@@ -918,7 +918,7 @@ void progressive_pre_regularisation_bp(struct particle_filter_instance *pf_inst,
 
     /* redistribute_particles(pf_inst, pf_inst->mstack->item, 0.1); // redistribute */
 
-    regularized_reject_correct(pf_inst, lambda);
+    regularized_reject_correct_alternative(pf_inst, lambda);
 
     lambda = calculate_progressive_factor(pf_inst, sigma_max);
 

@@ -24,7 +24,6 @@
 #include <webots/robot.h>
 #include <motor-adapter/motor-adapter.hpp>
 #include <pf-localization/pf-localization.hpp>
-// #include <libraw/
 
 #define SPEED_FACTOR 10.0
 
@@ -34,7 +33,6 @@ static WbDeviceTag right_motor = 0;
 int main(int argc, char **argv) {
   wb_robot_init();
 
-  // wb_robot_step(480);
   WbMutexRef robot_mutex = wb_robot_mutex_new();
 
   left_motor = wb_robot_get_device("left_wheel_hinge");
@@ -69,6 +67,8 @@ int main(int argc, char **argv) {
   // PFLocalization loc(gps);
   PFLocalization loc(gps, receiver, emitter, port);
 
+  loc.set_prediction_method(PFLocalization::PREDICT_MAX_SPEED);
+
   printf("Starting localization on port %d\n", port);
 
   // create string
@@ -80,7 +80,6 @@ int main(int argc, char **argv) {
 
   printf("Starting coordination process\n");
 
-  /* main loop */
   while (wb_robot_step(timestep) != -1) {
     loc.tick();
   };

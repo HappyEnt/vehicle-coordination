@@ -6,11 +6,12 @@ PROTO orcar [
   field SFVec3f translation 0 0 0
   field SFRotation rotation 0 0 1 0
   field SFString name "robot"
-  field SFString controller "<generic>"
+  field SFString controller "kiel_controller"
   field MFString controllerArgs [ ]
   field SFString customData ""
   field SFColor            chassis_color                0.47 0.45 0.47        # Color of the chassis.
-  field SFFloat  range     10
+  field SFFloat  range     5
+  field SFFloat  signalStrengthNoise     0.1
 ]
 
 {
@@ -30,9 +31,10 @@ PROTO orcar [
         children [
           Emitter {
              range IS range
-             baudRate 115200
+#             baudRate 115200
           }
           Receiver {
+          signalStrengthNoise IS signalStrengthNoise
           }
           GPS {
           }

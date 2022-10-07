@@ -12,6 +12,7 @@ PROTO JetsonWithUWB [
   field SFString customData "" # Is `Robot.customData`.
   field SFFloat  signalStrengthNoise     0.1
   field SFFloat range 1
+  field MFBool supervisor TRUE
 ]
 {
   JetBot {

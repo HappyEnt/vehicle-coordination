@@ -3,16 +3,15 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "../protos/Anchor.proto"
-EXTERNPROTO "../protos/UWBCrazyflie.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
+EXTERNPROTO "../protos/orcar.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation 0.05350257704462492 -0.9725130007597556 0.2266184846892233 5.542660697388705
-  position -46.36798639338281 17.22251070378858 34.13569886741231
-  follow "Crazyflie(1)"
+  orientation 0.11558669466965175 0.04617354742760093 -0.9922236237528795 3.160565575365633
+  position 5.068421262086702 -7.817131449332089 1.1261865007146323
   followType "Pan and Tilt Shot"
 }
 TexturedBackground {
@@ -20,19 +19,9 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 Anchor {
-  translation -0.310006 -9.53 0.499978
+  translation -0.310006 -9.53 0.05
   rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
   name "robot(1)"
-}
-UWBCrazyflie {
-  translation -0.55 3.72 0.455
-  rotation 0 1 0 0
-  name "Crazyflie(1)"
-  controllerArgs [
-    "0.0"
-    "0.0"
-  ]
-  range 4
 }
 RectangleArena {
   translation 0 0 0.02
@@ -43,22 +32,32 @@ RectangleArena {
     IBLStrength 3
   }
 }
-UWBCrazyflie {
-  translation -0.3 -8.67 0.555
-  name "Crazyflie(2)"
+orcar {
+  translation -0.249982 -7.77 0.11
+  rotation 0 0 1 1.5708
+  controller "eval_ambiguity_removal"
   controllerArgs [
-    "0.0"
-    "0.5"
+    "3"
+    "3"
   ]
-  range 4
+}
+orcar {
+  translation 0.100009 3.61 0.12
+  rotation 0 0 1 -1.5707953071795862
+  name "robot(4)"
+  controller "eval_ambiguity_removal"
+  controllerArgs [
+    "0"
+    "0"
+  ]
 }
 Anchor {
-  translation 3.50002 9.82 0.700057
+  translation 3.50002 9.82 0.05
   rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
   name "robot(3)"
 }
 Anchor {
-  translation -4.11998 9.87 0.600051
+  translation -4.11998 9.87 0.05
   rotation 3.3905113482557537e-09 0.70710528118436 0.707108281185553 3.14159
   name "robot(2)"
 }

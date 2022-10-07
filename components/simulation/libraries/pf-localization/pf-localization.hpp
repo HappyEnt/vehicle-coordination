@@ -1,5 +1,9 @@
 #pragma once
 
+extern "C" {
+#include "particle-belief-propagation.h"
+}
+
 #include <interface.grpc.pb.h>
 
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
@@ -22,11 +26,28 @@ public:
   PFLocalization(const WbDeviceTag gps, unsigned int port);
   virtual ~PFLocalization();
 
+  enum  prediction_method {
+    PREDICT_NONE,
+    PREDICT_MAX_SPEED,
+    PREDICT_WHEEL_SPEED, // not implemented fully yet
+  };
+
   void tick();
   double Tick(coordination::Vec2 position_estimate, std::unordered_map<std::string, coordination::Vec2*>);
+  void set_prediction_method(enum prediction_method method);
+  void set_pf_method(enum filter_type method);
+  void set_particles(size_t particles);
+  void reset_filter();
+  void set_receiver_deviation(double std_dev);
+
+  struct particle get_last_estimate();
 
 private:
   struct particle_filter_instance *pf_inst;
+  enum prediction_method current_prediction_method;
+  enum filter_type current_pf_method;
+
+  size_t current_particles;
 
   WbDeviceTag transmitter;
   WbDeviceTag receiver;
@@ -36,6 +57,7 @@ private:
   std::shared_ptr<grpc::Channel> channel_;
 
   double past_time;
+  struct particle most_recent_estimate;
 
   void tick_particle_filter();
 

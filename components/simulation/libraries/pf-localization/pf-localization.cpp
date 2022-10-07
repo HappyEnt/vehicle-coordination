@@ -14,9 +14,6 @@ extern "C" {
 #include <util.h>
 }
 
-#define PARTICLES 500
-// #define USE_GROUND_TRUTH 1
-
 PFLocalization::PFLocalization(const WbDeviceTag gps, unsigned int port) : gps(gps) {
   past_time = wb_robot_get_time();
 
@@ -29,6 +26,31 @@ PFLocalization::PFLocalization(const WbDeviceTag gps, unsigned int port) : gps(g
   // try to create grpc channel and catch errors
   channel_ = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
   server_stub_ = coordination::Coordination::NewStub(channel_);
+
+  // default prediction method is max speed
+  this->current_prediction_method = PREDICT_MAX_SPEED;
+}
+
+void PFLocalization::set_prediction_method(enum prediction_method method) {
+  this->current_prediction_method = method;
+}
+
+void PFLocalization::set_pf_method(enum filter_type method) {
+  this->current_pf_method = method;
+  set_filter_type(pf_inst, method);
+}
+
+void PFLocalization::set_particles(size_t particles) {
+  this->current_particles = particles;
+  set_particle_amount(pf_inst, particles);
+}
+
+void PFLocalization::reset_filter() {
+  reset_prior(this->pf_inst);
+}
+
+void PFLocalization::set_receiver_deviation(double std_dev) {
+  set_receiver_std_dev(pf_inst, std_dev);
 }
 
 PFLocalization::PFLocalization(const WbDeviceTag gps, const WbDeviceTag receiver, const WbDeviceTag transmitter, unsigned int port) : gps(gps), receiver(receiver), transmitter(transmitter) {
@@ -50,16 +72,17 @@ PFLocalization::PFLocalization(const WbDeviceTag gps, const WbDeviceTag receiver
   // initialize particle filter
   create_particle_filter_instance(&pf_inst);
 
-  /* set_particle_array(*pf_inst, own_particles, PARTICLES); */
-  set_particle_amount(pf_inst, PARTICLES);
+  // default to 500 particles
+  set_particles(2000);
 
-  set_filter_type(pf_inst, POST_REGULARIZATION);
+  // default to POST_REGULARIZATION
+  set_pf_method(POST_REGULARIZATION);
 
   pf_parallel_set_target_threads(8);
 
-  set_receiver_std_dev(pf_inst, 0.3);
+  set_receiver_deviation(0.3);
 
-  logger = std::unique_ptr<DataLogger>(new DataLogger(wb_robot_get_name(), PARTICLES));
+  logger = std::unique_ptr<DataLogger>(new DataLogger(wb_robot_get_name(), current_particles));
   logger->register_node_with_vis();
 }
 
@@ -118,24 +141,30 @@ void PFLocalization::tick_particle_filter() {
     queue_length--;
 
     if(queue_length <= 0) {
-      predict_max_movement_uniform(pf_inst, 0.1, 3);
+      switch (current_prediction_method) {
+      case PREDICT_MAX_SPEED: {
+        predict_max_movement_uniform(pf_inst, 0.1, 3);
+        break;
+      }
+      case PREDICT_WHEEL_SPEED: {
+        BOOST_LOG_TRIVIAL(info) << "PREDICT_WHEEL_SPEED not implemented yet";
+        break;
+      }
+      default:
+        break;
+      }
 
       iterate(pf_inst);
 
       struct particle mean = estimate_position(pf_inst);
 
+      most_recent_estimate = mean;
+
+      coordination::Vec2 position_estimate;
+      position_estimate.set_x(mean.x_pos);
+      position_estimate.set_y(mean.y_pos);
+
       if(channel_->GetState(true) == GRPC_CHANNEL_READY) {
-        coordination::Vec2 position_estimate;
-        position_estimate.set_x(mean.x_pos);
-        position_estimate.set_y(mean.y_pos);
-
-        // write error statistics
-        struct particle p;
-        p.x_pos = wb_gps_get_values(gps)[0];
-        p.y_pos = wb_gps_get_values(gps)[1];
-
-        logger->write_error_to_csv(mean, p);
-
         Tick(position_estimate, foreign_estimate);
       }
 
@@ -160,6 +189,10 @@ void PFLocalization::tick_particle_filter() {
       logger->write_particles(particles, amount);
     }
   }
+}
+
+struct particle PFLocalization::get_last_estimate() {
+  return most_recent_estimate;
 }
 
 void PFLocalization::tick() {
@@ -196,7 +229,6 @@ double PFLocalization::Tick(coordination::Vec2 position_estimate, std::unordered
 
     // derive from string key a unique integer
     unsigned int id = std::hash<std::string>{}(key);
-    BOOST_LOG_TRIVIAL(info) << "Adding " << key << " with id " << id << " to other_positions";
 
     // create std::unique_ptr from other_position
     coordination::TickRequest::Participant *participant = request->add_others();
