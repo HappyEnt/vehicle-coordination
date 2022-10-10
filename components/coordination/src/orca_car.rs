@@ -12,7 +12,7 @@ use orca_rs::{
 use tokio::time::timeout;
 
 use crate::{
-    math::{dist, norm, signed_angle_between},
+    math::{dist, signed_angle_between},
     wheels::Wheels,
 };
 
@@ -132,8 +132,8 @@ impl OrcaCar {
 
     /// Update the information about this car.
     /// Note: This should be called each time before calling OrcaCar::tick!
-    pub fn update(&mut self, position: Array1<f64>, target: Array1<f64>) {
-        debug!("OrcaCar::update({}, {:?})", position, target);
+    pub fn update_position(&mut self, position: Array1<f64>) {
+        debug!("OrcaCar::update({})", position);
         if self._after_update {
             warn!("Calling OrcaCar::update() twice without calling OrcaCar::tick()!");
         }
@@ -149,12 +149,11 @@ impl OrcaCar {
         debug!("self.velocity = {:?}", self.velocity);
         self.position = Some(position);
         debug!("self.position = {:?}", self.position);
-        self.target = Some(target);
-        debug!("self.target = {:?}", self.target);
         self._after_update = true;
     }
 
-    pub fn set_target(&mut self, target: Array1<f64>) {
+    /// Update the target of this car.
+    pub fn update_target(&mut self, target: Array1<f64>) {
         self.target = Some(target);
     }
 

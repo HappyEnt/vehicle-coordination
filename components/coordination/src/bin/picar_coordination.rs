@@ -18,59 +18,9 @@ use tonic::{transport::Server, Response, Status};
 struct CoordinationService {
     car: Mutex<OrcaCar>,
     participants: Mutex<HashMap<i32, Participant>>,
-    target: Mutex<TargetWrapper>,
 }
-
-type Coord = [f64; 2];
 
 static DEFAULT_PORT: &str = "50052";
-
-const TARGETS: [Coord; 2] = [
-    //
-    [0.2, 0.2],
-    // [0.2, 1.8],
-    [1.4, 1.8],
-    // [1.4, 0.2],
-];
-
-#[derive(Clone, Copy)]
-enum Target {
-    First,
-    Second,
-    Third,
-    Fourth,
-}
-
-struct TargetWrapper {
-    target: Target,
-}
-
-/// Wrapper around dynamic target selection
-impl TargetWrapper {
-    pub fn new() -> Self {
-        TargetWrapper {
-            target: Target::First,
-        }
-    }
-
-    pub fn next(&mut self) {
-        self.target = match self.target {
-            Target::First => Target::Second,
-            Target::Second => Target::Third,
-            Target::Third => Target::Fourth,
-            Target::Fourth => Target::First,
-        }
-    }
-
-    pub fn usize(&self) -> usize {
-        match self.target {
-            Target::First => 0,
-            Target::Second => 1,
-            Target::Third => 2,
-            Target::Fourth => 3,
-        }
-    }
-}
 
 #[tonic::async_trait]
 impl Coordination for CoordinationService {
@@ -81,12 +31,9 @@ impl Coordination for CoordinationService {
         debug!("Coordination::tick({:?})", request);
         let request = request.into_inner().clone();
         let mut car = self.car.lock().await;
-        let mut target_wrapper = self.target.lock().await;
-        let target: [f64; 2] = TARGETS[target_wrapper.usize()];
-        let target = arr1(&target);
 
-        // FIXME: This panic, if position is None
-        car.update(request.clone().position.unwrap().to_pos(), target.clone());
+        // FIXME: This panics, if position is None
+        car.update_position(request.clone().position.unwrap().to_pos());
 
         let participants = self.get_participants(request.clone()).await;
         let obstacles = self.get_obstacles(request.clone());
@@ -101,14 +48,12 @@ impl Coordination for CoordinationService {
 
         match new_velocity {
             Ok((new_vel, finished)) => {
-                if finished {
-                    target_wrapper.next();
-                }
                 return Ok(Response::new(TickResponse {
                     new_velocity: new_vel.map(|new_vel| Vec2 {
                         x: new_vel[0] as f32,
                         y: new_vel[1] as f32,
                     }),
+                    finished,
                 }));
             }
             Err(e) => {
@@ -123,7 +68,7 @@ impl Coordination for CoordinationService {
         debug!("Coordination::set_target({:?})", request);
         let target = request.into_inner();
         let mut car = self.car.lock().await;
-        car.set_target(target.to_pos());
+        car.update_target(target.to_pos());
 
         Ok(Response::new(Empty {}))
     }
@@ -201,7 +146,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let coordination_service = CoordinationService {
         car: Mutex::new(car),
         participants: Mutex::new(HashMap::new()),
-        target: Mutex::new(TargetWrapper::new()),
     };
 
     debug!("Attempting to start server...");
