@@ -118,6 +118,7 @@ impl Coordination for CoordinationService {
         }
     }
 
+    /// Set the target of the car.
     async fn set_target(&self, request: tonic::Request<Vec2>) -> Result<Response<Empty>, Status> {
         debug!("Coordination::set_target({:?})", request);
         let target = request.into_inner();
@@ -161,6 +162,7 @@ impl CoordinationService {
         participants.clone().into_values().collect()
     }
 
+    /// Get obstacles from a tick request.
     fn get_obstacles(&self, request: TickRequest) -> Vec<Obstacle> {
         request
             .obstacles
