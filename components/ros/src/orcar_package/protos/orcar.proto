@@ -6,7 +6,7 @@ PROTO orcar [
   field SFVec3f translation 0 0 0
   field SFRotation rotation 0 0 1 0
   field SFString name "robot"
-  field SFString controller "<external>"
+  field SFString controller "<extern>"
   field MFString controllerArgs [ ]
   field SFString customData ""
   field SFColor            chassis_color                0.47 0.45 0.47        # Color of the chassis.
@@ -40,7 +40,7 @@ PROTO orcar [
           }
           CadShape {
             url [
-              "../meshes/anchor.obj"
+              "https://cloud.rz.uni-kiel.de/index.php/s/okgSgz9dLHb2PyM/download
             ]
           }
         ]
@@ -57,23 +57,23 @@ PROTO orcar [
                 appearance PBRAppearance {
                   baseColorMap ImageTexture {
                     url [
-                      "../meshes/car/car.001_color.png"
+                      "https://cloud.rz.uni-kiel.de/index.php/s/fZQNdBHzmngsL6r/download"
                     ]
                   }
                   roughnessMap ImageTexture {
                     url [
-                     "../meshes/car/car.001_roughness.png"
+                     "https://cloud.rz.uni-kiel.de/index.php/s/oM5La2Ba2MeWWyA/download"
                     ]
                   }
                   metalnessMap  ImageTexture {
                     url [
-                     "../meshes/car/car.001_metallic.png"
+                     "https://cloud.rz.uni-kiel.de/index.php/s/66EJQ4KTbF4c73B/download"
                     ]
                   }
                 }
                 geometry Mesh {
                   url [
-                    "../meshes/car/car_assembly.obj"
+                    "https://cloud.rz.uni-kiel.de/index.php/s/eRjZdtkCP7DkBdC/download"
                   ]
                 }
               }
@@ -104,7 +104,7 @@ PROTO orcar [
               }
               geometry Mesh {
                 url [
-                  "../meshes/car/car_wheel.obj"
+                  "https://cloud.rz.uni-kiel.de/index.php/s/WTnzTg32dmaT2Ym/download"
                 ]
               }
             }
@@ -149,7 +149,7 @@ PROTO orcar [
               }
               geometry Mesh {
                 url [
-                  "../meshes/car/car_wheel.obj"
+                  "https://cloud.rz.uni-kiel.de/index.php/s/WTnzTg32dmaT2Ym/download"
                 ]
               }
             }
@@ -234,7 +234,7 @@ PROTO orcar [
           Shape {
             geometry Mesh {
                 url [
-                  "../meshes/car/car_collider.obj"
+                  "https://cloud.rz.uni-kiel.de/index.php/s/xJ8N5WWicKgRBdB/download"
                 ]
             }
           }

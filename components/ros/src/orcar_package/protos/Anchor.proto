@@ -25,7 +25,7 @@ PROTO Anchor [
           }
           CadShape {
             url [
-              "../meshes/anchor.obj"
+              "https://cloud.rz.uni-kiel.de/index.php/s/okgSgz9dLHb2PyM/download"
             ]
           }
         ]
