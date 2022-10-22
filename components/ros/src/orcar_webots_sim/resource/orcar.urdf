@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<robot name="Orcar">
+    <webots>
+        <plugin type="orcar_webots_sim.orcar_driver.OrcarDriver" />
+    </webots>
+</robot>

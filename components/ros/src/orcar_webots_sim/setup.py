@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'orcar_package'
+package_name = 'orcar_webots_sim'
 data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
 data_files.append(('share/' + package_name + '/launch', ['launch/robot_launch.py']))
@@ -22,7 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'orcar_driver = orcar_package.orcar_driver:main'
+            'orcar_driver = orcar_webots_sim.orcar_driver:main'
         ],
     },
 )

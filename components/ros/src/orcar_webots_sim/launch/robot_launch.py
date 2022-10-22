@@ -8,7 +8,7 @@ from webots_ros2_driver.webots_launcher import WebotsLauncher, Ros2SupervisorLau
 
 
 def generate_launch_description():
-    package_dir = get_package_share_directory('orcar_package')
+    package_dir = get_package_share_directory('orcar_webots_sim')
     robot_description = pathlib.Path(os.path.join(package_dir, 'resource', 'orcar.urdf')).read_text()
 
     webots = WebotsLauncher(
