@@ -3,4 +3,8 @@ services:
   ros:
     build: ./
     volumes:
-      - ./:/project
+      - ./:/ros
+      - /tmp/shared:/shared
+    # add environment variable
+    environment:
+      - WEBOTS_SHARED_FOLDER=/tmp/shared:/shared
