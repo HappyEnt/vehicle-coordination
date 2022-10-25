@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.0)
+
+# Setup the project.
+# Its name is defined to be the controller directory name.
+get_filename_component(CURRENT_CONTROLLER_DIR ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
+# Get C or C++ sources in the current directory (only).
+file(GLOB C_SOURCES *.c)
+file(GLOB CPP_SOURCES *.cpp)
+set(SOURCES ${C_SOURCES} ${CPP_SOURCES})
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+find_package(GSL REQUIRED)
+
+# Link with the Webots controller library.
+link_directories("../../../fast-particle-filter/pf/c_implementation/build")
+set (LIBRARIES ${CMAKE_SHARED_LIBRARY_PREFIX}Controller${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_SHARED_LIBRARY_PREFIX}CppController${CMAKE_SHARED_LIBRARY_SUFFIX})
+include_directories("../../../fast-particle-filter/pf/c_implementation")
+
+# Setup the target executable.
+add_executable(${CURRENT_CONTROLLER_DIR} ${SOURCES})
+target_link_libraries(${CURRENT_CONTROLLER_DIR} ${LIBRARIES} BeliefPropagation)
+
+# Copy the target executable at the right location.
+set(COPY_SOURCE_PATH ${CMAKE_BINARY_DIR}/${CONTROLLERS_PATH}/${CURRENT_CONTROLLER_DIR}/${CURRENT_CONTROLLER_DIR})
+add_custom_command(TARGET ${CURRENT_CONTROLLER_DIR} POST_BUILD COMMAND ${CMAKE_COMMAND} -E
+  copy ${COPY_SOURCE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# get current source dir relative to project root

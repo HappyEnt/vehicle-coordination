@@ -1,6 +1,11 @@
 #include <cstdio>
 #include <rclcpp/rclcpp.hpp>
 
+extern "C" {
+#include "../lib/particle-belief-propagation.h"
+}
+
+
 class BeliefPropagation : public rclcpp::Node
 {
 public:

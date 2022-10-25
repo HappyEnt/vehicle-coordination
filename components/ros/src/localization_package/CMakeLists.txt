@@ -5,6 +5,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+add_subdirectory(lib)
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
@@ -18,6 +20,7 @@ target_include_directories(belief_propagation PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(belief_propagation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(belief_propagation rclcpp)
+target_link_libraries(belief_propagation BeliefPropagation)
 
 install(TARGETS belief_propagation
   DESTINATION lib/${PROJECT_NAME})
