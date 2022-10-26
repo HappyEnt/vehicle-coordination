@@ -5,10 +5,10 @@ from launch_ros.actions import Node
 from launch import LaunchDescription
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_launcher import WebotsLauncher, Ros2SupervisorLauncher
-import launch
-import launch.actions
-import launch.substitutions
-import launch_ros.actions
+
+def is_docker():
+   return os.path.exists('/.dockerenv')
+    # return false
 
 def generate_launch_description():
     package_dir = get_package_share_directory('orcar_webots_sim')
@@ -20,17 +20,21 @@ def generate_launch_description():
 
     ros2_supervisor = Ros2SupervisorLauncher()
 
+    controller_url = 'tcp://' + 'host.docker.internal' + ':1234/' if is_docker() else ''
+
+    print('connecting to controller at: ' + controller_url)
+
     orcar_driver = Node(
         package='webots_ros2_driver',
         executable='driver',
         output='screen',
-        additional_env={'WEBOTS_CONTROLLER_URL': 'orcar'},
+        additional_env={'WEBOTS_CONTROLLER_URL': controller_url + 'orcar'},
         parameters=[
             {'robot_description': robot_description},
         ]
     )
 
-    localization = launch_ros.actions.Node(
+    localization = Node(
         executable='belief_propagation',
         package='localization_package',
         output='screen'

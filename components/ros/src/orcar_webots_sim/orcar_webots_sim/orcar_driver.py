@@ -17,7 +17,7 @@ class OrcarDriver:
         self.__right_motor.setVelocity(0)
 
         rclpy.init(args=None)
-        self.__node = rclpy.create_node('orcar_driver')
+        self.__node = rclpy.create_node('orcar_node')
 
     def step(self):
         rclpy.spin_once(self.__node, timeout_sec=0)
