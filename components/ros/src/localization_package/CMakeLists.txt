@@ -13,13 +13,14 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 add_executable(belief_propagation src/belief_propagation.cpp)
 target_include_directories(belief_propagation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(belief_propagation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-ament_target_dependencies(belief_propagation rclcpp)
+ament_target_dependencies(belief_propagation rclcpp geometry_msgs)
 target_link_libraries(belief_propagation BeliefPropagation)
 
 install(TARGETS belief_propagation
