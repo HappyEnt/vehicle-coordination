@@ -58,6 +58,7 @@ impl OrcaCar {
             _after_update: false,
         };
 
+        // spawn a new thread which handles the actual movement of the car
         let (_, receiver) = instance.channel.clone();
         tokio::spawn(async move {
             #[cfg(not(any(feature = "pi", feature = "simulation")))]
@@ -93,9 +94,11 @@ impl OrcaCar {
                                 // TODO: Maybe to sth like x^2 or x^3
                                 let factor = 2.0 * diff + 1.0;
 
+                                // "weight" wheels accordingly
                                 let mut right_factor = DRIVE_SPEED * velocity_scalar;
                                 let mut left_factor = DRIVE_SPEED * velocity_scalar;
 
+                                // check, if we actually have "valid" data
                                 if diff.is_normal() {
                                     if angle.is_sign_positive() {
                                         // to the right
@@ -120,6 +123,7 @@ impl OrcaCar {
                     Err(_) => {
                         warn!("Not received anything for {}ms", TIMEOUT);
 
+                        // stop car, because we ran into a timeout
                         if let Err(e) = wheels.set_speed(0.0, 0.0).await {
                             error!("Error during picar.stop() ({})", e);
                         }
@@ -133,9 +137,9 @@ impl OrcaCar {
     /// Update the information about this car.
     /// Note: This should be called each time before calling OrcaCar::tick!
     pub fn update_position(&mut self, position: Array1<f64>) {
-        debug!("OrcaCar::update({})", position);
+        debug!("OrcaCar::update_position({})", position);
         if self._after_update {
-            warn!("Calling OrcaCar::update() twice without calling OrcaCar::tick()!");
+            warn!("Calling OrcaCar::update_position() twice without calling OrcaCar::tick()!");
         }
         self.old_velocity = self.velocity.clone();
         debug!("self.old_velocity = {:?}", self.old_velocity);
@@ -157,39 +161,24 @@ impl OrcaCar {
         self.target = Some(target);
     }
 
-    /// Perform an actual tick of this car.
-    /// This is either a calibration tick or an actual tick of the ORCA algorithm depending on the
-    /// calibration stage of this car.
+    /// Perform an actual tick of this car performing the ORCA algorithm.
     ///
     /// Returns the new "desired" velocity, or None if still in calibration.
     ///
-    /// Note: You should call OrcaCar::update each time before calling this function!
+    /// Note: You should call OrcaCar::update_position each time before calling this function!
     pub async fn tick(
-        &mut self,
-        others: Vec<Participant>,
-        obstacles: Vec<Obstacle>,
-        radius: f64,
-        confidence: f64,
-    ) -> Result<(Option<Array1<f64>>, bool), Box<dyn Error>> {
-        debug!("OrcaCar::tick({:?}, {}, {})", others, radius, confidence);
-        if !self._after_update {
-            warn!("Calling OrcaCar::tick() without calling OrcaCar::update() before!");
-        }
-        self._after_update = false;
-        self.orca_tick(others, obstacles, radius, confidence).await
-    }
-
-    async fn orca_tick(
         &mut self,
         mut others: Vec<Participant>,
         obstacles: Vec<Obstacle>,
         radius: f64,
         confidence: f64,
     ) -> Result<(Option<Array1<f64>>, bool), Box<dyn Error>> {
-        debug!(
-            "OrcaCar::orca_tick({:?}, {}, {})",
-            others, radius, confidence
-        );
+        debug!("OrcaCar::tick({:?}, {}, {})", others, radius, confidence);
+        if !self._after_update {
+            warn!("Calling OrcaCar::tick() without calling OrcaCar::update_position() before!");
+        }
+        self._after_update = false;
+
         let (sender, _) = self.channel.clone();
 
         let old_velocity = self.velocity.clone();

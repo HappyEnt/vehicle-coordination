@@ -19,6 +19,7 @@ where
     }
 }
 
+/// Generate bounding obstacles for a rectangle with the given width and height.
 pub fn generate_bounding_obstacles(width: f64, height: f64) -> [Obstacle; 4] {
     [
         Obstacle {

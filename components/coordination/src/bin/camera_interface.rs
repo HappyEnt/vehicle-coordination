@@ -150,10 +150,12 @@ impl CameraInterface {
         let mut others: Vec<ParticipantInformation> = vec![];
 
         for key in cur_positions.keys() {
+            // check, if the information is about us
             if key == &self.id.to_string() {
                 continue;
             }
 
+            // generate information about this specific participant
             let (x, y) = cur_positions.get(key).unwrap();
             others.push(ParticipantInformation {
                 id: key.parse::<u8>()?,
