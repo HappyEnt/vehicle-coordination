@@ -19,9 +19,9 @@ use crate::{
 type NewVelAdjustment = (Option<Array1<f64>>, Option<Array1<f64>>);
 
 /// The speed for the wheels to drive.
-const DRIVE_SPEED: f64 = 0.2;
+const DRIVE_SPEED: f64 = 0.8;
 
-const MAX_SPEED: f64 = 0.2;
+const MAX_SPEED: f64 = DRIVE_SPEED;
 
 /// Timeout after which the car stops driving.
 const TIMEOUT: u64 = 2000;

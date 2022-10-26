@@ -1,6 +1,15 @@
 extern crate coordination;
 
-use std::{collections::HashMap, env, error::Error, thread, time::Duration};
+use std::{
+    collections::HashMap,
+    env,
+    error::Error,
+    fmt::format,
+    fs::File,
+    io::Write,
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use api::{ApiPayload, ParticipantInformation};
 use coordination::{
@@ -54,9 +63,9 @@ type Coord = [f64; 2];
 
 const TARGETS: [Coord; 2] = [
     //
-    [0.2, 0.2],
+    [0.4, 0.4],
     // [0.2, 1.8],
-    [1.4, 1.8],
+    [1.2, 1.6],
     // [1.4, 0.2],
 ];
 
@@ -83,6 +92,7 @@ impl TargetWrapper {
     pub fn next(&mut self) {
         self.target = match self.target {
             Target::First => Target::Second,
+            // TODO: Adjust this if you want cars to drive a square
             Target::Second => Target::First,
             Target::Third => Target::Fourth,
             Target::Fourth => Target::First,
@@ -175,6 +185,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let id = parse_cmd_arg(args.get(1).expect("No ID given!"));
 
+    // TODO: adjust this if you need another camera server
     let camera = CameraInterface::new("http://192.168.87.78:8081/positions", id);
     let mut target_wrapper = TargetWrapper::new();
     let mut client = CoordinationClient::connect(address.to_owned()).await?;
@@ -183,6 +194,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut last_direction: Option<Array1<f64>>;
     let mut desired_direction: Option<Array1<f64>> = None;
 
+    let mut last_errors: Vec<f64> = vec![];
+
     loop {
         let payload = camera.fetch().await?;
 
@@ -190,7 +203,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // update information about the last direction and the current position
             last_direction = calculate_position_delta(&old_position, &new_position);
             old_position = Some(new_position.clone());
-            diff_desired_and_actual_direction(&desired_direction, &last_direction);
+            if let Some(signed_angle) =
+                diff_desired_and_actual_direction(&desired_direction, &last_direction)
+            {
+                last_errors.push(signed_angle);
+            }
 
             // update the target of the car according to current wrapper
             let target: [f64; 2] = TARGETS[target_wrapper.usize()];
@@ -221,6 +238,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let response = response.into_inner();
             if response.finished {
                 target_wrapper.next();
+                println!("{:#?}", last_errors);
+                #[cfg(feature = "evaluation")]
+                write_result_to_file(&last_errors);
+                last_errors = vec![];
             }
 
             // update the stored "desired velocity"
@@ -241,6 +262,7 @@ fn calculate_position_delta(
         "calculate_position_delta({:#?}, {:#?})",
         old_position, new_position
     );
+
     old_position
         .clone()
         .map(|old_position| new_position - old_position)
@@ -249,7 +271,7 @@ fn calculate_position_delta(
 fn diff_desired_and_actual_direction(
     desired_direction: &Option<Array1<f64>>,
     actual_direction: &Option<Array1<f64>>,
-) {
+) -> Option<f64> {
     debug!(
         "diff_desired_and_actual_direction({:#?}, {:#?})",
         desired_direction, actual_direction
@@ -257,14 +279,32 @@ fn diff_desired_and_actual_direction(
 
     if let (Some(desired_direction), Some(actual_direction)) = (desired_direction, actual_direction)
     {
-        println!(
-            "{}",
-            signed_angle_between(desired_direction, actual_direction)
-        );
+        let signed_angle = signed_angle_between(desired_direction, actual_direction);
+        Some(signed_angle)
     } else {
         warn!(
             "Trying to calculate the difference between {:#?} and {:#?}",
             desired_direction, actual_direction
         );
+        None
+    }
+}
+
+#[cfg(feature = "evaluation")]
+fn write_result_to_file(last_errors: &Vec<f64>) {
+    let last_errors_string = serde_json::to_string(last_errors).unwrap_or_else(|_| "[]".to_owned());
+    let start = SystemTime::now();
+    let timestamp = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let filename = format!("{:?}.json", timestamp);
+
+    match File::create(&filename) {
+        Ok(mut file) => {
+            if let Err(e) = file.write_all(last_errors_string.as_bytes()) {
+                error!("Error writing to file '{}': {}", filename, e);
+            }
+        }
+        Err(e) => error!("Error opening '{}': {}", filename, e),
     }
 }

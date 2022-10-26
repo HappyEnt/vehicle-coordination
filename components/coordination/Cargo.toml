@@ -38,6 +38,7 @@ default = []
 pi = []
 native = []
 simulation = []
+evaluation = []
 
 [profile.release]
 strip = true    # Automatically strip symbols from the binary.
