@@ -14,6 +14,7 @@ This will generate the documentation depending on the actual documentation (i.e.
 
 - `src/bin` this folder holds both binaries of this crate (one for the actual coordination and one as the camera interface)
 - `src/*` these files contain different utility structs and functionality, depending on the name of the file 
+- `evaluation/` this folder contains all files regarding the evaluation of this project
 
 ### Binaries
 
