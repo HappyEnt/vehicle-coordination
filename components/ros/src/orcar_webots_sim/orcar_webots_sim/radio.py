@@ -13,8 +13,8 @@ class RangingRadio:
     def init(self, webots_node, properties):
         # Unfortunately, we cannot get an instance of the parent ROS node.
         # However, we can create a new one.
-        rclpy.init(args=None)
-        self.__node = rclpy.create_node('plugin_node_example')
+        # rclpy.init(args=None)
+        self.__node = rclpy.create_node('ranging_radio_node')
 
         # This will print the parameter from the URDF file.
         #
@@ -34,7 +34,7 @@ class RangingRadio:
 
         # register topic 'range_measurements' for publishing data
         self.__range_measurements_publisher = self.__node.create_publisher(
-            RangeMeasurements, 'range_measurements', 10)
+            RadioMessage, 'range_measurements', 10)
 
     # The `step` method is called at every step.
     def step(self):
