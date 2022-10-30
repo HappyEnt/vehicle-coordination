@@ -2,7 +2,7 @@
 # Describe the functionality of your PROTO here.
 
 
-PROTO orcar [
+PROTO Orcar [
   field SFVec3f translation 0 0 0
   field SFRotation rotation 0 0 1 0
   field SFString name "robot"

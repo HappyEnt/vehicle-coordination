@@ -20,7 +20,7 @@ class AnchorDriver:
         rclpy.spin_once(self.__node, timeout_sec=0)
 
         dt = self.__robot.getTime() - pastTime
-        if (dt > 0.025 && self.__robot.getTime() > self.__initialTimeout):
+        if (dt > 0.025 and self.__robot.getTime() > self.__initialTimeout):
             x_global = self.__gps.getValues()[0]
             y_global = self.__gps.getValues()[0]
 

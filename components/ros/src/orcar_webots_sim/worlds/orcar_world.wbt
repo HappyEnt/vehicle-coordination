@@ -34,9 +34,15 @@ RectangleArena {
     type "light strip"
   }
 }
-orcar {
+Orcar {
   translation 0 0.35 0.07
   name "orcar"
   range 1
   signalStrengthNoise 0
+}
+
+Anchor {
+  translation 0 1 0.07
+  name "anchor"
+  range 10
 }
