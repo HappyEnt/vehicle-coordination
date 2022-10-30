@@ -3,7 +3,7 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/HappyEnt/vehicle-coordination/feature/fast-particle-filter/components/ros/src/orcar_webots_sim/protos/orcar.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/HappyEnt/vehicle-coordination/feature/fast-particle-filter/components/ros/src/orcar_webots_sim/protos/Orcar.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/HappyEnt/vehicle-coordination/feature/fast-particle-filter/components/ros/src/orcar_webots_sim/protos/Anchor.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
 

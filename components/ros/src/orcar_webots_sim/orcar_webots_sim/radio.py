@@ -28,6 +28,8 @@ class RangingRadio:
         self.__node.get_logger().info('  - robot name: ' + str(self.__robot.getName()))
         self.__node.get_logger().info('  - basic timestep: ' + str(int(self.__robot.getBasicTimeStep())))
 
+        self.__robot_name = self.__robot.getName()
+
         # for our ranging radio we will need both a webots emitter and receiver device
         self.__emitter  = self.__robot.getDevice('emitter')
         self.__receiver = self.__robot.getDevice('receiver')
@@ -52,7 +54,7 @@ class RangingRadio:
 
         # create final RadioMessage for transfer
         radioMsg = RadioMessage()
-        radioMsg.node_id = "test_id"
+        radioMsg.node_id = self.__robot_name
         radioMsg.particles = particles
         radioMsg.header = header
 
