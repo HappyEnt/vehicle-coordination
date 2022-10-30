@@ -2,8 +2,8 @@ from logging import ERROR, WARNING, basicConfig
 from math import sqrt
 from typing import Dict, List, Optional, Tuple
 
-from src.data import ActiveMeasurement
-from src.ranging import DumpFileRangingNode
+from data import ActiveMeasurement
+from ranging import DumpFileRangingNode
 
 
 def average_measurment(
