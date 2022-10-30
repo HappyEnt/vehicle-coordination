@@ -11,20 +11,15 @@ Welcome to Vehicle Coordination's documentation!
    :maxdepth: 4
    :caption: Content
 
-.. include:: ../../README.rst
+   main_readme
+   localization_readme
+   coordination_readme
+   code_documentation/index
+   .. code_documentation/coordination
+   .. code_documentation/localization
+   .. code_documentation/ranging
 
-.. include:: ../../components/localization/README.rst
 
-.. include:: ../../components/coordination/README.rst
-
-Code Documenation
-=================
-
-.. include:: components-coordination-src.rst
-
-.. include:: components-localization-src.rst
-
-.. include:: components-ranging-src.rst
 
 Indices and tables
 ==================
