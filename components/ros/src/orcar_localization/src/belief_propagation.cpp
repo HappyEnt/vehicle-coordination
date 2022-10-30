@@ -7,7 +7,7 @@ extern "C" {
 #include "../lib/particle-belief-propagation.h"
 }
 // maybe useful later for gps signals
-#include <sensor_msgs>
+// #include <sensor_msgs>
 
 
 class BeliefPropagationNode : public rclcpp::Node

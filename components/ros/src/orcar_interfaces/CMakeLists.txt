@@ -1,35 +1,30 @@
 cmake_minimum_required(VERSION 3.8)
-project(localization_package)
+project(orcar_interfaces)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-add_subdirectory(lib)
-
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
-find_package(rclcpp REQUIRED)
+
+find_package(rosidl_default_generators REQUIRED)
+
+find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
-add_executable(belief_propagation src/belief_propagation.cpp)
-target_include_directories(belief_propagation PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(belief_propagation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-ament_target_dependencies(belief_propagation rclcpp geometry_msgs)
-target_link_libraries(belief_propagation BeliefPropagation)
 
-install(TARGETS belief_propagation
-  DESTINATION lib/${PROJECT_NAME})
-
-install(DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}/
-)
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/RadioMessage.msg"
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+ )
+ament_export_dependencies(rosidl_default_runtime)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

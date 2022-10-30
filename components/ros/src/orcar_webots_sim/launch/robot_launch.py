@@ -36,7 +36,7 @@ def generate_launch_description():
 
     localization = Node(
         executable='belief_propagation',
-        package='localization_package',
+        package='orcar_localization',
         output='screen'
     )
 

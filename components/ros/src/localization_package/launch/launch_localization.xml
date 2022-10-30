@@ -1,3 +1,0 @@
-<launch>
-  <node pkg="localization_package" exec="belief_propagation" name="belief_propagation"/>
-</launch>

@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/ros/build/orcar_localization/lib",
+  "command": "/bin/cc -DBeliefPropagation_EXPORTS   -fopenmp -fPIC -Wall -Wextra -Wpedantic -o CMakeFiles/BeliefPropagation.dir/particle-belief-propagation.c.o -c /ros/src/orcar_localization/lib/particle-belief-propagation.c",
+  "file": "/ros/src/orcar_localization/lib/particle-belief-propagation.c"
+},
+{
+  "directory": "/ros/build/orcar_localization/lib",
+  "command": "/bin/cc -DBeliefPropagation_EXPORTS   -fopenmp -fPIC -Wall -Wextra -Wpedantic -o CMakeFiles/BeliefPropagation.dir/util.c.o -c /ros/src/orcar_localization/lib/util.c",
+  "file": "/ros/src/orcar_localization/lib/util.c"
+}
+]

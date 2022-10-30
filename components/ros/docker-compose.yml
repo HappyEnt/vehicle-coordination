@@ -6,5 +6,6 @@ services:
       - ./:/ros
       - /tmp/shared:/shared
     # add environment variable
+    network_mode: host
     environment:
       - WEBOTS_SHARED_FOLDER=/tmp/shared:/shared
