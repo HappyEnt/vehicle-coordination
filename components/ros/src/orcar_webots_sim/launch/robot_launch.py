@@ -31,7 +31,7 @@ def generate_launch_description():
         output='screen',
         additional_env={'WEBOTS_CONTROLLER_URL': controller_url + 'orcar'},
         parameters=[
-            {'orcar_description': orcar_description},
+            {'robot_description': orcar_description},
         ]
     )
 
@@ -41,7 +41,7 @@ def generate_launch_description():
         output='screen',
         additional_env={'WEBOTS_CONTROLLER_URL': controller_url + 'anchor'},
         parameters=[
-            {'anchor_description': orcar_description},
+            {'robot_description': anchor_description},
         ]
     )
 
