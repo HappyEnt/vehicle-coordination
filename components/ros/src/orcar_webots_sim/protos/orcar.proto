@@ -9,7 +9,6 @@ PROTO orcar [
   field SFString controller "<extern>"
   field MFString controllerArgs [ ]
   field SFString customData ""
-  field SFColor            chassis_color                0.47 0.45 0.47        # Color of the chassis.
   field SFFloat  range     5
   field SFFloat  signalStrengthNoise     0.1
 ]
@@ -31,7 +30,7 @@ PROTO orcar [
         children [
           Emitter {
              range IS range
-#             baudRate 115200
+#            baudRate 115200
           }
           Receiver {
           signalStrengthNoise IS signalStrengthNoise
@@ -174,7 +173,11 @@ PROTO orcar [
         translation 0 -0.06 -0.055
         children [
           Shape {
-            appearance USE BLACK_APPEARANCE
+            appearance DEF BLACK_APPEARANCE PBRAppearance {
+                  baseColor 0.1 0.1 0.1
+                  roughness 0.5
+                  metalness 0.2
+            }
             geometry Cylinder {
               height 0.032
               radius 0.0153
@@ -243,7 +246,7 @@ PROTO orcar [
       ]
     }
 
-    physics Physics {
+     physics Physics {
       density -1
       mass 1
       centerOfMass [
