@@ -29,11 +29,15 @@ class AnchorDriver:
             RadioPacket, '/{}/ranging_radio/transmit_queue'.format(self.__robot.getName()), 10
         )
 
+        # parameters
+        # add ros2 parameter called frequency
+        self.__frequency = self.__node.declare_parameter('frequency', 10.0).value
+
     def step(self):
         rclpy.spin_once(self.__node, timeout_sec=0)
 
         dt = self.__robot.getTime() - self.__pastTime
-        if (dt > 0.5 and self.__robot.getTime() > self.__initialTimeout):
+        if (dt > (1.0 / self.__frequency) and self.__robot.getTime() > self.__initialTimeout):
             x_global = self.__gps.getValues()[0]
             y_global = self.__gps.getValues()[1]
             self.__pastTime = self.__robot.getTime()

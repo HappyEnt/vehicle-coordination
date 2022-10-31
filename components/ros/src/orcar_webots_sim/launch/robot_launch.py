@@ -32,6 +32,7 @@ def generate_launch_description():
         additional_env={'WEBOTS_CONTROLLER_URL': controller_url + 'orcar'},
         parameters=[
             {'robot_description': orcar_description},
+            {'particles': 500},
         ]
     )
 
@@ -42,6 +43,7 @@ def generate_launch_description():
         additional_env={'WEBOTS_CONTROLLER_URL': controller_url + 'anchor'},
         parameters=[
             {'robot_description': anchor_description},
+            {'frequency': 10}, # 10 hz beacon send rate
         ]
     )
 
