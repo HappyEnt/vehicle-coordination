@@ -2,6 +2,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <orcar_interfaces/msg/tagged_radio_packet.hpp>
+#include <orcar_interfaces/Particles.pb.h>
 
 extern "C" {
 #include "../lib/particle-belief-propagation.h"
@@ -42,6 +43,20 @@ private:
   void receive_queue_callback(const orcar_interfaces::msg::TaggedRadioPacket::SharedPtr msg)
   {
     RCLCPP_INFO(this->get_logger(), "Received message from topic %s", msg->header.frame_id.c_str());
+
+    // unpack payload message
+    std::vector<uint8_t> payload = msg->packet.payload;
+    uint32_t mac = msg->sender_mac;
+    float distance = msg->range;
+
+    // deserialize using protobuf to type Particles
+    orcar::ParticleArray particles;
+    particles.ParseFromArray(payload.data(), payload.size());
+
+    // for each particle in particles print x and y coordinate
+    for (int i = 0; i < particles.particles_size(); i++) {
+      RCLCPP_INFO(this->get_logger(), "Particle %d: x=%f, y=%f", i, particles.particles(i).x(), particles.particles(i).y());
+    }
   }
 };
 

@@ -44,8 +44,6 @@ endif()
 add_library(protocol)
 target_include_directories(protocol
   PUBLIC
-  .
-  ${CMAKE_CURRENT_BINARY_DIR}
   ${Protobuf_INCLUDE_DIRS}
 )
 
@@ -56,15 +54,15 @@ protobuf_generate_python(PROTO_PY ${PROTO_SOURCES})
 
 target_link_libraries(protocol ${Protobuf_LIBRARIES})
 target_sources(protocol
-  PUBLIC
+  PRIVATE
   ${LIB_HEADERS}
   ${PROTO_PY}
-  PRIVATE
   ${LIB_SOURCES}
 )
 
-install( FILES ${LIB_HEADERS} DESTINATION include/${PROJECT_NAME}/${DIR} )
+install( FILES ${LIB_HEADERS} DESTINATION include/${PROJECT_NAME}/${PROJECT_NAME}/${DIR} )
 install(TARGETS protocol
+  EXPORT protocolTargets
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
@@ -75,6 +73,7 @@ ament_python_install_module(${PROTO_PY}
 )
 
 ament_export_libraries(protocol)
+ament_export_targets(protocolTargets HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)
 
 ament_package()
