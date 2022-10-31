@@ -42,7 +42,7 @@ Orcar {
 }
 
 Anchor {
-  translation 0 1 0.07
+  translation 0 2 2.07
   name "anchor"
   range 10
 }

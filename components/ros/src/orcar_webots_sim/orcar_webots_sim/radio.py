@@ -6,6 +6,8 @@ from std_msgs.msg import Header
 from struct import pack, unpack
 from random import randint
 
+from numpy import sqrt
+
 import rclpy
 
 
@@ -82,11 +84,15 @@ class RangingRadio:
             packet = RadioPacket()
             packet.payload = [item.to_bytes(1, byteorder='big') for item in list(payload)]
 
+            # calculate range from radio rssi
+            rssi = self.__receiver.getSignalStrength()
+            distance = sqrt(1.0 / rssi)
+
             # create TaggedRadioPacket
             tagged_packet = TaggedRadioPacket()
             tagged_packet.sender_mac = mac
             tagged_packet.header = header
-            tagged_packet.range = 0.0
+            tagged_packet.range = distance
             tagged_packet.packet = packet
 
             self.__range_measurements_publisher.publish(tagged_packet)

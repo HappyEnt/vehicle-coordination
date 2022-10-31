@@ -5,6 +5,7 @@ package orcar;
 message Particle {
   double x = 1;
   double y = 2;
+  double weight = 3;
 }
 
 message ParticleArray {

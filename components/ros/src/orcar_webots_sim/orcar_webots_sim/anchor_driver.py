@@ -33,7 +33,7 @@ class AnchorDriver:
         rclpy.spin_once(self.__node, timeout_sec=0)
 
         dt = self.__robot.getTime() - self.__pastTime
-        if (dt > 0.025 and self.__robot.getTime() > self.__initialTimeout):
+        if (dt > 0.5 and self.__robot.getTime() > self.__initialTimeout):
             x_global = self.__gps.getValues()[0]
             y_global = self.__gps.getValues()[1]
             self.__pastTime = self.__robot.getTime()
@@ -42,6 +42,7 @@ class AnchorDriver:
             particle = Particle()
             particle.x = x_global
             particle.y = y_global
+            particle.weight = 1.0
 
             # create protobuf ParticleArray with exactly one Particle
             particle_array = ParticleArray()
