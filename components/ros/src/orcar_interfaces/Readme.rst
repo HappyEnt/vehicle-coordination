@@ -4,8 +4,9 @@ Orcar Interfaces
 
 This package defines resources that are used for interfacing between the different orcar components.
 
-We use both ROS2 Messages and Protobuf. Protobuf definitions are used for serializing and deserializing data
-for sending over radio, whereas ROS2 Messages are used for exchanging data over `DDS`_.
+We use both `ROS2 Messages`_ and `Protocol Buffers`_. Protocol Buffers definitions are used for
+serializing and deserializing data for sending over radio, whereas ROS2 Messages are used for
+exchanging data over `DDS`_.
 
 ``msg/``
   ``RadioPacket.msg``
@@ -19,3 +20,5 @@ for sending over radio, whereas ROS2 Messages are used for exchanging data over 
 
 
 .. _DDS: https://design.ros2.org/articles/ros_on_dds.html
+.. _Protocol Buffers: https://developers.google.com/protocol-buffers
+.. _ROS2 Messages: https://docs.ros.org/en/foxy/Concepts/About-ROS-Interfaces.html
