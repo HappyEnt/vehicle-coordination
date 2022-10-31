@@ -69,8 +69,6 @@ private:
   // receive_queue_callback implementation
   void receive_queue_callback(const orcar_interfaces::msg::TaggedRadioPacket::SharedPtr msg)
   {
-    RCLCPP_INFO(this->get_logger(), "Received message from topic %s", msg->header.frame_id.c_str());
-
     // unpack payload message
     std::vector<uint8_t> payload = msg->packet.payload;
     uint32_t mac = msg->sender_mac;
@@ -101,8 +99,6 @@ private:
       break;
     }
 
-    RCLCPP_INFO(this->get_logger(), "Measured distance: %f", distance);
-
     struct message m = {
       .measured_distance = distance,
       .particles = foreign_particles,
@@ -128,7 +124,6 @@ private:
       particles_msg.poses[i].position.x = own_particles[i].x_pos;
       particles_msg.poses[i].position.y = own_particles[i].y_pos;
     }
-    RCLCPP_INFO(this->get_logger(), "Particle %f, %f", own_particles[0].x_pos, own_particles[0].y_pos);
 
     // finally publish PoseArray
     this->particles_publisher->publish(particles_msg);
