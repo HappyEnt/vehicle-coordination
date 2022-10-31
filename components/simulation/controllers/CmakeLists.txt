@@ -1,8 +1,0 @@
-get_filename_component(CONTROLLERS_PATH ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-
-add_subdirectory(anchor_controller)
-add_subdirectory(crazyflie_controller)
-add_subdirectory(kiel_controller)
-add_subdirectory(supervisor)
-add_subdirectory(eval_stationary_error_vs_particle_amount)
-add_subdirectory(eval_ambiguity_removal)
