@@ -18,14 +18,15 @@ ROS2 works best on Ubuntu, for installation on MacOS it is therefore recommended
 container or a Virtual Machine.
 
 Before we can build the project, we will need to install some further ROS packages:
+
 ..  code-block::
 
     sudo apt install ros-humble-webots-ros2 ros-humble-webots-ros2-driver
 
 Furthermore, besides ROS2 the following dependencies have to be installed:
-``GNU Scientific Library``
-``Boost``
-``Protobuf``
+- ``GNU Scientific Library``
+- ``Boost``
+- ``Protobuf``
 
 Installation on Ubuntu:
 
@@ -41,6 +42,7 @@ ROS. Make sure you executed ``source /opt/ros/humble/setup.bash`` manually or by
 your ``.profile``, before executing the following commands
 
 ..  code-block::
+
     cd ~/vehicle-coordination/components/ros
     colcon build
     source install/local_setup.bash
@@ -70,8 +72,8 @@ Physical Orcars
 
 Currently not supported, the following essential components are missing:
 
-``Adapter for Wheels``
-``Adapter for UWB Radio``
+- ``Driver for the Servo motors``
+- ``Interface for the UWB transceiver``
 
 
 Tips
@@ -85,7 +87,7 @@ Resources
 =========
 .. _common-interfaces-guide:https://github.com/ros2/common_interfaces
 
-.. __ROS2: https://docs.ros.org/en/humble/index.html
+.. _ROS2: https://docs.ros.org/en/humble/index.html
 .. _installation documentation: https://docs.ros.org/en/humble/Installation.html
 .. _colcon beginner tutorial: https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html
 .. _webots: https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html
