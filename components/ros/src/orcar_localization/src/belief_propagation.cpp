@@ -1,14 +1,10 @@
 #include <cstdio>
 #include <rclcpp/rclcpp.hpp>
-// import geometry msgs
-// #include <geometry_msgs/msg/PoseWithCovarianceStamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+
 extern "C" {
 #include "../lib/particle-belief-propagation.h"
 }
-// maybe useful later for gps signals
-// #include <sensor_msgs>
-
 
 class BeliefPropagationNode : public rclcpp::Node
 {

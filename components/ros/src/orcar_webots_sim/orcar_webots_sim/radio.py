@@ -1,7 +1,11 @@
 from rosgraph_msgs.msg import Clock
-from orcar_interfaces.msg import RadioMessage
+from orcar_interfaces.msg import TaggedRadioPacket, RadioPacket
 from geometry_msgs.msg import PoseArray, Pose, Point, Quaternion
 from std_msgs.msg import Header
+
+from struct import pack, unpack
+from random import randint
+
 import rclpy
 
 
@@ -15,6 +19,9 @@ class RangingRadio:
         # However, we can create a new one.
         # rclpy.init(args=None)
         self.__node = rclpy.create_node('ranging_radio_node')
+
+        # generate random mac
+        self.__mac = randint(0, 2**32-1)
 
         # This will print the parameter from the URDF file.
         #
@@ -34,28 +41,59 @@ class RangingRadio:
         self.__emitter  = self.__robot.getDevice('emitter')
         self.__receiver = self.__robot.getDevice('receiver')
 
+        # set emitter & receiver channel to channel 0
+        self.__emitter.setChannel(0)
+
+        if self.__receiver != None:
+            self.__receiver.enable(int(self.__robot.getBasicTimeStep()))
+            self.__receiver.setChannel(0)
+
         # register topic 'range_measurements' for publishing data
         self.__range_measurements_publisher = self.__node.create_publisher(
-            RadioMessage, 'range_measurements', 10)
+            TaggedRadioPacket, '/{}/ranging_radio/receive_queue'.format(self.__robot.getName()), 10
+        )
+
+        # create topic where other nodes can push data into
+        self.__range_measurements_subscriber = self.__node.create_subscription(
+            RadioPacket, '/{}/ranging_radio/transmit_queue'.format(self.__robot.getName()), self.__transmit_queue_callback, 10
+        )
+
+    def __transmit_queue_callback(self, msg):
+        # create data for sending over simulated radio
+        data = pack("!I%dc" % len(msg.payload), self.__mac, *msg.payload)
+        self.__emitter.send(data)
 
     # The `step` method is called at every step.
     def step(self):
         # The self.__node has to be spinned once in order to execute callback functions.
         rclpy.spin_once(self.__node, timeout_sec=0)
 
-        # create header
-        header = Header()
-        header.stamp = self.__node.get_clock().now().to_msg() # TODO use simulation clock here?
+        while self.__receiver != None and self.__receiver.getQueueLength() > 0:
+            data = self.__receiver.getData()
+            length = self.__receiver.getDataSize()
 
-        # create particles
-        particles = PoseArray()
-        particles.header = header
-        particles.poses = [Pose(position=Point(x=0.0, y=0.0, z=0.0), orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))]
+            mac, payload = unpack("!I%ds" % (length-4), data)
 
-        # create final RadioMessage for transfer
-        radioMsg = RadioMessage()
-        radioMsg.node_id = self.__robot_name
-        radioMsg.particles = particles
-        radioMsg.header = header
+            # create header with reception time step
+            header = Header()
+            header.stamp = self.__node.get_clock().now().to_msg() # TODO use simulation clock here?
 
-        self.__range_measurements_publisher.publish(radioMsg)
+            # # create particles
+            # particles = PoseArray()
+            # particles.header = header
+            # particles.poses = [Pose(position=Point(x=0.0, y=0.0, z=0.0), orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))]
+
+            # recover RadioMessage from received bytes
+            packet = RadioPacket()
+            packet.payload = [item.to_bytes(1, byteorder='big') for item in list(payload)]
+            # create TaggedRadioPacket
+            tagged_packet = TaggedRadioPacket()
+            tagged_packet.sender_mac = mac
+            tagged_packet.header = header
+            tagged_packet.range = 0.0
+            tagged_packet.packet = packet
+
+            self.__range_measurements_publisher.publish(tagged_packet)
+
+            if self.__receiver.getQueueLength() > 0:
+                self.__receiver.nextPacket()
