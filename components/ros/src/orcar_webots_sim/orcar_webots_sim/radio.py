@@ -18,7 +18,7 @@ class RangingRadio:
         # Unfortunately, we cannot get an instance of the parent ROS node.
         # However, we can create a new one.
         # rclpy.init(args=None)
-        self.__node = rclpy.create_node('ranging_radio_node')
+        self.__node = rclpy.create_node('ranging_radio')
 
         # generate random mac
         self.__mac = randint(0, 2**32-1)
@@ -78,14 +78,10 @@ class RangingRadio:
             header = Header()
             header.stamp = self.__node.get_clock().now().to_msg() # TODO use simulation clock here?
 
-            # # create particles
-            # particles = PoseArray()
-            # particles.header = header
-            # particles.poses = [Pose(position=Point(x=0.0, y=0.0, z=0.0), orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))]
-
             # recover RadioMessage from received bytes
             packet = RadioPacket()
             packet.payload = [item.to_bytes(1, byteorder='big') for item in list(payload)]
+
             # create TaggedRadioPacket
             tagged_packet = TaggedRadioPacket()
             tagged_packet.sender_mac = mac

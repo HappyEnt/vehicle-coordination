@@ -49,6 +49,10 @@ def generate_launch_description():
     localization = Node(
         executable='belief_propagation',
         package='orcar_localization',
+        namespace="orcar",
+        parameters=[
+          {"receive_queue_topicname": "/orcar/ranging_radio/receive_queue"}
+        ],
         output='screen'
     )
 

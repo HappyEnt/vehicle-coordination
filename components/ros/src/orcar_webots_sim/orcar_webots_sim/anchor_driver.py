@@ -1,5 +1,6 @@
 import rclpy
 from orcar_interfaces.msg import TaggedRadioPacket, RadioPacket
+from orcar_interfaces.Particles_pb2 import Particle, ParticleArray
 from geometry_msgs.msg import PoseArray, Pose, Point, Quaternion
 from std_msgs.msg import Header
 from struct import pack
@@ -37,25 +38,20 @@ class AnchorDriver:
             y_global = self.__gps.getValues()[1]
             self.__pastTime = self.__robot.getTime()
 
-            # create header
-            # header = Header()
-            # header.stamp = self.__node.get_clock().now().to_msg() # TODO use simulation clock here?
+            # first create single Particle from protobuf
+            particle = Particle()
+            particle.x = x_global
+            particle.y = y_global
 
-            # # create particles
-            # particles = PoseArray()
-            # particles.header = header
-            # particles.poses = [Pose(position=Point(x=x_global, y=y_global, z=0.0), orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0))]
+            # create protobuf ParticleArray with exactly one Particle
+            particle_array = ParticleArray()
+            particle_array.particles.extend([particle])
 
-            # # create final RadioMessage for transfer
-            # radioMsg = RadioMessage()
-            # radioMsg.node_id = self.__robot.getName()
-            # radioMsg.particles = particles
-            # radioMsg.header = header
-
+            # create packet for radio module
             packet = RadioPacket()
-            data = pack('hhl', 1, 2, 3) # will be replaced with protobuf
+
             # convert each item to bytes
-            packet.payload = [item.to_bytes(1, byteorder='big') for item in list(data)]
+            packet.payload = [item.to_bytes(1, byteorder='big') for item in list(particle_array.SerializeToString())]
 
             # push radioMsg into transmit_queue topic
             self.__range_measurements_publisher.publish(packet)
