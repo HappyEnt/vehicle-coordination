@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package orcar;
+
+message Particle {
+  double x = 1;
+  double y = 2;
+}
+
+message ParticleArray {
+  repeated Particle particles = 1;
+}
