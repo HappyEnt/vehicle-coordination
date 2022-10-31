@@ -24,6 +24,7 @@ Before we can build the project, we will need to install some further ROS packag
     sudo apt install ros-humble-webots-ros2 ros-humble-webots-ros2-driver
 
 Furthermore, besides ROS2 the following dependencies have to be installed:
+
 - ``GNU Scientific Library``
 - ``Boost``
 - ``Protobuf``
