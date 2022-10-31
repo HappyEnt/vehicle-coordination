@@ -21,7 +21,6 @@ Afterwards you will have to source install/local_setup.bash so the newly build p
 can be found by ROS.
 
 ..  code-block::
-    :caption: Building
 
     cd ~/vehicle-coordination/components/ros
     colcon build
@@ -37,7 +36,6 @@ Simulation
 In order to run the example simulation simply run
 
 ..  code-block::
-    :caption: Running Simulation
 
     ros2 launch orcar_webots_sim robot_launch.py
 
