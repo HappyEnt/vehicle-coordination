@@ -13,7 +13,9 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.abspath('../../components/localization/src'))
+sys.path.insert(0, os.path.abspath('../../components'))
+sys.path.insert(0, os.path.abspath('../../components/localization'))
+print(sys.path)
 
 
 import sphinxrust
@@ -37,6 +39,13 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinxrust"
+]
+
+autosummary_generate = True
+autosummary_mock_imports = [
+    'localization.test',
+    'localization.interface_pb2_grpc',
+    'localization.interface_pb2',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

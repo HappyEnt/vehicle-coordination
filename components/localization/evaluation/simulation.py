@@ -4,8 +4,8 @@ from typing import Any, Callable, List
 
 from scipy.constants import speed_of_light
 
-from config import TIME_UNIT
 from data import RX, TX, TimingInfo, jsonify_message, Message
+from ranging.twr import TIME_UNIT
 
 
 class SimulationNode:

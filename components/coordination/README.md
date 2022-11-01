@@ -1,11 +1,39 @@
 # Picar Coordination
 
-This repo contains the code for the coordination of our Picars. Furthermore, it handles initial "calibration" of a car, i.e., determining the rotation, max speed, etc..
+This repo contains the code for the coordination of our Picars. Furthermore, it provides an interface to obtain information about the participants from the camera server.  
+
+To generate and open the code documentation, you can run the following command from the root of this crate: 
+
+```shell
+cargo doc --workspace --no-deps --open --target-dir docs
+```
+
+This will generate the documentation depending on the actual documentation (i.e., comments) of the code in this crate and open it in our default web browser.
 
 ## Overview 
 
 - `src/bin` this folder holds both binaries of this crate (one for the actual coordination and one as the camera interface)
 - `src/*` these files contain different utility structs and functionality, depending on the name of the file 
+- `evaluation/` this folder contains all files regarding the evaluation of this project
+
+### Binaries
+
+#### Picar Coordination
+
+To start the actual coordination, you can start the executable `picar-coordination`. The program will try to connect to a locally running `picar-daemon` (so start it first!) and then waits for incomming connections for receiving information about other participants.
+
+#### Camera Interface 
+
+In order to provide information about other participants via the camera server, this crate provides the `camera-interface` binary. This program is responsible for connecting to a *running* camera server and to a *locally running* `picar-coordination`. If one of them is not available, it will panic! 
+
+To provide reasonable data, the program needs to be called with special arguments: 
+
+```shell 
+camera-interface <ID>
+```
+`<ID>` is the ID of the respective car.
+
+Currently, the binary tries to connect to a camera server reachable under `192.168.87.78:8081` _in the same network_ (adjustable in the code) and lets each car drive from one corner to the other (also adjustable in the code).  
 
 ## Compilation
 

@@ -1,15 +1,26 @@
 extern crate coordination;
 
-use std::{collections::HashMap, env, error::Error, thread, time::Duration};
+use std::{
+    collections::HashMap,
+    env,
+    error::Error,
+    fmt::format,
+    fs::File,
+    io::Write,
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use api::{ApiPayload, ParticipantInformation};
 use coordination::{
     interface::{
         coordination_client::CoordinationClient, tick_request::Participant, TickRequest, Vec2,
     },
+    math::signed_angle_between,
     util::parse_cmd_arg,
 };
-use orca_rs::ndarray::arr1;
+use log::{debug, error, warn};
+use orca_rs::ndarray::{arr1, Array1};
 
 const SLEEP_TIMER: u64 = 100;
 
@@ -45,6 +56,56 @@ mod api {
         pub radius: f64,
         /// Inaccuracy in terms of the position of this participant
         pub inaccuracy: f64,
+    }
+}
+
+type Coord = [f64; 2];
+
+const TARGETS: [Coord; 2] = [
+    //
+    [0.4, 0.4],
+    // [0.2, 1.8],
+    [1.2, 1.6],
+    // [1.4, 0.2],
+];
+
+#[derive(Clone, Copy)]
+enum Target {
+    First,
+    Second,
+    Third,
+    Fourth,
+}
+
+struct TargetWrapper {
+    target: Target,
+}
+
+/// Wrapper around dynamic target selection
+impl TargetWrapper {
+    pub fn new() -> Self {
+        TargetWrapper {
+            target: Target::First,
+        }
+    }
+
+    pub fn next(&mut self) {
+        self.target = match self.target {
+            Target::First => Target::Second,
+            // TODO: Adjust this if you want cars to drive a square
+            Target::Second => Target::First,
+            Target::Third => Target::Fourth,
+            Target::Fourth => Target::First,
+        }
+    }
+
+    pub fn usize(&self) -> usize {
+        match self.target {
+            Target::First => 0,
+            Target::Second => 1,
+            Target::Third => 2,
+            Target::Fourth => 3,
+        }
     }
 }
 
@@ -89,10 +150,12 @@ impl CameraInterface {
         let mut others: Vec<ParticipantInformation> = vec![];
 
         for key in cur_positions.keys() {
+            // check, if the information is about us
             if key == &self.id.to_string() {
                 continue;
             }
 
+            // generate information about this specific participant
             let (x, y) = cur_positions.get(key).unwrap();
             others.push(ParticipantInformation {
                 id: key.parse::<u8>()?,
@@ -115,6 +178,7 @@ impl CameraInterface {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
+    // TODO: make this address a cmd arg
     #[cfg(not(feature = "pi"))]
     let address = "http://192.168.1.101:50052";
     #[cfg(feature = "pi")]
@@ -123,16 +187,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let id = parse_cmd_arg(args.get(1).expect("No ID given!"));
 
+    // TODO: adjust this if you need another camera server
     let camera = CameraInterface::new("http://192.168.87.78:8081/positions", id);
+    let mut target_wrapper = TargetWrapper::new();
     let mut client = CoordinationClient::connect(address.to_owned()).await?;
+
+    let mut old_position: Option<Array1<f64>> = None;
+    let mut last_direction: Option<Array1<f64>>;
+    let mut desired_direction: Option<Array1<f64>> = None;
+
+    let mut last_errors: Vec<f64> = vec![];
 
     loop {
         let payload = camera.fetch().await?;
 
-        if let Some(position) = payload.position {
+        if let Some(new_position) = payload.position {
+            // update information about the last direction and the current position
+            last_direction = calculate_position_delta(&old_position, &new_position);
+            old_position = Some(new_position.clone());
+            if let Some(signed_angle) =
+                diff_desired_and_actual_direction(&desired_direction, &last_direction)
+            {
+                last_errors.push(signed_angle);
+            }
+
+            // update the target of the car according to current wrapper
+            let target: [f64; 2] = TARGETS[target_wrapper.usize()];
+            if let Err(e) = client.set_target(Vec2::from_pos(&arr1(&target))).await {
+                error!("Error setting new target: {:#?}", e);
+            }
+
             let tick_request = TickRequest {
                 id: 6,
-                position: Some(Vec2::from_pos(&position)),
+                position: Some(Vec2::from_pos(&new_position)),
                 confidence: 0.0,
                 radius: 0.2,
                 others: payload
@@ -145,11 +232,81 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         radius: p.radius as f32,
                     })
                     .collect(),
+                obstacles: vec![],
             };
 
-            client.tick(tick_request).await?;
+            // check if the car thinks it is finished
+            let response = client.tick(tick_request).await?;
+            let response = response.into_inner();
+            if response.finished {
+                target_wrapper.next();
+                println!("{:#?}", last_errors);
+                #[cfg(feature = "evaluation")]
+                write_result_to_file(&last_errors);
+                last_errors = vec![];
+            }
+
+            // update the stored "desired velocity"
+            if let Some(new_velocity) = response.new_velocity {
+                desired_direction = Some(new_velocity.to_pos());
+            }
         }
 
         thread::sleep(Duration::from_millis(SLEEP_TIMER));
+    }
+}
+
+fn calculate_position_delta(
+    old_position: &Option<Array1<f64>>,
+    new_position: &Array1<f64>,
+) -> Option<Array1<f64>> {
+    debug!(
+        "calculate_position_delta({:#?}, {:#?})",
+        old_position, new_position
+    );
+
+    old_position
+        .clone()
+        .map(|old_position| new_position - old_position)
+}
+
+fn diff_desired_and_actual_direction(
+    desired_direction: &Option<Array1<f64>>,
+    actual_direction: &Option<Array1<f64>>,
+) -> Option<f64> {
+    debug!(
+        "diff_desired_and_actual_direction({:#?}, {:#?})",
+        desired_direction, actual_direction
+    );
+
+    if let (Some(desired_direction), Some(actual_direction)) = (desired_direction, actual_direction)
+    {
+        let signed_angle = signed_angle_between(desired_direction, actual_direction);
+        Some(signed_angle)
+    } else {
+        warn!(
+            "Trying to calculate the difference between {:#?} and {:#?}",
+            desired_direction, actual_direction
+        );
+        None
+    }
+}
+
+#[cfg(feature = "evaluation")]
+fn write_result_to_file(last_errors: &Vec<f64>) {
+    let last_errors_string = serde_json::to_string(last_errors).unwrap_or_else(|_| "[]".to_owned());
+    let start = SystemTime::now();
+    let timestamp = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let filename = format!("{:?}.json", timestamp);
+
+    match File::create(&filename) {
+        Ok(mut file) => {
+            if let Err(e) = file.write_all(last_errors_string.as_bytes()) {
+                error!("Error writing to file '{}': {}", filename, e);
+            }
+        }
+        Err(e) => error!("Error opening '{}': {}", filename, e),
     }
 }
