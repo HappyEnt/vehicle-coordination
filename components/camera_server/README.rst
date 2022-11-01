@@ -1,11 +1,11 @@
-The Camera-Server Module
-========================
+
 The camera server is an alternative to the ranging and localization. It can track the vehicles using aruco-markers (generator for the markers: https://chev.me/arucogen/), which represent a number and can be detected with a camera and OpenCV.  
 We generally use this module for our evaluation and currently also for communication between the vehicles. Furthermore, currently the coordination only works with the camera. For this to work, this module provides a webserver.  
 In our work, we used a special camera from IDS, which can be adapted and used with code.  
 
 Installation
 ------------
+
 Use camera from IDS
 ^^^^^^^^^^^^^^^^^^^
 Select your os and download IDS Software Suite from:
@@ -20,6 +20,7 @@ You can also use another USB camera (controlled without code). To do this, use t
 
 Install python libraries
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
 Install all other libraries in the requirements.txt file (normally with pip).
 
 .. code-block::
@@ -28,6 +29,7 @@ Install all other libraries in the requirements.txt file (normally with pip).
 
 Usage
 -----
+
 Before running the system, create an area (physically) with four aruco markers:
 
 - The marker with ID 0 has to be on the top-left corner.
@@ -59,6 +61,7 @@ Remember to save the IP-address and port of the server, as it is also used for t
 
 Source Files Explanation
 ------------------------
+
 ``CameraConverter.py`` Converts the camera data to coordinates.  
 
 ``TrackerPyUEyeLinux.py`` Code to read the camera data from an IDS camera.  
