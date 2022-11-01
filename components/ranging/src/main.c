@@ -6,8 +6,9 @@
 #include <drivers/ieee802154/dw1000.h>
 #include <stdio.h>
 #include <drivers/uart.h>
+#include <random/rand32.h>
 
-#define RANGING_ID 0x40
+#define RANGING_ID 0x0700
 
 LOG_MODULE_REGISTER(main);
 
@@ -49,6 +50,8 @@ uint16_t ranging_id;
 
 // TODO: This is not standard compliant
 static uint8_t msg_header[] = {0xDE, 0xCA};
+
+static int random_tx_delay_add;
 
 // we keep things simple and define a buffer for the timestamps
 // at position 0 is our tx timestamp, others are rx timestamps (or just zero if not used)
@@ -102,7 +105,7 @@ int main(void) {
     printk("\n");
     printk("Ranging ID: %X\n", ranging_id);
 
-    k_msleep(10000);
+    k_msleep(3000);
 
     // we disable the frame filter, otherwise the packets are not received!
     dwt_set_frame_filter(ieee802154_dev, 0, 0);
@@ -115,6 +118,8 @@ int main(void) {
         LOG_ERR("Could not start ieee 802.15.4 device");
         return false;
     }
+
+    random_tx_delay_add = (sys_rand32_get() % 20) - 20;
 
     // Create TX thread and queue
     init_tx_queue();
@@ -342,8 +347,10 @@ static void tx_thread(void)
                 LOG_ERR("TX: Error transmitting data!");
             } else {
 
-                output_msg_to_uart("tx", msg_tx_buf, MIN(NUM_MSG_TS, num_receptions+1), NULL);
-
+                // output_msg_to_uart("tx", msg_tx_buf, MIN(NUM_MSG_TS, num_receptions+1), NULL);
+                while(msg_tx_buf[0].sn == 255) {
+                    k_yield();
+                }
                 msg_tx_buf[0].sn++;
                 sent_packets++;
 
@@ -359,6 +366,6 @@ static void tx_thread(void)
 
         net_pkt_unref(pkt);
 
-        k_msleep(250);
+        k_msleep(25 + random_tx_delay_add);
     }
 }
