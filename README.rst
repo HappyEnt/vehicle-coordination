@@ -1,11 +1,6 @@
-Vehicle Coordination Introduction
-=================================
 
-This project is a template on how to structure your project for the final submission.
-Your project repository should serve as the main entry point, therefore also explaining the fundamental motivation and goals.
-We expect all components of the project to be included in this single repository.
-While this might not match your workflow (e.g. you use multiple git repositories), it should allow for an easier administration and setup later.  
-Keep in mind that you do not need to work in this repository and that you can easily copy commits from other repositories (see [components](components/index.md) how to copy).
+Welcome the KIEL (Kiel Intelligent Entity Localization) project.
+
 
 Overview
 --------
@@ -18,20 +13,31 @@ Overview
 Resources
 ---------
 
-Please add your presented slides as PDFs to this repository (into a directory ``resources``). And link them in the main README for quick access.
-You may also add evaluation results / raw data (when their file size is reasonable). 
+In the resources you will find our presentation as well as additional material.
+
+Building the documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Run ``make html`` inside the ``resources`` directory to generate documentation for this project.
+
+Evaluation Data
+^^^^^^^^^^^^^^^
+
+The ``evaluation-data`` directory contains raw evaluation data.
+See the scripts in for example: ``components/localization/evaluation`` to interpret these and generate graphs.
 
 Components
 ----------
 
-.. image:: ../MasterProject.png
+.. image:: resources/component_diagram.pdf
 
-Please put the used components into the components directory and give an overview of what they do and how they interact.
 
 Setup
 -----
 
-Please document how to integrate the different components and how they interact. You can point to individual README files from the different components for their respective setups.
+The Instructions on how to set up and run each component can be found in their respective readme: ``components/<name>/README.rst``.
+Generally you need an instance of the camera server running in the same network as the cars.
+Each car has to run the ``coordination`` as well as the ``localization`` module and be connected to an ultrawideband transceiver running the ``ranging`` software.
 
 Usage
 -----

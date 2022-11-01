@@ -11,15 +11,10 @@ Welcome to Vehicle Coordination's documentation!
    :maxdepth: 4
    :caption: Content
 
-   main_readme
-   localization_readme
-   coordination_readme
-   code_documentation/index
-   .. code_documentation/coordination
-   .. code_documentation/localization
-   .. code_documentation/ranging
-
-
+   readme
+   camera-server-readme
+   coordination-readme
+   localization-readme
 
 Indices and tables
 ==================
