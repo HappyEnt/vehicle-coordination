@@ -18,27 +18,23 @@ class AbstractRangingNode(ABC):
     """This class represents an UWB node.
 
     Attributes:
-        addr:
-        measurement_cb:
-        msg_storage:
-        active_measurements:
-        tx_delays:
-        rx_delays:
+        measurement_cb: A callback for new measurements. Should be set to the `receive_measurement`
+            method of the corresponding Localization system
+        msg_storage: A storage for all messages
+        tx_delays: The calibration delays for all nodes in TX mode
+        rx_delays: The calibration delays for all nodes in RX mode
     """
 
     def __init__(
         self,
-        # ranging_id,
         measurement_cb: Callable[
             [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ],
     ):
-        # self.addr: int = ranging_id
         self.measurement_cb: Callable[
             [Iterable[Union[ActiveMeasurement, PassiveMeasurement]]], Any
         ] = measurement_cb
         self.msg_storage: deque[Message] = deque(maxlen=MESSAGE_STORAGE_SIZE)
-        self.active_measurements: List[ActiveMeasurement] = []
         self.tx_delays: Dict[int, float] = TX_DELAYS
         self.rx_delays: Dict[int, float] = RX_DELAYS
 
@@ -62,14 +58,15 @@ class AbstractRangingNode(ABC):
         )
 
         self.msg_storage.appendleft(message)
-        self.active_measurements.extend(
-            list(filter(lambda x: isinstance(x, ActiveMeasurement), measurements))  # type: ignore
-        )
         self.measurement_cb(measurements)
 
     @abstractmethod
-    def send_data(self, data):
-        """Send data to be transmitted by the UWB module."""
+    def send_data(self, data: str):
+        """Send data to be transmitted by the UWB module.
+
+        Args:
+            data: The data to be transmitted
+        """
 
     @abstractmethod
     def run(self):

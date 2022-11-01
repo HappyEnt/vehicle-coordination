@@ -14,7 +14,7 @@ class DumpFileRangingNode(AbstractRangingNode):
     """Extension of the `RangingNode` to work with a dump file.
 
     Attributes:
-        file_name:
+        file_name: The path to the file that is to be read
     """
 
     def __init__(

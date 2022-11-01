@@ -19,6 +19,17 @@ TIME_UNIT = 15.65 / 1_000_000_000_000
 def find_message_sequence(
     messages: Iterable[Message], endpoint: TimingInfo, active_addr
 ) -> Optional[Tuple[Message, Message, Message]]:
+    """Finds a suitalbe message sequence for TWR.
+
+    Args:
+        messages: The stored messages that should be searched
+        endpoint: The information about the last message of the exchange
+        active_addr: The addr of the active node i.e. the node that received the last message and
+            therefore performs TWR.
+
+    Returns:
+        A tuple consistiong of three messages or None
+    """
     a_msg = None
     a_sn = None
     b_msg = None
@@ -68,6 +79,18 @@ def find_message_sequence(
 
 
 def get_ts(rx: List[TimingInfo], reference: TimingInfo) -> int:
+    """Convenience function for retrieveing a timestamp of a certain message.
+
+    Args:
+        rx: The message timestamps to be searched
+        reference: Info (Addr and sequence number) of the message that is searched
+
+    Returns:
+        The RX timestamp of a matching message
+
+    Raises:
+        Assertion error if `rx` does not contain a matching timestamp
+    """
     for i in rx:
         if i == reference:
             return i.ts
@@ -80,6 +103,17 @@ def perform_twr(
     tx_delays: Optional[Dict[int, float]] = None,
     rx_delays: Optional[Dict[int, float]] = None,
 ) -> List[Union[ActiveMeasurement, PassiveMeasurement]]:
+    """Performs TWR on a newly received message and stored messages.
+
+    Args:
+        message: The newly received message
+        msg_storage: The stored messages that were received earlier
+        tx_delays: The calibration delays for all nodes in TX mode
+        rx_delays: The calibration delays for all nodes in RX mode
+
+    Returns:
+        A list of all active and passive measurements that could be made with the new `message`
+    """
 
     measurements: List[Union[ActiveMeasurement, PassiveMeasurement]] = []
 
