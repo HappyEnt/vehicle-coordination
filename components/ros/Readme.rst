@@ -24,6 +24,7 @@ Before we can build the project, we will need to install some further ROS packag
     sudo apt install ros-humble-webots-ros2 ros-humble-webots-ros2-driver
 
 Furthermore, besides ROS2 the following dependencies have to be installed:
+
 - ``GNU Scientific Library``
 - ``Boost``
 - ``Protobuf``
@@ -82,6 +83,16 @@ RVIZ Visualization
 ^^^^^^^^^^^^^^^^^^
 You can use ``rviz2`` in order to display information from ROS2 topics.
 
+Interact with robot
+^^^^^^^^^^^^^^^^^^
+Orcar receives `Twist`_ messages on the ``/<robot-name>/cmd_vel`` topic.
+You can use the simpe gui ``rqt_robot_steering`` in order to send Twist messages to a Orcar node.
+
+..  code-block::
+
+    sudo apt install ros-humble-rqt-robot-steering
+    rqt-robot-steering
+
 
 Resources
 =========
@@ -92,3 +103,4 @@ Resources
 .. _colcon beginner tutorial: https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html
 .. _webots: https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html
 .. _webots-ros2 complete installation guide: https://github.com/cyberbotics/webots_ros2/wiki/Complete-Installation-Guide
+.. _Twist: https://docs.ros2.org/foxy/api/geometry_msgs/index-msg.html
