@@ -4,14 +4,16 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from rpi_hardware_pwm import HardwarePWM
 
+from math import pi
+
 HALF_DISTANCE_BETWEEN_WHEELS = 0.047
 WHEEL_RADIUS = 0.0299
-WHEEL_DIAMETER = 2 * np.pi * WHEEL_RADIUS
+WHEEL_DIAMETER = 2 * pi * WHEEL_RADIUS
 
 BASE_FREQUENCY = 50.0
 BASE_PERIOD = 1000.0 / BASE_FREQUENCY
 
-MAX_RPM = 110 # from datasheet, could deviate in practice depending on the load and supply voltage
+MAX_RPM = 110.0 # from datasheet, could deviate in practice depending on the load and supply voltage
 MAX_VELOCITY = WHEEL_DIAMETER * MAX_RPM / 60.0
 
 FULL_BACKWARD_DUTY_CYCLE   = 1.0 / BASE_PERIOD * 100
@@ -44,8 +46,8 @@ class OrcarServoNode(Node):
 
     def __cmd_vel_callback(self, msg):
         # extract from Twist speeds for both motors
-        left_vel  = (msg.linear.x - msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS) / WHEEL_RADIUS
-        right_vel = (msg.linear.x + msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS) / WHEEL_RADIUS
+        left_vel  = (msg.linear.x - msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS)
+        right_vel = (msg.linear.x + msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS)
 
         self.setVelocity(left_vel, right_vel)
 
