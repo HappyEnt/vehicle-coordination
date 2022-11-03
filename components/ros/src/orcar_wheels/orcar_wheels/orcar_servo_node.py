@@ -7,7 +7,7 @@ from rpi_hardware_pwm import HardwarePWM
 from math import pi
 
 HALF_DISTANCE_BETWEEN_WHEELS = 0.047
-WHEEL_RADIUS = 0.0299
+WHEEL_RADIUS = 0.03
 WHEEL_DIAMETER = 2 * pi * WHEEL_RADIUS
 
 BASE_FREQUENCY = 50.0
@@ -46,7 +46,7 @@ class OrcarServoNode(Node):
 
     def __cmd_vel_callback(self, msg):
         # extract from Twist speeds for both motors
-        left_vel  = (msg.linear.x - msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS)
+        left_vel  = -1 * (msg.linear.x - msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS)
         right_vel = (msg.linear.x + msg.angular.z * HALF_DISTANCE_BETWEEN_WHEELS)
 
         self.setVelocity(left_vel, right_vel)
