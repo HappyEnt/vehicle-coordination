@@ -102,7 +102,7 @@ private:
     struct message m = {
       .measured_distance = distance,
       .particles = foreign_particles,
-      .particles_length = particles.particles_size(),
+      .particles_length = (size_t) particles.particles_size(),
       .type = message::DUMB_PARTICLES,
     };
 

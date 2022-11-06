@@ -1,11 +1,19 @@
 version: "3.9"
 services:
   ros:
-    build: ./
+    build:
+      dockerfile: ./Dockerfile
+      args:
+        HOST_SHARED_DIRECTORY: /tmp/shared
+        CONTAINER_SHARED_DIRECTORY: /shared
+        ROS_WORKSPACE: /ros_webots/
     volumes:
       - ./:/ros
       - /tmp/shared:/shared
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/root/.Xauthority
     # add environment variable
-    network_mode: host
+    # network_mode: host
     environment:
-      - WEBOTS_SHARED_FOLDER=/tmp/shared:/shared
+      DISPLAY: host.docker.internal:0
+

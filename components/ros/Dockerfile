@@ -1,28 +1,36 @@
 FROM arm64v8/ros:humble-perception
+SHELL ["/bin/bash", "-c"]
 
-LABEL description="Container for development"
+ARG HOST_SHARED_DIRECTORY
+ARG CONTAINER_SHARED_DIRECTORY
+ARG ROS_WORKSPACE
 
-# add multiline RUN command that updates locale
-#RUN locale && \
-#    sudo apt update && sudo apt install locales && \
-    # sudo locale-gen en_US en_US.UTF-8 && \
-    # sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 && \
-    # export LANG=en_US.UTF-8 && \
-    # locale  # verify settings
+# Environment variable for shared folder information
+ENV WEBOTS_SHARED_FOLDER=$HOST_SHARED_DIRECTORY:$CONTAINER_SHARED_DIRECTORY
 
-# RUN sudo apt update && sudo apt install curl gnupg lsb-release
-# RUN sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+# Create shared directory and ros2 workspace
+RUN mkdir -p $CONTAINER_SHARED_DIRECTORY
 
-RUN apt-get update && apt-get install -y g++ rsync zip openssh-server make valgrind build-essential cmake libboost-dev libboost-all-dev
+# Install ROS2 Humble desktop
+RUN sudo apt update && sudo apt install curl gnupg lsb-release -y
+RUN sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+RUN sudo apt update
+RUN sudo apt upgrade -y
+RUN sudo apt install ros-humble-desktop -y
 
-# RUN sudo apt install ros-humble-ros-base
+# Clone webots_ros2 sources and configure for arm64 architecture
+RUN source /opt/ros/humble/setup.bash
+RUN git clone --recurse-submodules https://github.com/cyberbotics/webots_ros2.git $ROS_WORKSPACE/src/webots_ros2
+RUN cd $ROS_WORKSPACE/src/webots_ros2/webots_ros2_driver/webots && git checkout arm64 && cd $ROS_WORKSPACE
 
-RUN useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1000 dev
+# Install ros dependencies
+RUN sudo apt install python3-pip python3-rosdep python3-colcon-common-extensions openssh-server -y
+RUN sudo rosdep update
+RUN rosdep install --from-paths $ROS_WORKSPACE/src --ignore-src --rosdistro humble -y
 
-RUN echo 'dev:dev' | chpasswd
+# Install Orcar dependencies
+RUN sudo apt install build-essential libgsl-dev libboost-all-dev protobuf-compiler -y
+RUN sudo pip3 install rpi-hardware-pwm
 
-RUN service ssh start
-
-EXPOSE 22
-
-CMD ["/usr/sbin/sshd","-D"]
+# Build packages
+RUN source /opt/ros/humble/setup.bash && cd $ROS_WORKSPACE && colcon build
