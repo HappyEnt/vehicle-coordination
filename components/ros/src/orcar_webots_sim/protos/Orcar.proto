@@ -252,6 +252,7 @@ PROTO Orcar [
       centerOfMass [
         0  -0.02 -0.03
       ]
+      inertiaMatrix [9.78585e-05 8.64333e-05 8.74869e-05, 0 0 0]
     }
   }
 }

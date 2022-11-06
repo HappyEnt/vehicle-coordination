@@ -7,13 +7,17 @@ services:
         HOST_SHARED_DIRECTORY: /tmp/shared
         CONTAINER_SHARED_DIRECTORY: /shared
         ROS_WORKSPACE: /ros_webots/
+    command: tail -F /dev/null # Keep container running
     volumes:
       - ./:/ros
       - /tmp/shared:/shared
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/root/.Xauthority
     # add environment variable
+    # network most host works only on linux hosts
     # network_mode: host
+    ports:
+      - "9090:9090"
     environment:
       DISPLAY: host.docker.internal:0
 

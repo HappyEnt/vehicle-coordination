@@ -17,6 +17,7 @@ RUN sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.ke
 RUN sudo apt update
 RUN sudo apt upgrade -y
 RUN sudo apt install ros-humble-desktop -y
+RUN sudo apt install ros-humble-rosbridge-server -y
 
 # Clone webots_ros2 sources and configure for arm64 architecture
 RUN source /opt/ros/humble/setup.bash
