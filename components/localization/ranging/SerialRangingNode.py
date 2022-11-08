@@ -18,7 +18,7 @@ class SerialRangingNode(AbstractRangingNode):
     connection.
 
     Attributes:
-        serial_connection:
+        serial_connection: The `Serial` connection to the connected board.
     """
 
     def __init__(

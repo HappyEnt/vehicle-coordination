@@ -1,63 +1,102 @@
+from distutils.log import error
+from fileinput import filename
 from logging import ERROR, WARNING, basicConfig
 from math import sqrt
+import os
 from typing import Dict, List, Optional, Tuple
 
 from data import ActiveMeasurement
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+
 from ranging import DumpFileRangingNode
 
 
-def average_measurment(
-    measurements: List[ActiveMeasurement], a: int, b: int, start: int, stop: int
-) -> Optional[float]:
-    distances_a_b = [m.distance for m in measurements if m.a == a and m.b == b]
-    distances_a_b = distances_a_b[start:stop]
-    distances_a_b.sort()
-    distances_a_b = distances_a_b[
-        int(0.1 * len(distances_a_b)) : int(
-            len(distances_a_b) - 0.1 * len(distances_a_b)
-        )
-    ]
-    if distances_a_b:
-        return sum(distances_a_b) / len(distances_a_b)
-
-
-def evaluate_calibration(
-    file, addr, nodes_and_positions: Dict[int, Tuple[float, float]]
-):
+def evaluate_calibration(addr, real_distance, configuration: str):
+    # x_data = []
+    # y_data_cal = []
+    # y_err_cal = []
+    # y_data_uncal = []
+    # y_err_uncal = []
     basicConfig(level=ERROR)
-    ranging_node = DumpFileRangingNode(addr, lambda _: None, file)
-    ranging_node.set_calibration_ground_truth(nodes_and_positions)
-    ranging_node.run()
-    for (a, b) in [
-        (a, b) for a in nodes_and_positions for b in nodes_and_positions if a != b
-    ]:
-        real_distance = sqrt(
-            (nodes_and_positions[a][0] - nodes_and_positions[b][0]) ** 2
-            + (nodes_and_positions[a][1] - nodes_and_positions[b][1]) ** 2
+    error_list_cal = []
+    error_list_uncal = []
+    for i in range(1, 8):
+        name = f"experiment_{int(real_distance*100)}_with_{i}_{configuration}"
+        file_name = os.path.join(
+            "evaluation-data",
+            "ranging-accuracy",
+            f"{int(real_distance*100)}-{configuration}",
+            f"{name}.txt",
         )
-        distance_pre_calibration = average_measurment(
-            ranging_node.active_measurements, a, b, 0, ranging_node.calibrated_at
-        )
-        distance_post_calibration = average_measurment(
-            ranging_node.active_measurements,
-            a,
-            b,
-            ranging_node.calibrated_at,
-            len(ranging_node.active_measurements),
-        )
-        if distance_pre_calibration and distance_post_calibration:
-            print()
-            print(
-                f"Evaluating distance measurement between {a} and {b} real distance {real_distance}"
+        try:
+            ranging_node_calibrated = DumpFileRangingNode(
+                lambda _: None, file_name
             )
-            print(f"Before calibration {distance_pre_calibration}")
-            print(f"After calibration {distance_post_calibration}")
+            ranging_node_calibrated.run()
+            ranging_node_uncalibrated = DumpFileRangingNode(
+                lambda _: None, file_name
+            )
+            ranging_node_uncalibrated.rx_delays = {}
+            ranging_node_uncalibrated.tx_delays = {}
+            ranging_node_uncalibrated.run()
 
+            error_a_b_with_calibration = [
+                m.distance - real_distance
+                for m in ranging_node_calibrated.active_measurements
+                if m.a == 0 and m.b == i << 8 or m.b == 0 and m.a == i << 8
+            ]
+            error_a_b_without_calibration = [
+                m.distance - real_distance
+                for m in ranging_node_uncalibrated.active_measurements
+                if m.a == 0 and m.b == i << 8 or m.b == 0 and m.a == i << 8
+            ]
+
+            error_list_cal.append(list(map(lambda x: x*100,error_a_b_with_calibration)))
+            error_list_uncal.append(list(map(lambda x: x*100,error_a_b_without_calibration)))
+
+        except FileNotFoundError:
+            error(f'Could not open "{file_name}"')
+
+    fig_box1, ax_box1 = plt.subplots()
+    ax_box1.boxplot(error_list_cal, showfliers=False)
+    ax_box1.grid(True, which="both", axis="y")
+    ax_box1.set_title(f"Calibrated nodes, distance: {int(real_distance*100)} cm, {configuration}")
+    ax_box1.set_ylabel("distance error in cm")
+    ax_box1.set_xlabel("node id")
+    ax_box1.set_ylim(-100,250)
+
+    fig_box2, ax_box2 = plt.subplots()
+    ax_box2.boxplot(error_list_uncal, showfliers=False)
+    ax_box2.grid(True, which="both", axis="y")
+    ax_box2.set_title(f"Uncalibrated  nodes, distance: {int(real_distance*100)} cm, {configuration}")
+    ax_box2.set_ylabel("distance error in cm")
+    ax_box2.set_xlabel("node id")
+    ax_box2.set_ylim(-100,250)
+
+    export_file_name1 = os.path.join(
+        "resources",
+        "evaluation",
+        "ranging-accuracy",
+        f"accuracy_{real_distance*100}_{configuration}_calibrated.pdf"
+    )
+
+    export_file_name2 = os.path.join(
+        "resources",
+        "evaluation",
+        "ranging-accuracy",
+        f"accuracy_{real_distance*100}_{configuration}_uncalibrated.pdf"
+    )
+
+    fig_box1.savefig(export_file_name1, format="pdf")
+    fig_box2.savefig(export_file_name2, format="pdf")
 
 def main():
-    # evaluate_calibration("screenlog.txt", 0x40, {0x40: (0,0), 0x00: (1,0)})
-    evaluate_calibration("screenlog.0", 0x00, {0x0000: (0,0), 0x0100: (2.15,0), 0x0200: (0,1.655)})
-    #0x0300: (0,1.655), 0x0400: (0.96,0.60)})
+    for d in [1, 2]:
+        for c in ["standing", "lying"]:
+            evaluate_calibration(0x0000, d, c)
+    plt.show()
 
 
 if __name__ == "__main__":
