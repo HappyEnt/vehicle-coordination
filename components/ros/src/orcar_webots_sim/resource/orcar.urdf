@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<robot name="orcar">
+    <webots>
+      <plugin type="orcar_webots_sim.orcar_driver.OrcarDriver"/>
+      <plugin type="orcar_webots_sim.radio.RangingRadio"/>
+    </webots>
+</robot>

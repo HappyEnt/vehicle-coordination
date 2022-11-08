@@ -1,0 +1,41 @@
+#VRML_SIM R2022b utf8
+# Describe the functionality of your PROTO here.
+
+PROTO Anchor [
+  field SFVec3f translation 0 0 0
+  field SFRotation rotation 0 0 1 0
+  field SFString name "anchor"
+  field SFString controller "<extern>"
+  field SFFloat  range     10
+]
+{
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    model "anchor"
+
+    children [
+    DEF TRANSCEIVER Transform {
+        translation 0 0 -0.015
+        children [
+          Group {
+             children IS extensionSlot
+          }
+          CadShape {
+            url [
+              "https://cloud.rz.uni-kiel.de/index.php/s/okgSgz9dLHb2PyM/download"
+            ]
+          }
+        ]
+      }
+      Emitter {
+        range IS range
+#         baudRate 115200
+      }
+      GPS {
+      }
+    ]
+  }
+}

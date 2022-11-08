@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="orcar_localization" exec="belief_propagation" name="belief_propagation"/>
+</launch>
