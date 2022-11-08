@@ -29,26 +29,14 @@ See the scripts in for example: ``components/localization/evaluation`` to interp
 Components
 ----------
 
-.. image:: resources/component_diagram.pdf
+.. image:: resources/component_diagram.png
 
 
-Setup
------
+Setup / Usage
+-------------
 
-The Instructions on how to set up and run each component can be found in their respective readme: ``components/<name>/README.rst``.
-Generally you need an instance of the camera server running in the same network as the cars.
-Each car has to run the ``coordination`` as well as the ``localization`` module and be connected to an ultrawideband transceiver running the ``ranging`` software.
-
-Usage
------
-
-* How to use it?
-* How to do the experiments?
-
-Other
------
-
-* Gitlab CI?
-* Docker Containers / Registry?
-* Issues?
-* ...
+The Instructions on how to set up and run each component can be found in their respective readme:
+``components/<name>/README.rst``.  Generally you need an instance of the camera server running in
+the same network as the cars.  Each car has to run the ``coordination`` as well as the
+``localization`` module and be connected to an ultrawideband transceiver running the ``ranging``
+software.
