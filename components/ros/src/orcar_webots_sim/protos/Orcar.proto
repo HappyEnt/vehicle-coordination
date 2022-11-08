@@ -248,7 +248,7 @@ PROTO Orcar [
 
      physics Physics {
       density -1
-      mass 1
+      mass 0.5641
       centerOfMass [
         0  -0.02 -0.03
       ]
