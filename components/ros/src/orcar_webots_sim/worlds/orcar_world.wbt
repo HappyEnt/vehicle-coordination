@@ -1,0 +1,48 @@
+#VRML_SIM R2022b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/HappyEnt/vehicle-coordination/feature/fast-particle-filter/components/ros/src/orcar_webots_sim/protos/Orcar.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/HappyEnt/vehicle-coordination/feature/fast-particle-filter/components/ros/src/orcar_webots_sim/protos/Anchor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/b42cbe6c9ae0c009c0b11436843325e8508f1a01/projects/appearances/protos/Parquetry.proto"
+
+WorldInfo {
+  basicTimeStep 8
+  contactProperties [
+    ContactProperties {
+      material1 "orcar rear wheel"
+      coulombFriction [
+        0
+      ]
+    }
+  ]
+}
+Viewpoint {
+  orientation 0.36882414196306473 0.18384510333234375 -0.9111365047488378 2.7108122168993307
+  position 1.517408907341592 0.9690890642112693 1.8867451866257232
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  translation 0.69 0.64 -0.01
+  rotation 0 1 0 0
+  floorSize 8 8
+  floorAppearance Parquetry {
+    type "light strip"
+  }
+}
+Orcar {
+  translation 0 0.35 0.07
+  name "orcar"
+  range 1
+  signalStrengthNoise 0
+}
+
+Anchor {
+  translation 0 2 2.07
+  name "anchor"
+  range 10
+}

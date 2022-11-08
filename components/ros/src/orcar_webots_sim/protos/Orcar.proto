@@ -1,0 +1,258 @@
+#VRML_SIM R2022b utf8
+# Describe the functionality of your PROTO here.
+
+
+PROTO Orcar [
+  field SFVec3f translation 0 0 0
+  field SFRotation rotation 0 0 1 0
+  field SFString name "robot"
+  field SFString controller "<extern>"
+  field MFString controllerArgs [ ]
+  field SFString customData ""
+  field SFFloat  range     5
+  field SFFloat  signalStrengthNoise     0.1
+]
+
+{
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    controllerArgs IS controllerArgs
+    customData IS customData
+
+    children [
+
+    DEF TRANSCEIVER Transform {
+        translation -0.085 0  0
+        rotation 0.57735 0.57735 0.57735 2.0944
+        children [
+          Emitter {
+             range IS range
+#            baudRate 115200
+          }
+          Receiver {
+          signalStrengthNoise IS signalStrengthNoise
+          }
+          GPS {
+          }
+          CadShape {
+            url [
+              "https://cloud.rz.uni-kiel.de/index.php/s/m5GTYERmtCp9at7/download"
+            ]
+          }
+        ]
+      }
+
+    DEF BODY Transform {
+        translation 0 0 0
+        rotation 0 0 1 4.7124
+        children [
+          DEF CHASSIS Transform {
+            rotation 0.57735 0.57735 0.57735 2.0944
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  baseColorMap ImageTexture {
+                    url [
+                      "https://cloud.rz.uni-kiel.de/index.php/s/fZQNdBHzmngsL6r/download"
+                    ]
+                  }
+                  roughnessMap ImageTexture {
+                    url [
+                     "https://cloud.rz.uni-kiel.de/index.php/s/oM5La2Ba2MeWWyA/download"
+                    ]
+                  }
+                  metalnessMap  ImageTexture {
+                    url [
+                     "https://cloud.rz.uni-kiel.de/index.php/s/66EJQ4KTbF4c73B/download"
+                    ]
+                  }
+                }
+                geometry Mesh {
+                  url [
+                    "https://cloud.rz.uni-kiel.de/index.php/s/eRjZdtkCP7DkBdC/download"
+                  ]
+                }
+              }
+            ]
+          }
+      DEF RIGHT_WHEEL_JOINT HingeJoint {
+        jointParameters HingeJointParameters {
+          position -2.166075283053669e-09
+          axis -1 0 0
+          anchor 0.047 0.03 -0.0494587
+        }
+        device [
+          RotationalMotor {
+            name "right_wheel_hinge"
+            maxVelocity 25
+            maxTorque 2.5
+            }
+        ]
+        endPoint DEF RIGHT_WHEEL Solid {
+          translation 0.047 0.03 -0.0494587
+          rotation 0 1 0 1.5708
+          children [
+            DEF WHEEL_SHAPE Shape {
+              appearance PBRAppearance {
+                baseColor 0 0 0
+                roughness 0.5
+                metalness 0.2
+              }
+              geometry Mesh {
+                url [
+                  "https://cloud.rz.uni-kiel.de/index.php/s/WTnzTg32dmaT2Ym/download"
+                ]
+              }
+            }
+          ]
+          name "right wheel"
+          contactMaterial "jetbot wheel"
+          boundingObject Transform {
+            children [
+              Cylinder {
+                height 0.0078
+                radius 0.0299
+              }
+            ]
+          }
+          physics Physics {
+          }
+          translationStep 0.001
+        }
+      }
+      DEF LEFT_WHEEL_JOINT HingeJoint {
+        jointParameters HingeJointParameters {
+          position -2.166075283053669e-09
+          axis -1 0 0
+          anchor -0.047 0.03 -0.0494587
+        }
+        device [
+          RotationalMotor {
+            name "left_wheel_hinge"
+            maxVelocity 25
+            maxTorque 2.5
+          }
+        ]
+        endPoint DEF LEFT_WHEEL Solid {
+          translation -0.047 0.03 -0.0494587
+          rotation 0 1 0 1.5708
+          children [
+            DEF WHEEL_SHAPE Shape {
+              appearance PBRAppearance {
+                baseColor 0 0 0
+                roughness 0.5
+                metalness 0.2
+              }
+              geometry Mesh {
+                url [
+                  "https://cloud.rz.uni-kiel.de/index.php/s/WTnzTg32dmaT2Ym/download"
+                ]
+              }
+            }
+          ]
+          name "left wheel"
+          contactMaterial "jetbot wheel"
+          boundingObject Transform {
+            children [
+              Cylinder {
+                height 0.0078
+                radius 0.0299
+              }
+            ]
+          }
+          physics Physics {
+          }
+          translationStep 0.001
+        }
+      }
+
+        DEF REAR_WHEEL Solid {
+        translation 0 -0.06 -0.055
+        children [
+          Shape {
+            appearance DEF BLACK_APPEARANCE PBRAppearance {
+                  baseColor 0.1 0.1 0.1
+                  roughness 0.5
+                  metalness 0.2
+            }
+            geometry Cylinder {
+              height 0.032
+              radius 0.0153
+            }
+          }
+          Transform {
+            translation 0 -0. -0.013
+            children [
+              Shape {
+                appearance DEF LIGHT_GRAY_APPEARANCE PBRAppearance {
+                  baseColor 0.729412 0.741176 0.713725
+                  roughness 0.5
+                  metalness 0.2
+                }
+                geometry Sphere {
+                  radius 0.0126
+                }
+              }
+            ]
+          }
+        ]
+        name "rear_wheel"
+        contactMaterial "orcar rear wheel"
+        boundingObject Group {
+          children [
+            DEF REAR_WHEEL Transform {
+              translation 0 0 -0.013
+              children [
+                Sphere {
+                  radius 0.0127
+                }
+              ]
+            }
+            Transform {
+              children [
+                Cylinder {
+                  height 0.032
+                  radius 0.0153
+                }
+              ]
+            }
+          ]
+        }
+        physics Physics {
+        }
+        }
+        ]
+      }
+    ]
+    boundingObject Group {
+      children [
+        Transform {
+          translation 0 0 0
+          # rotation 0.57735 0.57735 0.57735 2.0944
+          rotation 1 0 0 1.5708
+          children [
+          Shape {
+            geometry Mesh {
+                url [
+                  "https://cloud.rz.uni-kiel.de/index.php/s/xJ8N5WWicKgRBdB/download"
+                ]
+            }
+          }
+          ]
+        }
+      ]
+    }
+
+     physics Physics {
+      density -1
+      mass 0.5641
+      centerOfMass [
+        0  -0.02 -0.03
+      ]
+      inertiaMatrix [9.78585e-05 8.64333e-05 8.74869e-05, 0 0 0]
+    }
+  }
+}
