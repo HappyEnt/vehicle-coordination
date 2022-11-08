@@ -34,6 +34,27 @@ Raspberry Pi
         chown -R root:gpio /sys/class/pwm && chmod -R 770 /sys/class/pwm;\
         chown -R root:gpio /sys/devices/platform/soc/*.pwm/pwm/pwmchip* && chmod -R 770 /sys/devices/platform/soc/*.pwm/pwm/pwmchip*\
     '"
+MacOS Docker Installation
+^^^^^^^^^^^^^^^^^^^^^^^^^
+We provide a Dockerfile with all required dependencies installed (So you can skip the Dependencies section below).
+Use docker-compose to automatically configure volume mounts and needed exposed ports.
+For example:
+
+.. code::
+
+   docker-compose up -d
+
+afterwards spawn bash in newly created container
+
+.. code:: python
+
+   docker exec -it <container_id_or_name> bash
+
+Alternatively you can also use ``docker-compose run``,  but be sure to pass the ``--service-ports`` option so the port forwards will be created.
+
+.. code::
+
+   docker-compose run --service-ports ros bash
 
 MacOS Native Installation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,7 +151,23 @@ Support for MacOS is currently Work-in-Progress. See the `webots-ros2 complete i
 In short, it relies on running ROS inside a Docker container and communicating over a server running
 on the host providing the Webots instance.
 
-Note: The above Guide currently only works on nightly builds of Webots 2022b.
+If you installed ROS2 on Mac using the provided docker file you only need to perform the following steps on the
+host in order to connect to Webots from the container.
+
+.. code-block::
+   git clone https://github.com/cyberbotics/webots-server
+   cd webots-server
+   export WEBOTS_HOME=/Applications/Webots.app
+   python3 local_simulation_server.py
+
+Also in the container before launching ``robot_launch.py`` you need to source the webots_ros2 package
+
+.. code::
+
+   source /ros_webots/install/local_setup.bash
+   ros2 launch orcar_webots_sim robot_launch.py
+
+IMPORTANT: The above Guide currently only works on nightly builds of Webots 2022b, which you can grab `here`_.
 
 Orcars
 ^^^^^^^^^^^^^^^
@@ -184,5 +221,6 @@ Resources
 .. _foxglove: https://foxglove.dev/
 .. _Robostack: https://github.com/RoboStack
 .. _installation guide: https://robostack.github.io/GettingStarted.html.
+.. _here: https://github.com/cyberbotics/webots/releases
 
 .. _16.2.5.1: https://fast-dds.docs.eprosima.com/en/latest/fastdds/ros2/discovery_server/ros2_discovery_server.html#daemon-s-related-commands
